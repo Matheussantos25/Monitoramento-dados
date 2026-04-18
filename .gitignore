@@ -1,0 +1,8 @@
+# Segredos do Streamlit
+.streamlit/secrets.toml
+
+# Ignorar também ambientes virtuais e cache do Python (boas práticas)
+.venv/
+venv/
+__pycache__/
+*.pyc
