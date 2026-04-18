@@ -103,18 +103,28 @@ tab_registro, tab_dieta, tab_dashboard, tab_gerenciar = st.tabs(["📝 Novo Trei
 with tab_registro:
     with st.form("registro_treino", clear_on_submit=True):
         st.markdown("<h3 style='margin-bottom: 20px;'>🏋️ Registrar Treino Físico</h3>", unsafe_allow_html=True)
+        
+        # Adicionei o peso corporal na linha de cima, junto com data e horário
+        c_top1, c_top2, c_top3 = st.columns(3)
+        with c_top1:
+            data_treino = st.date_input("Data do Treino", value=datetime.today())
+        with c_top2:
+            horario = st.time_input("Horário", step=60)
+        with c_top3:
+            peso_corporal = st.number_input("Seu Peso Hoje (kg)", min_value=0.0, step=0.1, help="Preencha apenas 1x no dia. Deixe 0.0 nos demais exercícios.")
+
+        st.markdown("---")
+        
         c1, c2, c3 = st.columns(3)
         with c1:
-            data_treino = st.date_input("Data do Treino", value=datetime.today())
-            horario = st.time_input("Horário", step=60)
             exercicio_input = st.selectbox("Exercício", TODOS_EXERCICIOS)
+            duracao = st.number_input("Duração Cardio (min)", min_value=0)
         with c2:
             series = st.number_input("Séries", min_value=1, value=1, step=1)
             reps = st.number_input("Repetições", min_value=0, step=1)
-            carga = st.number_input("Carga (kg)", min_value=0.0)
         with c3:
+            carga = st.number_input("Carga (kg)", min_value=0.0)
             descanso = st.number_input("Descanso (seg)", min_value=0, step=15)
-            duracao = st.number_input("Duração Cardio (min)", min_value=0)
             distancia = st.number_input("Distância Cardio (km)", min_value=0.0)
         
         if st.form_submit_button("🚀 Salvar Treino", use_container_width=True):
@@ -123,7 +133,8 @@ with tab_registro:
                 "data": str(data_treino), "horario": str(horario), "grupo_muscular": grupo,
                 "exercicio": exercicio_input, "series": int(series), "repeticoes": int(reps),
                 "carga_kg": float(carga), "descanso_seg": int(descanso), "duracao_min": int(duracao),
-                "distancia_km": float(distancia), "alimentacao_saudavel": "", "alimentacao_besteirol": ""
+                "distancia_km": float(distancia), "alimentacao_saudavel": "", "alimentacao_besteirol": "",
+                "peso_corporal": float(peso_corporal) # Enviando o peso para o banco!
             }
             supabase.table("treinos").insert(dados).execute()
             st.success("Treino salvo com sucesso!")
@@ -158,7 +169,8 @@ with tab_dieta:
                 "data": str(data_dieta), "horario": "00:00:00", 
                 "grupo_muscular": "Nutrição", "exercicio": "Refeição Diária", 
                 "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0,
-                "alimentacao_saudavel": final_s, "alimentacao_besteirol": final_b
+                "alimentacao_saudavel": final_s, "alimentacao_besteirol": final_b,
+                "peso_corporal": 0.0 # Dieta não registra peso corporal para não duplicar dados
             }
             supabase.table("treinos").insert(dados_dieta).execute()
             st.success("Refeição registrada!")
@@ -204,6 +216,27 @@ with tab_dashboard:
         </div>
         """, unsafe_allow_html=True)
 
+        # --- NOVA SEÇÃO: EVOLUÇÃO DE PESO CORPORAL ---
+        # Filtra apenas os dias onde você preencheu o peso (maior que zero)
+        if 'peso_corporal' in df_treinos.columns:
+            df_peso = df_treinos[df_treinos['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
+            
+            if not df_peso.empty:
+                with st.container(border=True):
+                    st.markdown("#### ⚖️ Evolução do Peso Corporal (kg)")
+                    fig_peso = px.line(df_peso, x='data', y='peso_corporal', markers=True, text='peso_corporal')
+                    fig_peso.update_traces(
+                        line_color='#B224EF', marker=dict(size=10, color='#7579FF'),
+                        textposition="top center", texttemplate='%{text:.1f}'
+                    )
+                    fig_peso.update_layout(
+                        xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                        font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=20),
+                        xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626")
+                    )
+                    st.plotly_chart(fig_peso, use_container_width=True)
+
+        # --- GRÁFICOS INFERIORES ---
         col_esq, col_dir = st.columns(2)
         
         with col_esq:
@@ -223,7 +256,6 @@ with tab_dashboard:
             with st.container(border=True):
                 st.markdown("#### ⏰ Frequência de Treino por Turno")
                 
-                # --- NOVA LÓGICA DE TURNOS ---
                 def classificar_turno(hora_str):
                     if pd.isna(hora_str) or hora_str == "": return "Outro"
                     try:
@@ -237,7 +269,6 @@ with tab_dashboard:
                 df_treinos['turno'] = df_treinos['horario'].apply(classificar_turno)
                 df_turno = df_treinos.groupby('turno', as_index=False).size().rename(columns={'size': 'quantidade'})
                 
-                # Gráfico de Rosca (Donut) moderno
                 fig_turno = px.pie(df_turno, values='quantidade', names='turno', hole=0.5,
                                    color_discrete_sequence=['#F9D423', '#FF4E50', '#00F2FE'])
                 
@@ -250,7 +281,9 @@ with tab_dashboard:
                 st.plotly_chart(fig_turno, use_container_width=True)
 
         st.markdown("### 🗄️ Detalhes dos Treinos")
-        df_display = df_treinos.drop(columns=['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno'], errors='ignore')
+        # Ocultamos a coluna alimentação daqui para ficar limpo
+        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno']
+        df_display = df_treinos.drop(columns=[c for c in colunas_remover if c in df_treinos.columns], errors='ignore')
         df_display['data'] = df_display['data'].dt.strftime('%d/%m/%Y')
         st.dataframe(df_display.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
     else:
