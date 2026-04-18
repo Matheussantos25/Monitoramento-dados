@@ -3,6 +3,7 @@ import pandas as pd
 from supabase import create_client, Client
 from datetime import datetime
 import plotly.express as px
+import json
 
 # --- DICIONÁRIOS PRESETADOS ---
 EXERCICIOS_PRESETADOS = {
@@ -17,7 +18,7 @@ EXERCICIOS_PRESETADOS = {
 TODOS_EXERCICIOS = [ex for lista in EXERCICIOS_PRESETADOS.values() for ex in lista]
 TODOS_EXERCICIOS.sort()
 
-ALIMENTOS_SAUDAVEIS = ["Banana", "Uva", "Maçã", "Laranja", "Melão", "Melancia", "Mirtilo"]
+ALIMENTOS_SAUDAVEIS = ["Banana", "Uva", "Maçã", "Laranja", "Melão", "Melancia", "Mirtilo", "Ovo", "Frango", "Aveia", "Whey"]
 ALIMENTOS_SAUDAVEIS.sort()
 
 ALIMENTOS_BESTEIROL = ["Refrigerante", "Hambúrguer", "Pizza", "Lasanha", "Churros", "Pastel", "Coxinha", "Sorvete", "Batata Frita", "Sonho de Valsa", "Biscoito Recheado", "Chocotone"]
@@ -104,14 +105,13 @@ with tab_registro:
     with st.form("registro_treino", clear_on_submit=True):
         st.markdown("<h3 style='margin-bottom: 20px;'>🏋️ Registrar Treino Físico</h3>", unsafe_allow_html=True)
         
-        # Adicionei o peso corporal na linha de cima, junto com data e horário
         c_top1, c_top2, c_top3 = st.columns(3)
         with c_top1:
             data_treino = st.date_input("Data do Treino", value=datetime.today())
         with c_top2:
             horario = st.time_input("Horário", step=60)
         with c_top3:
-            peso_corporal = st.number_input("Seu Peso Hoje (kg)", min_value=0.0, step=0.1, help="Preencha apenas 1x no dia. Deixe 0.0 nos demais exercícios.")
+            peso_corporal = st.number_input("Seu Peso Hoje (kg)", min_value=0.0, step=0.1, help="Preencha apenas 1x no dia.")
 
         st.markdown("---")
         
@@ -124,17 +124,32 @@ with tab_registro:
             reps = st.number_input("Repetições", min_value=0, step=1)
         with c3:
             carga = st.number_input("Carga (kg)", min_value=0.0)
-            descanso = st.number_input("Descanso (seg)", min_value=0, step=15)
             distancia = st.number_input("Distância Cardio (km)", min_value=0.0)
+            
+        st.markdown("---")
+        st.markdown("#### 🎒 Mochila de Dados (Extras)")
+        c_extra1, c_extra2 = st.columns(2)
+        with c_extra1:
+            nivel_energia = st.slider("Nível de Energia (1 a 5)", 1, 5, 3)
+        with c_extra2:
+            humor = st.selectbox("Humor", ["Normal", "Motivado", "Cansado", "Estressado"])
         
         if st.form_submit_button("🚀 Salvar Treino", use_container_width=True):
             grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if exercicio_input in l), "Outro")
+            
+            # Montando a mochila JSONB
+            mochila_json = {
+                "energia": nivel_energia,
+                "humor": humor
+            }
+            
             dados = {
                 "data": str(data_treino), "horario": str(horario), "grupo_muscular": grupo,
                 "exercicio": exercicio_input, "series": int(series), "repeticoes": int(reps),
-                "carga_kg": float(carga), "descanso_seg": int(descanso), "duracao_min": int(duracao),
+                "carga_kg": float(carga), "descanso_seg": 0, "duracao_min": int(duracao),
                 "distancia_km": float(distancia), "alimentacao_saudavel": "", "alimentacao_besteirol": "",
-                "peso_corporal": float(peso_corporal) # Enviando o peso para o banco!
+                "peso_corporal": float(peso_corporal),
+                "dados_extras": mochila_json # O Supabase aceita isso perfeitamente agora!
             }
             supabase.table("treinos").insert(dados).execute()
             st.success("Treino salvo com sucesso!")
@@ -170,7 +185,8 @@ with tab_dieta:
                 "grupo_muscular": "Nutrição", "exercicio": "Refeição Diária", 
                 "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0,
                 "alimentacao_saudavel": final_s, "alimentacao_besteirol": final_b,
-                "peso_corporal": 0.0 # Dieta não registra peso corporal para não duplicar dados
+                "peso_corporal": 0.0,
+                "dados_extras": {}
             }
             supabase.table("treinos").insert(dados_dieta).execute()
             st.success("Refeição registrada!")
@@ -216,11 +232,9 @@ with tab_dashboard:
         </div>
         """, unsafe_allow_html=True)
 
-        # --- NOVA SEÇÃO: EVOLUÇÃO DE PESO CORPORAL ---
-        # Filtra apenas os dias onde você preencheu o peso (maior que zero)
+        # --- EVOLUÇÃO DE PESO CORPORAL ---
         if 'peso_corporal' in df_treinos.columns:
             df_peso = df_treinos[df_treinos['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
-            
             if not df_peso.empty:
                 with st.container(border=True):
                     st.markdown("#### ⚖️ Evolução do Peso Corporal (kg)")
@@ -255,7 +269,6 @@ with tab_dashboard:
         with col_dir:
             with st.container(border=True):
                 st.markdown("#### ⏰ Frequência de Treino por Turno")
-                
                 def classificar_turno(hora_str):
                     if pd.isna(hora_str) or hora_str == "": return "Outro"
                     try:
@@ -281,8 +294,7 @@ with tab_dashboard:
                 st.plotly_chart(fig_turno, use_container_width=True)
 
         st.markdown("### 🗄️ Detalhes dos Treinos")
-        # Ocultamos a coluna alimentação daqui para ficar limpo
-        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno']
+        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno', 'dados_extras']
         df_display = df_treinos.drop(columns=[c for c in colunas_remover if c in df_treinos.columns], errors='ignore')
         df_display['data'] = df_display['data'].dt.strftime('%d/%m/%Y')
         st.dataframe(df_display.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
