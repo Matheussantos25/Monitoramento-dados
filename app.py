@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client, Client
-from datetime import datetime, timedelta
+from datetime import datetime
 import plotly.express as px
 import json
 
@@ -129,6 +129,8 @@ with tab_registro:
         with c_top1:
             data_treino = st.date_input("Data do Treino", value=datetime.today())
         with c_top2:
+            # 🚨 A SOLUÇÃO DO BUG DO CELULAR ESTÁ AQUI 🚨
+            # Removido o step=60 e adicionado o value=datetime.now().time()
             horario = st.time_input("Horário", value=datetime.now().time())
             
         st.markdown("---")
@@ -146,8 +148,6 @@ with tab_registro:
             
         st.markdown("---")
         st.markdown("#### 🎒 Como você está se sentindo?")
-        
-        # 2. REMOVIDO O NÍVEL DE ENERGIA, FICOU APENAS O HUMOR
         humor = st.selectbox("Humor no Treino", ["Normal", "Motivado", "Cansado", "Estressado"])
         
         if st.form_submit_button("🚀 Salvar Treino", use_container_width=True):
@@ -325,7 +325,6 @@ with tab_dashboard:
 
         with col_graf4:
             with st.container(border=True):
-                # 3. NOVO GRÁFICO DE HUMOR
                 st.markdown("#### 🧠 Humor Durante o Treino")
                 if 'dados_extras' in df_treinos.columns:
                     def extrair_humor(x):
@@ -337,13 +336,10 @@ with tab_dashboard:
                         return None
 
                     df_treinos['humor'] = df_treinos['dados_extras'].apply(extrair_humor)
-                    # Filtra apenas os que têm humor registrado
                     df_humor = df_treinos[df_treinos['humor'].notna()].groupby('humor', as_index=False).size().rename(columns={'size': 'quantidade'})
                     
                     if not df_humor.empty:
-                        # Cores padronizadas para cada tipo de humor
                         cores_humor = {'Motivado': '#00F2FE', 'Normal': '#F9D423', 'Cansado': '#FF4E50', 'Estressado': '#B224EF'}
-                        
                         fig_humor = px.pie(df_humor, values='quantidade', names='humor', hole=0.5, color='humor', color_discrete_map=cores_humor)
                         fig_humor.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#111111', width=2)))
                         fig_humor.update_layout(showlegend=False, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=0))
