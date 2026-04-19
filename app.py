@@ -12,7 +12,8 @@ EXERCICIOS_PRESETADOS = {
     "Cardio": ["Bike", "Caminhada", "Corrida", "Pular Corda", "Pular Normal", "Subida Escada (Andares)"],
     "Costas": ["Barra Fixa (Pronada)"],
     "Peitoral": ["Flexão"],
-    "Pernas": ["Agachamento"]
+    "Pernas": ["Agachamento"],
+    "Rosto": ["Massagem Facial"] # <-- Novo exercício adicionado aqui!
 }
 
 TODOS_EXERCICIOS = [ex for lista in EXERCICIOS_PRESETADOS.values() for ex in lista]
@@ -80,8 +81,9 @@ st.sidebar.markdown("## 🔍 Filtros")
 st.sidebar.write("---")
 filtro_ex = st.sidebar.selectbox("Detalhar Exercício:", ["Todos"] + TODOS_EXERCICIOS)
 
+# Separando as bases para não misturar no dashboard
 if not df_raw.empty:
-    df_treinos = df_raw[df_raw['grupo_muscular'] != 'Nutrição'].copy()
+    df_treinos = df_raw[(df_raw['grupo_muscular'] != 'Nutrição') & (df_raw['grupo_muscular'] != 'Métricas')].copy()
     df_dieta = df_raw[df_raw['grupo_muscular'] == 'Nutrição'].copy()
 else:
     df_treinos = pd.DataFrame()
@@ -96,7 +98,8 @@ if filtro_ex != "Todos":
     st.markdown(f"<p style='text-align: center; color: #FF4B4B; margin-top: -15px;'>Filtrando por: {filtro_ex}</p>", unsafe_allow_html=True)
 st.write("")
 
-tab_registro, tab_dieta, tab_dashboard, tab_gerenciar = st.tabs(["📝 Novo Treino", "🥗 Alimentação", "📊 Dashboard", "⚙️ Gerenciar"])
+# Nova Aba Adicionada: "⚖️ Peso"
+tab_registro, tab_dieta, tab_peso, tab_dashboard, tab_gerenciar = st.tabs(["📝 Novo Treino", "🥗 Alimentação", "⚖️ Peso", "📊 Dashboard", "⚙️ Gerenciar"])
 
 # ==========================================
 # ABA 1: REGISTRO DE TREINO 
@@ -105,14 +108,12 @@ with tab_registro:
     with st.form("registro_treino", clear_on_submit=True):
         st.markdown("<h3 style='margin-bottom: 20px;'>🏋️ Registrar Treino Físico</h3>", unsafe_allow_html=True)
         
-        c_top1, c_top2, c_top3 = st.columns(3)
+        c_top1, c_top2 = st.columns(2)
         with c_top1:
             data_treino = st.date_input("Data do Treino", value=datetime.today())
         with c_top2:
             horario = st.time_input("Horário", step=60)
-        with c_top3:
-            peso_corporal = st.number_input("Seu Peso Hoje (kg)", min_value=0.0, step=0.1, help="Preencha apenas 1x no dia.")
-
+            
         st.markdown("---")
         
         c1, c2, c3 = st.columns(3)
@@ -137,7 +138,6 @@ with tab_registro:
         if st.form_submit_button("🚀 Salvar Treino", use_container_width=True):
             grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if exercicio_input in l), "Outro")
             
-            # Montando a mochila JSONB
             mochila_json = {
                 "energia": nivel_energia,
                 "humor": humor
@@ -148,8 +148,8 @@ with tab_registro:
                 "exercicio": exercicio_input, "series": int(series), "repeticoes": int(reps),
                 "carga_kg": float(carga), "descanso_seg": 0, "duracao_min": int(duracao),
                 "distancia_km": float(distancia), "alimentacao_saudavel": "", "alimentacao_besteirol": "",
-                "peso_corporal": float(peso_corporal),
-                "dados_extras": mochila_json # O Supabase aceita isso perfeitamente agora!
+                "peso_corporal": 0.0, # Zerado aqui, pois agora temos uma aba só pra isso
+                "dados_extras": mochila_json 
             }
             supabase.table("treinos").insert(dados).execute()
             st.success("Treino salvo com sucesso!")
@@ -199,7 +199,34 @@ with tab_dieta:
         st.dataframe(df_dieta_view.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
 
 # ==========================================
-# ABA 3: DASHBOARD
+# ABA 3: REGISTRO DE PESO (NOVA)
+# ==========================================
+with tab_peso:
+    with st.form("registro_peso", clear_on_submit=True):
+        st.markdown("<h3 style='margin-bottom: 20px;'>⚖️ Registrar Peso Diário</h3>", unsafe_allow_html=True)
+        st.info("Basta preencher isso uma vez ao dia para acompanhar sua evolução.")
+        
+        c_p1, c_p2 = st.columns(2)
+        with c_p1:
+            data_peso = st.date_input("Data da Pesagem", value=datetime.today(), key="data_peso")
+        with c_p2:
+            peso_corporal_input = st.number_input("Seu Peso (kg)", min_value=0.0, step=0.1)
+
+        if st.form_submit_button("💾 Salvar Peso", use_container_width=True):
+            dados_peso = {
+                "data": str(data_peso), "horario": "00:00:00", 
+                "grupo_muscular": "Métricas", "exercicio": "Peso Diário", 
+                "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0,
+                "alimentacao_saudavel": "", "alimentacao_besteirol": "",
+                "peso_corporal": float(peso_corporal_input),
+                "dados_extras": {}
+            }
+            supabase.table("treinos").insert(dados_peso).execute()
+            st.success("Peso registrado com sucesso!")
+            st.rerun()
+
+# ==========================================
+# ABA 4: DASHBOARD
 # ==========================================
 with tab_dashboard:
     if not df_treinos.empty:
@@ -232,9 +259,9 @@ with tab_dashboard:
         </div>
         """, unsafe_allow_html=True)
 
-        # --- EVOLUÇÃO DE PESO CORPORAL ---
-        if 'peso_corporal' in df_treinos.columns:
-            df_peso = df_treinos[df_treinos['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
+        # --- EVOLUÇÃO DE PESO CORPORAL (Lê da base inteira para não depender da aba de treinos) ---
+        if 'peso_corporal' in df_raw.columns:
+            df_peso = df_raw[df_raw['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
             if not df_peso.empty:
                 with st.container(border=True):
                     st.markdown("#### ⚖️ Evolução do Peso Corporal (kg)")
@@ -294,7 +321,7 @@ with tab_dashboard:
                 st.plotly_chart(fig_turno, use_container_width=True)
 
         st.markdown("### 🗄️ Detalhes dos Treinos")
-        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno', 'dados_extras']
+        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno', 'dados_extras', 'peso_corporal']
         df_display = df_treinos.drop(columns=[c for c in colunas_remover if c in df_treinos.columns], errors='ignore')
         df_display['data'] = df_display['data'].dt.strftime('%d/%m/%Y')
         st.dataframe(df_display.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
@@ -302,15 +329,23 @@ with tab_dashboard:
         st.warning("Nenhum dado de treino encontrado.")
 
 # ==========================================
-# ABA 4: GERENCIAR
+# ABA 5: GERENCIAR
 # ==========================================
 with tab_gerenciar:
     if not df_raw.empty:
         st.markdown("### ⚙️ Corrigir ou Apagar Registros")
         df_raw['data_formatada'] = pd.to_datetime(df_raw['data']).dt.strftime('%d/%m/%Y')
         
+        def formatar_registro(row):
+            if row['grupo_muscular'] == 'Nutrição':
+                return "🍏 DIETA"
+            elif row['grupo_muscular'] == 'Métricas':
+                return f"⚖️ PESO ({row['peso_corporal']}kg)"
+            else:
+                return f"🏋️ {row['exercicio']} ({row['carga_kg']}kg)"
+
         opcoes_registros = df_raw.apply(
-            lambda row: f"ID: {row['id']} | {row['data_formatada']} - {'🍏 DIETA' if row['grupo_muscular'] == 'Nutrição' else f'🏋️ {row['exercicio']} ({row['carga_kg']}kg)'}", 
+            lambda row: f"ID: {row['id']} | {row['data_formatada']} - {formatar_registro(row)}", 
             axis=1
         ).tolist()
         
