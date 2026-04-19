@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client, Client
-from datetime import datetime
+from datetime import datetime, timedelta
 import plotly.express as px
 import json
 
@@ -13,7 +13,7 @@ EXERCICIOS_PRESETADOS = {
     "Costas": ["Barra Fixa (Pronada)"],
     "Peitoral": ["Flexão"],
     "Pernas": ["Agachamento"],
-    "Rosto": ["Massagem Facial"] # <-- Novo exercício adicionado aqui!
+    "Rosto": ["Massagem Facial"]
 }
 
 TODOS_EXERCICIOS = [ex for lista in EXERCICIOS_PRESETADOS.values() for ex in lista]
@@ -79,9 +79,26 @@ df_raw = fetch_data()
 # --- FILTROS NA SIDEBAR ---
 st.sidebar.markdown("## 🔍 Filtros")
 st.sidebar.write("---")
+
+# 1. NOVO FILTRO DE TEMPO
+filtro_tempo = st.sidebar.selectbox("Período:", ["Todo o Histórico", "Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Este Ano"])
 filtro_ex = st.sidebar.selectbox("Detalhar Exercício:", ["Todos"] + TODOS_EXERCICIOS)
 
-# Separando as bases para não misturar no dashboard
+# Aplicando o Filtro de Tempo (Se houver dados)
+if not df_raw.empty:
+    df_raw['data'] = pd.to_datetime(df_raw['data'])
+    hoje = pd.Timestamp.today().normalize()
+    
+    if filtro_tempo == "Hoje":
+        df_raw = df_raw[df_raw['data'] == hoje]
+    elif filtro_tempo == "Últimos 7 Dias":
+        df_raw = df_raw[df_raw['data'] >= (hoje - pd.Timedelta(days=7))]
+    elif filtro_tempo == "Últimos 30 Dias":
+        df_raw = df_raw[df_raw['data'] >= (hoje - pd.Timedelta(days=30))]
+    elif filtro_tempo == "Este Ano":
+        df_raw = df_raw[df_raw['data'].dt.year == hoje.year]
+
+# Separando as bases (Treino x Dieta x Peso)
 if not df_raw.empty:
     df_treinos = df_raw[(df_raw['grupo_muscular'] != 'Nutrição') & (df_raw['grupo_muscular'] != 'Métricas')].copy()
     df_dieta = df_raw[df_raw['grupo_muscular'] == 'Nutrição'].copy()
@@ -89,16 +106,16 @@ else:
     df_treinos = pd.DataFrame()
     df_dieta = pd.DataFrame()
 
+# Aplicando o Filtro de Exercício
 if filtro_ex != "Todos" and not df_treinos.empty:
     df_treinos = df_treinos[df_treinos['exercicio'] == filtro_ex].copy()
 
 # --- INTERFACE ---
 st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1px;'>⚡ Monitoramento Físico</h1>", unsafe_allow_html=True)
-if filtro_ex != "Todos":
-    st.markdown(f"<p style='text-align: center; color: #FF4B4B; margin-top: -15px;'>Filtrando por: {filtro_ex}</p>", unsafe_allow_html=True)
+if filtro_ex != "Todos" or filtro_tempo != "Todo o Histórico":
+    st.markdown(f"<p style='text-align: center; color: #FF4B4B; margin-top: -15px;'>Filtros ativos: {filtro_tempo} | {filtro_ex}</p>", unsafe_allow_html=True)
 st.write("")
 
-# Nova Aba Adicionada: "⚖️ Peso"
 tab_registro, tab_dieta, tab_peso, tab_dashboard, tab_gerenciar = st.tabs(["📝 Novo Treino", "🥗 Alimentação", "⚖️ Peso", "📊 Dashboard", "⚙️ Gerenciar"])
 
 # ==========================================
@@ -128,18 +145,15 @@ with tab_registro:
             distancia = st.number_input("Distância Cardio (km)", min_value=0.0)
             
         st.markdown("---")
-        st.markdown("#### 🎒 Mochila de Dados (Extras)")
-        c_extra1, c_extra2 = st.columns(2)
-        with c_extra1:
-            nivel_energia = st.slider("Nível de Energia (1 a 5)", 1, 5, 3)
-        with c_extra2:
-            humor = st.selectbox("Humor", ["Normal", "Motivado", "Cansado", "Estressado"])
+        st.markdown("#### 🎒 Como você está se sentindo?")
+        
+        # 2. REMOVIDO O NÍVEL DE ENERGIA, FICOU APENAS O HUMOR
+        humor = st.selectbox("Humor no Treino", ["Normal", "Motivado", "Cansado", "Estressado"])
         
         if st.form_submit_button("🚀 Salvar Treino", use_container_width=True):
             grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if exercicio_input in l), "Outro")
             
             mochila_json = {
-                "energia": nivel_energia,
                 "humor": humor
             }
             
@@ -148,7 +162,7 @@ with tab_registro:
                 "exercicio": exercicio_input, "series": int(series), "repeticoes": int(reps),
                 "carga_kg": float(carga), "descanso_seg": 0, "duracao_min": int(duracao),
                 "distancia_km": float(distancia), "alimentacao_saudavel": "", "alimentacao_besteirol": "",
-                "peso_corporal": 0.0, # Zerado aqui, pois agora temos uma aba só pra isso
+                "peso_corporal": 0.0, 
                 "dados_extras": mochila_json 
             }
             supabase.table("treinos").insert(dados).execute()
@@ -199,7 +213,7 @@ with tab_dieta:
         st.dataframe(df_dieta_view.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
 
 # ==========================================
-# ABA 3: REGISTRO DE PESO (NOVA)
+# ABA 3: REGISTRO DE PESO
 # ==========================================
 with tab_peso:
     with st.form("registro_peso", clear_on_submit=True):
@@ -226,11 +240,10 @@ with tab_peso:
             st.rerun()
 
 # ==========================================
-# ABA 4: DASHBOARD
+# ABA 4: DASHBOARD (ORGANIZADO)
 # ==========================================
 with tab_dashboard:
     if not df_treinos.empty:
-        df_treinos['data'] = pd.to_datetime(df_treinos['data'])
         df_treinos['reps_totais'] = df_treinos.apply(lambda row: row['repeticoes'] if row['series'] == 0 else row['series'] * row['repeticoes'], axis=1)
         
         total_dias = len(df_treinos['data'].unique())
@@ -259,41 +272,37 @@ with tab_dashboard:
         </div>
         """, unsafe_allow_html=True)
 
-        # --- EVOLUÇÃO DE PESO CORPORAL (Lê da base inteira para não depender da aba de treinos) ---
-        if 'peso_corporal' in df_raw.columns:
-            df_peso = df_raw[df_raw['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
-            if not df_peso.empty:
-                with st.container(border=True):
-                    st.markdown("#### ⚖️ Evolução do Peso Corporal (kg)")
-                    fig_peso = px.line(df_peso, x='data', y='peso_corporal', markers=True, text='peso_corporal')
-                    fig_peso.update_traces(
-                        line_color='#B224EF', marker=dict(size=10, color='#7579FF'),
-                        textposition="top center", texttemplate='%{text:.1f}'
-                    )
-                    fig_peso.update_layout(
-                        xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                        font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=20),
-                        xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626")
-                    )
-                    st.plotly_chart(fig_peso, use_container_width=True)
-
-        # --- GRÁFICOS INFERIORES ---
-        col_esq, col_dir = st.columns(2)
+        # --- LINHA 1 DE GRÁFICOS (Evolução & Volume) ---
+        col_graf1, col_graf2 = st.columns(2)
         
-        with col_esq:
+        with col_graf1:
+            with st.container(border=True):
+                st.markdown("#### ⚖️ Evolução do Peso Corporal (kg)")
+                if 'peso_corporal' in df_raw.columns:
+                    df_peso = df_raw[df_raw['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
+                    if not df_peso.empty:
+                        fig_peso = px.line(df_peso, x='data', y='peso_corporal', markers=True, text='peso_corporal')
+                        fig_peso.update_traces(line_color='#B224EF', marker=dict(size=10, color='#7579FF'), textposition="top center", texttemplate='%{text:.1f}')
+                        fig_peso.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=20), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626"))
+                        st.plotly_chart(fig_peso, use_container_width=True)
+                    else:
+                        st.info("Nenhum registro de peso neste período.")
+                else:
+                    st.info("Adicione dados de peso para ver o gráfico.")
+
+        with col_graf2:
             with st.container(border=True):
                 st.markdown(f"#### 📊 Repetições por Dia")
                 df_reps_dia = df_treinos.groupby('data', as_index=False)['reps_totais'].sum()
                 fig_reps = px.bar(df_reps_dia, x='data', y='reps_totais', text_auto=True)
                 fig_reps.update_traces(marker_color='#FF416C')
-                fig_reps.update_layout(
-                    xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=30, b=0),
-                    xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626")
-                )
+                fig_reps.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=0), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626"))
                 st.plotly_chart(fig_reps, use_container_width=True)
 
-        with col_dir:
+        # --- LINHA 2 DE GRÁFICOS (Hábitos: Turno & Humor) ---
+        col_graf3, col_graf4 = st.columns(2)
+        
+        with col_graf3:
             with st.container(border=True):
                 st.markdown("#### ⏰ Frequência de Treino por Turno")
                 def classificar_turno(hora_str):
@@ -309,24 +318,48 @@ with tab_dashboard:
                 df_treinos['turno'] = df_treinos['horario'].apply(classificar_turno)
                 df_turno = df_treinos.groupby('turno', as_index=False).size().rename(columns={'size': 'quantidade'})
                 
-                fig_turno = px.pie(df_turno, values='quantidade', names='turno', hole=0.5,
-                                   color_discrete_sequence=['#F9D423', '#FF4E50', '#00F2FE'])
-                
-                fig_turno.update_traces(textposition='inside', textinfo='percent+label', 
-                                        marker=dict(line=dict(color='#111111', width=2)))
-                fig_turno.update_layout(
-                    showlegend=False, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=0)
-                )
+                fig_turno = px.pie(df_turno, values='quantidade', names='turno', hole=0.5, color_discrete_sequence=['#F9D423', '#FF4E50', '#00F2FE'])
+                fig_turno.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#111111', width=2)))
+                fig_turno.update_layout(showlegend=False, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_turno, use_container_width=True)
 
+        with col_graf4:
+            with st.container(border=True):
+                # 3. NOVO GRÁFICO DE HUMOR
+                st.markdown("#### 🧠 Humor Durante o Treino")
+                if 'dados_extras' in df_treinos.columns:
+                    def extrair_humor(x):
+                        if isinstance(x, str):
+                            try: x = json.loads(x)
+                            except: return None
+                        if isinstance(x, dict):
+                            return x.get('humor', None)
+                        return None
+
+                    df_treinos['humor'] = df_treinos['dados_extras'].apply(extrair_humor)
+                    # Filtra apenas os que têm humor registrado
+                    df_humor = df_treinos[df_treinos['humor'].notna()].groupby('humor', as_index=False).size().rename(columns={'size': 'quantidade'})
+                    
+                    if not df_humor.empty:
+                        # Cores padronizadas para cada tipo de humor
+                        cores_humor = {'Motivado': '#00F2FE', 'Normal': '#F9D423', 'Cansado': '#FF4E50', 'Estressado': '#B224EF'}
+                        
+                        fig_humor = px.pie(df_humor, values='quantidade', names='humor', hole=0.5, color='humor', color_discrete_map=cores_humor)
+                        fig_humor.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#111111', width=2)))
+                        fig_humor.update_layout(showlegend=False, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=0))
+                        st.plotly_chart(fig_humor, use_container_width=True)
+                    else:
+                        st.info("Nenhum humor registrado neste período.")
+                else:
+                    st.info("A mochila de dados não foi encontrada.")
+
         st.markdown("### 🗄️ Detalhes dos Treinos")
-        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno', 'dados_extras', 'peso_corporal']
+        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno', 'humor', 'dados_extras', 'peso_corporal']
         df_display = df_treinos.drop(columns=[c for c in colunas_remover if c in df_treinos.columns], errors='ignore')
         df_display['data'] = df_display['data'].dt.strftime('%d/%m/%Y')
         st.dataframe(df_display.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
     else:
-        st.warning("Nenhum dado de treino encontrado.")
+        st.warning("Nenhum dado encontrado para o filtro selecionado.")
 
 # ==========================================
 # ABA 5: GERENCIAR
