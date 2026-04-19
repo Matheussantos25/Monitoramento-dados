@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client, Client
-from datetime import datetime
+from datetime import datetime, timedelta
 import plotly.express as px
 import json
 
@@ -121,8 +121,6 @@ with tab_registro:
     with st.form("registro_treino", clear_on_submit=True):
         st.markdown("<h3 style='margin-bottom: 20px;'>🏋️ Registrar Treino Físico</h3>", unsafe_allow_html=True)
         
-        # --- SOLUÇÃO DO BUG DO CELULAR ---
-        # Dividimos em 3 colunas. Removemos o st.time_input nativo.
         c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
         with c_top1:
             data_treino = st.date_input("Data do Treino", value=datetime.today())
@@ -133,7 +131,6 @@ with tab_registro:
         with c_top3:
             minuto = st.selectbox("Min.", [f"{i:02d}" for i in range(60)], index=agora.minute)
             
-        # O código junta a hora e o minuto perfeitamente para o Supabase
         horario = f"{hora}:{minuto}:00"
             
         st.markdown("---")
@@ -144,9 +141,10 @@ with tab_registro:
             duracao = st.number_input("Duração Cardio (min)", min_value=0)
         with c2:
             series = st.number_input("Séries", min_value=1, value=1, step=1)
-            reps = st.number_input("Repetições", min_value=0, step=1)
+            reps = st.number_input("Repetições (Total)", min_value=0, step=1)
         with c3:
             carga = st.number_input("Carga (kg)", min_value=0.0)
+            intervalo = st.number_input("Intervalo (seg)", min_value=0, step=15) # Campo de intervalo de volta!
             distancia = st.number_input("Distância Cardio (km)", min_value=0.0)
             
         st.markdown("---")
@@ -164,7 +162,7 @@ with tab_registro:
             dados = {
                 "data": str(data_treino), "horario": str(horario), "grupo_muscular": grupo,
                 "exercicio": exercicio_input, "series": int(series), "repeticoes": int(reps),
-                "carga_kg": float(carga), "descanso_seg": 0, "duracao_min": int(duracao),
+                "carga_kg": float(carga), "descanso_seg": int(intervalo), "duracao_min": int(duracao),
                 "distancia_km": float(distancia), "alimentacao_saudavel": "", "alimentacao_besteirol": "",
                 "peso_corporal": 0.0, 
                 "dados_extras": mochila_json 
@@ -248,12 +246,16 @@ with tab_peso:
 # ==========================================
 with tab_dashboard:
     if not df_treinos.empty:
-        df_treinos['reps_totais'] = df_treinos.apply(lambda row: row['repeticoes'] if row['series'] == 0 else row['series'] * row['repeticoes'], axis=1)
+        # AQUI FOI A CORREÇÃO DA MATEMÁTICA DAS REPETIÇÕES
+        df_treinos['reps_totais'] = df_treinos['repeticoes']
+        
+        # Calcula a média por série: se fez 40 reps em 2 séries, a média é 20.
+        df_treinos['reps_por_serie'] = df_treinos.apply(lambda row: row['repeticoes'] / row['series'] if row['series'] > 0 else row['repeticoes'], axis=1)
         
         total_dias = len(df_treinos['data'].unique())
         total_reps = int(df_treinos['reps_totais'].sum())
         carga_max = df_treinos['carga_kg'].max()
-        media_reps = df_treinos['repeticoes'].mean()
+        media_reps = df_treinos['reps_por_serie'].mean()
         
         st.markdown(f"""
         <div class="card-container">
@@ -354,7 +356,8 @@ with tab_dashboard:
                     st.info("A mochila de dados não foi encontrada.")
 
         st.markdown("### 🗄️ Detalhes dos Treinos")
-        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno', 'humor', 'dados_extras', 'peso_corporal']
+        # Esconde do usuário as colunas que são só pro computador fazer cálculos
+        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno', 'humor', 'dados_extras', 'peso_corporal', 'reps_por_serie']
         df_display = df_treinos.drop(columns=[c for c in colunas_remover if c in df_treinos.columns], errors='ignore')
         df_display['data'] = df_display['data'].dt.strftime('%d/%m/%Y')
         st.dataframe(df_display.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
