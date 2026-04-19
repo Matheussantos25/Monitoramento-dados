@@ -129,7 +129,7 @@ with tab_registro:
         with c_top1:
             data_treino = st.date_input("Data do Treino", value=datetime.today())
         with c_top2:
-            horario = st.time_input("Horário", step=60)
+            horario = st.time_input("Horário", value=datetime.now().time())
             
         st.markdown("---")
         
