@@ -80,11 +80,9 @@ df_raw = fetch_data()
 st.sidebar.markdown("## 🔍 Filtros")
 st.sidebar.write("---")
 
-# 1. NOVO FILTRO DE TEMPO
 filtro_tempo = st.sidebar.selectbox("Período:", ["Todo o Histórico", "Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Este Ano"])
 filtro_ex = st.sidebar.selectbox("Detalhar Exercício:", ["Todos"] + TODOS_EXERCICIOS)
 
-# Aplicando o Filtro de Tempo (Se houver dados)
 if not df_raw.empty:
     df_raw['data'] = pd.to_datetime(df_raw['data'])
     hoje = pd.Timestamp.today().normalize()
@@ -98,7 +96,6 @@ if not df_raw.empty:
     elif filtro_tempo == "Este Ano":
         df_raw = df_raw[df_raw['data'].dt.year == hoje.year]
 
-# Separando as bases (Treino x Dieta x Peso)
 if not df_raw.empty:
     df_treinos = df_raw[(df_raw['grupo_muscular'] != 'Nutrição') & (df_raw['grupo_muscular'] != 'Métricas')].copy()
     df_dieta = df_raw[df_raw['grupo_muscular'] == 'Nutrição'].copy()
@@ -106,7 +103,6 @@ else:
     df_treinos = pd.DataFrame()
     df_dieta = pd.DataFrame()
 
-# Aplicando o Filtro de Exercício
 if filtro_ex != "Todos" and not df_treinos.empty:
     df_treinos = df_treinos[df_treinos['exercicio'] == filtro_ex].copy()
 
@@ -125,13 +121,20 @@ with tab_registro:
     with st.form("registro_treino", clear_on_submit=True):
         st.markdown("<h3 style='margin-bottom: 20px;'>🏋️ Registrar Treino Físico</h3>", unsafe_allow_html=True)
         
-        c_top1, c_top2 = st.columns(2)
+        # --- SOLUÇÃO DO BUG DO CELULAR ---
+        # Dividimos em 3 colunas. Removemos o st.time_input nativo.
+        c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
         with c_top1:
             data_treino = st.date_input("Data do Treino", value=datetime.today())
+            
+        agora = datetime.now()
         with c_top2:
-            # 🚨 A SOLUÇÃO DO BUG DO CELULAR ESTÁ AQUI 🚨
-            # Removido o step=60 e adicionado o value=datetime.now().time()
-            horario = st.time_input("Horário", value=datetime.now().time())
+            hora = st.selectbox("Hora", [f"{i:02d}" for i in range(24)], index=agora.hour)
+        with c_top3:
+            minuto = st.selectbox("Min.", [f"{i:02d}" for i in range(60)], index=agora.minute)
+            
+        # O código junta a hora e o minuto perfeitamente para o Supabase
+        horario = f"{hora}:{minuto}:00"
             
         st.markdown("---")
         
@@ -148,6 +151,7 @@ with tab_registro:
             
         st.markdown("---")
         st.markdown("#### 🎒 Como você está se sentindo?")
+        
         humor = st.selectbox("Humor no Treino", ["Normal", "Motivado", "Cansado", "Estressado"])
         
         if st.form_submit_button("🚀 Salvar Treino", use_container_width=True):
