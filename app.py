@@ -10,7 +10,13 @@ EXERCICIOS_PRESETADOS = {
     "Abdominal": ["Abdominal Levantada", "Prancha"],
     "Bíceps": ["Barra Fixa (Supinada)"],
     "Cardio": ["Bike", "Caminhada", "Corrida", "Pular Corda", "Pular Normal", "Subida Escada (Andares)"],
-    "Costas": ["Barra Fixa (Pronada)"],
+    "Costas": [
+        "Barra Fixa (Pronada)", 
+        "Puxada Alta", 
+        "Remada Baixa", 
+        "Remada em Pé na Polia", 
+        "Remada em Pé na Polia com barra"
+    ],
     "Peitoral": ["Flexão"],
     "Pernas": ["Agachamento"],
     "Rosto": ["Massagem Facial"]
@@ -144,7 +150,7 @@ with tab_registro:
             reps = st.number_input("Repetições (Total)", min_value=0, step=1)
         with c3:
             carga = st.number_input("Carga (kg)", min_value=0.0)
-            intervalo = st.number_input("Intervalo (seg)", min_value=0, step=15) # Campo de intervalo de volta!
+            intervalo = st.number_input("Intervalo (seg)", min_value=0, step=15)
             distancia = st.number_input("Distância Cardio (km)", min_value=0.0)
             
         st.markdown("---")
@@ -246,10 +252,8 @@ with tab_peso:
 # ==========================================
 with tab_dashboard:
     if not df_treinos.empty:
-        # AQUI FOI A CORREÇÃO DA MATEMÁTICA DAS REPETIÇÕES
         df_treinos['reps_totais'] = df_treinos['repeticoes']
         
-        # Calcula a média por série: se fez 40 reps em 2 séries, a média é 20.
         df_treinos['reps_por_serie'] = df_treinos.apply(lambda row: row['repeticoes'] / row['series'] if row['series'] > 0 else row['repeticoes'], axis=1)
         
         total_dias = len(df_treinos['data'].unique())
@@ -356,7 +360,6 @@ with tab_dashboard:
                     st.info("A mochila de dados não foi encontrada.")
 
         st.markdown("### 🗄️ Detalhes dos Treinos")
-        # Esconde do usuário as colunas que são só pro computador fazer cálculos
         colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno', 'humor', 'dados_extras', 'peso_corporal', 'reps_por_serie']
         df_display = df_treinos.drop(columns=[c for c in colunas_remover if c in df_treinos.columns], errors='ignore')
         df_display['data'] = df_display['data'].dt.strftime('%d/%m/%Y')
