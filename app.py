@@ -19,7 +19,7 @@ EXERCICIOS_PRESETADOS = {
     ],
     "Peitoral": ["Flexão"],
     "Pernas": ["Agachamento"],
-    "Rosto": ["Massagem Facial"]
+    "Rosto": ["Massagem Facial", "Mewing com borracha"]
 }
 
 TODOS_EXERCICIOS = [ex for lista in EXERCICIOS_PRESETADOS.values() for ex in lista]
