@@ -282,34 +282,80 @@ with tab_dashboard:
         </div>
         """, unsafe_allow_html=True)
 
-        # --- LINHA 1 DE GRÁFICOS (Evolução & Volume) ---
-        col_graf1, col_graf2 = st.columns(2)
-        
-        with col_graf1:
-            with st.container(border=True):
-                st.markdown("#### ⚖️ Evolução do Peso Corporal (kg)")
-                if 'peso_corporal' in df_raw.columns:
-                    df_peso = df_raw[df_raw['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
-                    if not df_peso.empty:
-                        fig_peso = px.line(df_peso, x='data', y='peso_corporal', markers=True, text='peso_corporal')
-                        fig_peso.update_traces(line_color='#B224EF', marker=dict(size=10, color='#7579FF'), textposition="top center", texttemplate='%{text:.1f}')
-                        fig_peso.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=20), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626"))
-                        st.plotly_chart(fig_peso, use_container_width=True)
-                    else:
-                        st.info("Nenhum registro de peso neste período.")
-                else:
-                    st.info("Adicione dados de peso para ver o gráfico.")
+        # --- NOVOS CONTROLES DEFINIDOS PELO USUÁRIO ---
+        st.markdown("### 🎛️ Controles Visuais")
+        c_ctrl1, c_ctrl2 = st.columns(2)
+        with c_ctrl1:
+            ex_selecionados = st.multiselect(
+                "Quais exercícios deseja visualizar nas Repetições?", 
+                options=TODOS_EXERCICIOS, 
+                default=[],
+                help="Deixe vazio para considerar todos os exercícios"
+            )
+        with c_ctrl2:
+            st.write("") # Espaçamento
+            mostrar_peso_corporal = st.checkbox("Incluir gráfico de Evolução do Peso Corporal", value=True)
+            
+        st.write("---")
 
+        # --- LINHA 1 DE GRÁFICOS (Evolução & Volume) ---
+        
+        # Filtrar o DataFrame de treinos baseado na seleção do usuário
+        df_grafico_reps = df_treinos.copy()
+        if ex_selecionados:
+            df_grafico_reps = df_grafico_reps[df_grafico_reps['exercicio'].isin(ex_selecionados)]
+
+        # Ajuste dinâmico das colunas dependendo se o peso está ativado ou não
+        if mostrar_peso_corporal:
+            col_graf1, col_graf2 = st.columns(2)
+        else:
+            # Se o usuário desmarcar o peso, o gráfico de repetições ocupa a tela toda
+            col_graf2 = st.container()
+            col_graf1 = None
+        
+        # Renderiza Evolução do Peso Corporal apenas se a caixa estiver marcada
+        if mostrar_peso_corporal and col_graf1 is not None:
+            with col_graf1:
+                with st.container(border=True):
+                    st.markdown("#### ⚖️ Evolução do Peso Corporal (kg)")
+                    if 'peso_corporal' in df_raw.columns:
+                        df_peso = df_raw[df_raw['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
+                        if not df_peso.empty:
+                            # Formatação da data no eixo X
+                            df_peso['data_format'] = df_peso['data'].dt.strftime('%d/%m')
+                            
+                            fig_peso = px.line(df_peso, x='data_format', y='peso_corporal', markers=True, text='peso_corporal')
+                            fig_peso.update_traces(line_color='#B224EF', marker=dict(size=10, color='#7579FF'), textposition="top center", texttemplate='%{text:.1f}')
+                            fig_peso.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=20), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626"))
+                            st.plotly_chart(fig_peso, use_container_width=True)
+                        else:
+                            st.info("Nenhum registro de peso neste período.")
+                    else:
+                        st.info("Adicione dados de peso para ver o gráfico.")
+
+        # Renderiza as Repetições por Dia (agora com eixo X formatado de Segunda a Domingo)
         with col_graf2:
             with st.container(border=True):
                 st.markdown(f"#### 📊 Repetições por Dia")
-                df_reps_dia = df_treinos.groupby('data', as_index=False)['reps_totais'].sum()
-                fig_reps = px.bar(df_reps_dia, x='data', y='reps_totais', text_auto=True)
-                fig_reps.update_traces(marker_color='#FF416C')
-                fig_reps.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=0), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626"))
-                st.plotly_chart(fig_reps, use_container_width=True)
+                if not df_grafico_reps.empty:
+                    # Mapeando os dias da semana para português
+                    dias_map = {0: 'Segunda', 1: 'Terça', 2: 'Quarta', 3: 'Quinta', 4: 'Sexta', 5: 'Sábado', 6: 'Domingo'}
+                    
+                    # Criando uma coluna amigável: "Segunda (19/04)"
+                    df_grafico_reps['dia_formatado'] = df_grafico_reps['data'].dt.weekday.map(dias_map) + df_grafico_reps['data'].dt.strftime(' (%d/%m)')
+                    
+                    # Agrupa garantindo que a ordem cronológica original da "data" seja respeitada
+                    df_reps_dia = df_grafico_reps.groupby(['data', 'dia_formatado'], as_index=False)['reps_totais'].sum()
+                    df_reps_dia = df_reps_dia.sort_values('data')
 
-        # --- LINHA 2 DE GRÁFICOS (Hábitos: Turno & Humor) ---
+                    fig_reps = px.bar(df_reps_dia, x='dia_formatado', y='reps_totais', text_auto=True)
+                    fig_reps.update_traces(marker_color='#FF416C')
+                    fig_reps.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=0), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626"))
+                    st.plotly_chart(fig_reps, use_container_width=True)
+                else:
+                    st.info("Nenhum exercício selecionado encontrado neste período.")
+
+        # --- LINHA 2 DE GRÁFICOS (Hábitos: Turno & Humor) --- MANTIDOS IGUAIS
         col_graf3, col_graf4 = st.columns(2)
         
         with col_graf3:
@@ -360,7 +406,7 @@ with tab_dashboard:
                     st.info("A mochila de dados não foi encontrada.")
 
         st.markdown("### 🗄️ Detalhes dos Treinos")
-        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno', 'humor', 'dados_extras', 'peso_corporal', 'reps_por_serie']
+        colunas_remover = ['id', 'created_at', 'alimentacao_saudavel', 'alimentacao_besteirol', 'turno', 'humor', 'dados_extras', 'peso_corporal', 'reps_por_serie', 'dia_formatado']
         df_display = df_treinos.drop(columns=[c for c in colunas_remover if c in df_treinos.columns], errors='ignore')
         df_display['data'] = df_display['data'].dt.strftime('%d/%m/%Y')
         st.dataframe(df_display.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
