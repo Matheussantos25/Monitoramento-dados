@@ -4,6 +4,7 @@ from supabase import create_client, Client
 from datetime import datetime, timedelta
 import plotly.express as px
 import json
+import time
 
 # --- DICIONÁRIOS PRESETADOS ---
 EXERCICIOS_PRESETADOS = {
@@ -31,8 +32,20 @@ ALIMENTOS_SAUDAVEIS.sort()
 ALIMENTOS_BESTEIROL = ["Refrigerante", "Hambúrguer", "Pizza", "Lasanha", "Churros", "Pastel", "Coxinha", "Sorvete", "Batata Frita", "Sonho de Valsa", "Biscoito Recheado", "Chocotone"]
 ALIMENTOS_BESTEIROL.sort()
 
+DISCIPLINAS_ESTUDO = [
+    "Business Intelligence (Power BI/SQL)", 
+    "Ciência de Dados", 
+    "Engenharia de Dados",
+    "Estatística / Matemática", 
+    "Inglês", 
+    "Machine Learning", 
+    "TCC", 
+    "Outro"
+]
+DISCIPLINAS_ESTUDO.sort()
+
 # --- CONFIGURAÇÕES DA PÁGINA ---
-st.set_page_config(page_title="Monitoramento Físico", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="Monitoramento Físico & Mental", page_icon="⚡", layout="wide")
 
 # --- INJEÇÃO DE CSS PREMIUM ---
 st.markdown("""
@@ -103,22 +116,26 @@ if not df_raw.empty:
         df_raw = df_raw[df_raw['data'].dt.year == hoje.year]
 
 if not df_raw.empty:
-    df_treinos = df_raw[(df_raw['grupo_muscular'] != 'Nutrição') & (df_raw['grupo_muscular'] != 'Métricas')].copy()
+    df_treinos = df_raw[~df_raw['grupo_muscular'].isin(['Nutrição', 'Métricas', 'Estudos'])].copy()
     df_dieta = df_raw[df_raw['grupo_muscular'] == 'Nutrição'].copy()
+    df_estudos = df_raw[df_raw['grupo_muscular'] == 'Estudos'].copy()
 else:
     df_treinos = pd.DataFrame()
     df_dieta = pd.DataFrame()
+    df_estudos = pd.DataFrame()
 
 if filtro_ex != "Todos" and not df_treinos.empty:
     df_treinos = df_treinos[df_treinos['exercicio'] == filtro_ex].copy()
 
 # --- INTERFACE ---
-st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1px;'>⚡ Monitoramento Físico</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1px;'>⚡ Monitoramento Físico & Mental</h1>", unsafe_allow_html=True)
 if filtro_ex != "Todos" or filtro_tempo != "Todo o Histórico":
     st.markdown(f"<p style='text-align: center; color: #FF4B4B; margin-top: -15px;'>Filtros ativos: {filtro_tempo} | {filtro_ex}</p>", unsafe_allow_html=True)
 st.write("")
 
-tab_registro, tab_dieta, tab_peso, tab_dashboard, tab_gerenciar = st.tabs(["📝 Novo Treino", "🥗 Alimentação", "⚖️ Peso", "📊 Dashboard", "⚙️ Gerenciar"])
+tab_registro, tab_dieta, tab_peso, tab_estudo, tab_dashboard, tab_gerenciar = st.tabs([
+    "📝 Novo Treino", "🥗 Alimentação", "⚖️ Peso", "📚 Estudos", "📊 Dashboard", "⚙️ Gerenciar"
+])
 
 # ==========================================
 # ABA 1: REGISTRO DE TREINO 
@@ -248,12 +265,77 @@ with tab_peso:
             st.rerun()
 
 # ==========================================
-# ABA 4: DASHBOARD (ORGANIZADO)
+# ABA 4: REGISTRO DE ESTUDOS E POMODORO
+# ==========================================
+with tab_estudo:
+    st.markdown("<h3 style='margin-bottom: 20px;'>📚 Central de Foco e Estudos</h3>", unsafe_allow_html=True)
+    
+    col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
+    
+    # --- ÁREA DO POMODORO ---
+    with col_pomodoro:
+        with st.container(border=True):
+            st.markdown("#### 🍅 Timer Pomodoro")
+            minutos_pomodoro = st.number_input("Tempo de Foco (minutos)", min_value=1, value=25, step=5)
+            
+            relogio_placeholder = st.empty()
+            
+            if st.button("▶️ Iniciar Pomodoro", use_container_width=True):
+                tempo_total_segundos = int(minutos_pomodoro * 60)
+                
+                for t in range(tempo_total_segundos, -1, -1):
+                    mins, secs = divmod(t, 60)
+                    relogio_placeholder.markdown(
+                        f"<h1 style='text-align: center; font-size: 60px; color: #009CA6; margin: 0;'>{mins:02d}:{secs:02d}</h1>", 
+                        unsafe_allow_html=True
+                    )
+                    time.sleep(1)
+                
+                st.success("🎯 Pomodoro concluído! Hora de registrar seu progresso ao lado.")
+
+    # --- ÁREA DE REGISTRO ---
+    with col_registro:
+        with st.form("registro_estudo", clear_on_submit=True):
+            st.markdown("#### 📝 Registrar Sessão")
+            
+            c_estudo1, c_estudo2 = st.columns(2)
+            with c_estudo1:
+                data_estudo = st.date_input("Data do Estudo", value=datetime.today())
+                disciplina = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO)
+            
+            with c_estudo2:
+                tempo_estudo = st.number_input("Tempo Líquido Estudado (min)", min_value=0, step=15)
+                questoes_feitas = st.number_input("Questões Resolvidas", min_value=0, step=1)
+                
+            topico_estudado = st.text_input("Tópico Específico (Opcional)", placeholder="Ex: Limpeza de dados com Pandas, Modelagem DAX...")
+            humor_estudo = st.selectbox("Nível de Foco", ["Alto", "Médio", "Baixo", "Disperso"])
+
+            if st.form_submit_button("💾 Salvar Sessão de Estudo", use_container_width=True):
+                mochila_estudo_json = {
+                    "humor_foco": humor_estudo,
+                    "topico": topico_estudado
+                }
+                
+                dados_estudo = {
+                    "data": str(data_estudo), "horario": datetime.now().strftime("%H:%M:%00"), 
+                    "grupo_muscular": "Estudos", "exercicio": disciplina, 
+                    "series": 0, "repeticoes": int(questoes_feitas), 
+                    "carga_kg": 0.0, "descanso_seg": 0, "duracao_min": int(tempo_estudo),
+                    "distancia_km": 0.0, "alimentacao_saudavel": "", "alimentacao_besteirol": "",
+                    "peso_corporal": 0.0, 
+                    "dados_extras": mochila_estudo_json 
+                }
+                
+                supabase.table("treinos").insert(dados_estudo).execute()
+                st.success("Sessão de estudo registrada com sucesso!")
+                st.rerun()
+
+# ==========================================
+# ABA 5: DASHBOARD (ORGANIZADO)
 # ==========================================
 with tab_dashboard:
     if not df_treinos.empty:
         df_treinos['reps_totais'] = df_treinos['repeticoes']
-        
         df_treinos['reps_por_serie'] = df_treinos.apply(lambda row: row['repeticoes'] / row['series'] if row['series'] > 0 else row['repeticoes'], axis=1)
         
         total_dias = len(df_treinos['data'].unique())
@@ -282,7 +364,6 @@ with tab_dashboard:
         </div>
         """, unsafe_allow_html=True)
 
-        # --- NOVOS CONTROLES DEFINIDOS PELO USUÁRIO ---
         st.markdown("### 🎛️ Controles Visuais")
         c_ctrl1, c_ctrl2 = st.columns(2)
         with c_ctrl1:
@@ -293,27 +374,21 @@ with tab_dashboard:
                 help="Deixe vazio para considerar todos os exercícios"
             )
         with c_ctrl2:
-            st.write("") # Espaçamento
+            st.write("") 
             mostrar_peso_corporal = st.checkbox("Incluir gráfico de Evolução do Peso Corporal", value=True)
             
         st.write("---")
 
-        # --- LINHA 1 DE GRÁFICOS (Evolução & Volume) ---
-        
-        # Filtrar o DataFrame de treinos baseado na seleção do usuário
         df_grafico_reps = df_treinos.copy()
         if ex_selecionados:
             df_grafico_reps = df_grafico_reps[df_grafico_reps['exercicio'].isin(ex_selecionados)]
 
-        # Ajuste dinâmico das colunas dependendo se o peso está ativado ou não
         if mostrar_peso_corporal:
             col_graf1, col_graf2 = st.columns(2)
         else:
-            # Se o usuário desmarcar o peso, o gráfico de repetições ocupa a tela toda
             col_graf2 = st.container()
             col_graf1 = None
         
-        # Renderiza Evolução do Peso Corporal apenas se a caixa estiver marcada
         if mostrar_peso_corporal and col_graf1 is not None:
             with col_graf1:
                 with st.container(border=True):
@@ -321,9 +396,7 @@ with tab_dashboard:
                     if 'peso_corporal' in df_raw.columns:
                         df_peso = df_raw[df_raw['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
                         if not df_peso.empty:
-                            # Formatação da data no eixo X
                             df_peso['data_format'] = df_peso['data'].dt.strftime('%d/%m')
-                            
                             fig_peso = px.line(df_peso, x='data_format', y='peso_corporal', markers=True, text='peso_corporal')
                             fig_peso.update_traces(line_color='#B224EF', marker=dict(size=10, color='#7579FF'), textposition="top center", texttemplate='%{text:.1f}')
                             fig_peso.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=20), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626"))
@@ -333,18 +406,12 @@ with tab_dashboard:
                     else:
                         st.info("Adicione dados de peso para ver o gráfico.")
 
-        # Renderiza as Repetições por Dia (agora com eixo X formatado de Segunda a Domingo)
         with col_graf2:
             with st.container(border=True):
                 st.markdown(f"#### 📊 Repetições por Dia")
                 if not df_grafico_reps.empty:
-                    # Mapeando os dias da semana para português
                     dias_map = {0: 'Segunda', 1: 'Terça', 2: 'Quarta', 3: 'Quinta', 4: 'Sexta', 5: 'Sábado', 6: 'Domingo'}
-                    
-                    # Criando uma coluna amigável: "Segunda (19/04)"
                     df_grafico_reps['dia_formatado'] = df_grafico_reps['data'].dt.weekday.map(dias_map) + df_grafico_reps['data'].dt.strftime(' (%d/%m)')
-                    
-                    # Agrupa garantindo que a ordem cronológica original da "data" seja respeitada
                     df_reps_dia = df_grafico_reps.groupby(['data', 'dia_formatado'], as_index=False)['reps_totais'].sum()
                     df_reps_dia = df_reps_dia.sort_values('data')
 
@@ -355,7 +422,6 @@ with tab_dashboard:
                 else:
                     st.info("Nenhum exercício selecionado encontrado neste período.")
 
-        # --- LINHA 2 DE GRÁFICOS (Hábitos: Turno & Humor) --- MANTIDOS IGUAIS
         col_graf3, col_graf4 = st.columns(2)
         
         with col_graf3:
@@ -414,7 +480,7 @@ with tab_dashboard:
         st.warning("Nenhum dado encontrado para o filtro selecionado.")
 
 # ==========================================
-# ABA 5: GERENCIAR
+# ABA 6: GERENCIAR
 # ==========================================
 with tab_gerenciar:
     if not df_raw.empty:
@@ -426,6 +492,8 @@ with tab_gerenciar:
                 return "🍏 DIETA"
             elif row['grupo_muscular'] == 'Métricas':
                 return f"⚖️ PESO ({row['peso_corporal']}kg)"
+            elif row['grupo_muscular'] == 'Estudos':
+                return f"📚 ESTUDO: {row['exercicio']} ({row['duracao_min']} min)"
             else:
                 return f"🏋️ {row['exercicio']} ({row['carga_kg']}kg)"
 
@@ -442,11 +510,22 @@ with tab_gerenciar:
         
         with col_edit:
             with st.container(border=True):
-                st.markdown("#### ✏️ Renomear Exercício")
-                novo_nome = st.selectbox("Mudar para qual exercício?", TODOS_EXERCICIOS)
+                st.markdown("#### ✏️ Renomear Exercício/Disciplina")
                 
-                if st.button("Atualizar Exercício", use_container_width=True):
-                    novo_grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if novo_nome in l), "Outro")
+                # Identifica se é estudo ou treino físico para mostrar a lista correta
+                registro_df = df_raw[df_raw['id'] == id_real].iloc[0]
+                is_estudo = registro_df['grupo_muscular'] == 'Estudos'
+                
+                opcoes_renomear = DISCIPLINAS_ESTUDO if is_estudo else TODOS_EXERCICIOS
+                
+                novo_nome = st.selectbox("Mudar para qual?", opcoes_renomear)
+                
+                if st.button("Atualizar Registro", use_container_width=True):
+                    if is_estudo:
+                        novo_grupo = "Estudos"
+                    else:
+                        novo_grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if novo_nome in l), "Outro")
+                        
                     supabase.table("treinos").update({"exercicio": novo_nome, "grupo_muscular": novo_grupo}).eq("id", id_real).execute()
                     st.success(f"Registro atualizado para {novo_nome}!")
                     st.rerun()
