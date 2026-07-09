@@ -142,9 +142,9 @@ if filtro_ex != "Todos" or filtro_disc != "Todas" or filtro_tempo != "Todo o His
     st.markdown(f"<p style='text-align: center; color: #FF4B4B; margin-top: -15px;'>Filtros ativos: {filtro_tempo}</p>", unsafe_allow_html=True)
 st.write("")
 
-# Abas reestruturadas para os dois Dashboards
-tab_registro, tab_dieta, tab_peso, tab_estudo, tab_dash_treino, tab_dash_estudo, tab_gerenciar = st.tabs([
-    "📝 Treino", "🥗 Dieta", "⚖️ Peso", "📚 Estudar", "📊 Dash Físico", "📈 Dash Estudos", "⚙️ Config"
+# Abas reorganizadas
+tab_registro, tab_dash_treino, tab_dieta, tab_peso, tab_estudo, tab_dash_estudo, tab_gerenciar = st.tabs([
+    "📝 Treino", "📊 Dash Físico", "🥗 Dieta", "⚖️ Peso", "📚 Estudar", "📈 Dash Estudos", "⚙️ Config"
 ])
 
 # ==========================================
@@ -205,143 +205,7 @@ with tab_registro:
             st.rerun()
 
 # ==========================================
-# ABA 2: REGISTRO DE ALIMENTAÇÃO
-# ==========================================
-with tab_dieta:
-    with st.form("registro_dieta", clear_on_submit=True):
-        st.markdown("<h3 style='margin-bottom: 20px;'>🍏 Diário Alimentar</h3>", unsafe_allow_html=True)
-        data_dieta = st.date_input("Data da Refeição", value=datetime.today(), key="data_dieta")
-        
-        c_alim1, c_alim2 = st.columns(2)
-        with c_alim1:
-            st.markdown("#### 🥗 Saudável")
-            alim_s_preset = st.multiselect("Selecione os alimentos:", ALIMENTOS_SAUDAVEIS)
-            alim_s_extra = st.text_input("Outros saudáveis (opcional):", placeholder="Ex: Frango, Aveia...")
-            
-        with c_alim2:
-            st.markdown("#### 🍔 Besteirol")
-            alim_b_preset = st.multiselect("Selecione as besteiras:", ALIMENTOS_BESTEIROL)
-            alim_b_extra = st.text_input("Outras besteiras (opcional):", placeholder="Ex: Cerveja, Doce de leite...")
-
-        if st.form_submit_button("💾 Salvar Refeição", use_container_width=True):
-            lista_s = alim_s_preset + ([alim_s_extra.strip()] if alim_s_extra.strip() else [])
-            lista_b = alim_b_preset + ([alim_b_extra.strip()] if alim_b_extra.strip() else [])
-            final_s = ", ".join(lista_s)
-            final_b = ", ".join(lista_b)
-            
-            dados_dieta = {
-                "data": str(data_dieta), "horario": "00:00:00", 
-                "grupo_muscular": "Nutrição", "exercicio": "Refeição Diária", 
-                "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0,
-                "alimentacao_saudavel": final_s, "alimentacao_besteirol": final_b,
-                "peso_corporal": 0.0,
-                "dados_extras": {}
-            }
-            supabase.table("treinos").insert(dados_dieta).execute()
-            st.success("Refeição registrada!")
-            st.rerun()
-            
-    if not df_dieta.empty:
-        st.markdown("#### 📜 Histórico de Alimentação")
-        df_dieta_view = df_dieta[['data', 'alimentacao_saudavel', 'alimentacao_besteirol']].copy()
-        df_dieta_view['data'] = pd.to_datetime(df_dieta_view['data']).dt.strftime('%d/%m/%Y')
-        st.dataframe(df_dieta_view.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
-
-# ==========================================
-# ABA 3: REGISTRO DE PESO
-# ==========================================
-with tab_peso:
-    with st.form("registro_peso", clear_on_submit=True):
-        st.markdown("<h3 style='margin-bottom: 20px;'>⚖️ Registrar Peso Diário</h3>", unsafe_allow_html=True)
-        st.info("Basta preencher isso uma vez ao dia para acompanhar sua evolução.")
-        
-        c_p1, c_p2 = st.columns(2)
-        with c_p1:
-            data_peso = st.date_input("Data da Pesagem", value=datetime.today(), key="data_peso")
-        with c_p2:
-            peso_corporal_input = st.number_input("Seu Peso (kg)", min_value=0.0, step=0.1)
-
-        if st.form_submit_button("💾 Salvar Peso", use_container_width=True):
-            dados_peso = {
-                "data": str(data_peso), "horario": "00:00:00", 
-                "grupo_muscular": "Métricas", "exercicio": "Peso Diário", 
-                "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0,
-                "alimentacao_saudavel": "", "alimentacao_besteirol": "",
-                "peso_corporal": float(peso_corporal_input),
-                "dados_extras": {}
-            }
-            supabase.table("treinos").insert(dados_peso).execute()
-            st.success("Peso registrado com sucesso!")
-            st.rerun()
-
-# ==========================================
-# ABA 4: REGISTRO DE ESTUDOS E POMODORO
-# ==========================================
-with tab_estudo:
-    st.markdown("<h3 style='margin-bottom: 20px;'>📚 Central de Foco e Estudos</h3>", unsafe_allow_html=True)
-    
-    col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
-    
-    # --- ÁREA DO POMODORO ---
-    with col_pomodoro:
-        with st.container(border=True):
-            st.markdown("#### 🍅 Timer Pomodoro")
-            minutos_pomodoro = st.number_input("Tempo de Foco (minutos)", min_value=1, value=25, step=5)
-            
-            relogio_placeholder = st.empty()
-            
-            if st.button("▶️ Iniciar Pomodoro", use_container_width=True):
-                tempo_total_segundos = int(minutos_pomodoro * 60)
-                
-                for t in range(tempo_total_segundos, -1, -1):
-                    mins, secs = divmod(t, 60)
-                    relogio_placeholder.markdown(
-                        f"<h1 style='text-align: center; font-size: 60px; color: #009CA6; margin: 0;'>{mins:02d}:{secs:02d}</h1>", 
-                        unsafe_allow_html=True
-                    )
-                    time.sleep(1)
-                
-                st.success("🎯 Pomodoro concluído! Hora de registrar seu progresso ao lado.")
-
-    # --- ÁREA DE REGISTRO ---
-    with col_registro:
-        with st.form("registro_estudo", clear_on_submit=True):
-            st.markdown("#### 📝 Registrar Sessão")
-            
-            c_estudo1, c_estudo2 = st.columns(2)
-            with c_estudo1:
-                data_estudo = st.date_input("Data do Estudo", value=datetime.today())
-                disciplina = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO)
-            
-            with c_estudo2:
-                tempo_estudo = st.number_input("Tempo Líquido Estudado (min)", min_value=0, step=15)
-                questoes_feitas = st.number_input("Questões Resolvidas", min_value=0, step=1)
-                
-            topico_estudado = st.text_input("Tópico Específico (Opcional)", placeholder="Ex: Limpeza de dados com Pandas, Modelagem DAX...")
-            humor_estudo = st.selectbox("Nível de Foco", ["Alto", "Médio", "Baixo", "Disperso"])
-
-            if st.form_submit_button("💾 Salvar Sessão de Estudo", use_container_width=True):
-                mochila_estudo_json = {
-                    "humor_foco": humor_estudo,
-                    "topico": topico_estudado
-                }
-                
-                dados_estudo = {
-                    "data": str(data_estudo), "horario": datetime.now().strftime("%H:%M:%00"), 
-                    "grupo_muscular": "Estudos", "exercicio": disciplina, 
-                    "series": 0, "repeticoes": int(questoes_feitas), 
-                    "carga_kg": 0.0, "descanso_seg": 0, "duracao_min": int(tempo_estudo),
-                    "distancia_km": 0.0, "alimentacao_saudavel": "", "alimentacao_besteirol": "",
-                    "peso_corporal": 0.0, 
-                    "dados_extras": mochila_estudo_json 
-                }
-                
-                supabase.table("treinos").insert(dados_estudo).execute()
-                st.success("Sessão de estudo registrada com sucesso!")
-                st.rerun()
-
-# ==========================================
-# ABA 5: DASHBOARD FÍSICO
+# ABA 2: DASHBOARD FÍSICO
 # ==========================================
 with tab_dash_treino:
     if not df_treinos.empty:
@@ -488,6 +352,143 @@ with tab_dash_treino:
         st.dataframe(df_display.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
     else:
         st.warning("Nenhum treino encontrado para o filtro selecionado.")
+
+# ==========================================
+# ABA 3: REGISTRO DE ALIMENTAÇÃO
+# ==========================================
+with tab_dieta:
+    with st.form("registro_dieta", clear_on_submit=True):
+        st.markdown("<h3 style='margin-bottom: 20px;'>🍏 Diário Alimentar</h3>", unsafe_allow_html=True)
+        data_dieta = st.date_input("Data da Refeição", value=datetime.today(), key="data_dieta")
+        
+        c_alim1, c_alim2 = st.columns(2)
+        with c_alim1:
+            st.markdown("#### 🥗 Saudável")
+            alim_s_preset = st.multiselect("Selecione os alimentos:", ALIMENTOS_SAUDAVEIS)
+            alim_s_extra = st.text_input("Outros saudáveis (opcional):", placeholder="Ex: Frango, Aveia...")
+            
+        with c_alim2:
+            st.markdown("#### 🍔 Besteirol")
+            alim_b_preset = st.multiselect("Selecione as besteiras:", ALIMENTOS_BESTEIROL)
+            alim_b_extra = st.text_input("Outras besteiras (opcional):", placeholder="Ex: Cerveja, Doce de leite...")
+
+        if st.form_submit_button("💾 Salvar Refeição", use_container_width=True):
+            lista_s = alim_s_preset + ([alim_s_extra.strip()] if alim_s_extra.strip() else [])
+            lista_b = alim_b_preset + ([alim_b_extra.strip()] if alim_b_extra.strip() else [])
+            final_s = ", ".join(lista_s)
+            final_b = ", ".join(lista_b)
+            
+            dados_dieta = {
+                "data": str(data_dieta), "horario": "00:00:00", 
+                "grupo_muscular": "Nutrição", "exercicio": "Refeição Diária", 
+                "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0,
+                "alimentacao_saudavel": final_s, "alimentacao_besteirol": final_b,
+                "peso_corporal": 0.0,
+                "dados_extras": {}
+            }
+            supabase.table("treinos").insert(dados_dieta).execute()
+            st.success("Refeição registrada!")
+            st.rerun()
+            
+    if not df_dieta.empty:
+        st.markdown("#### 📜 Histórico de Alimentação")
+        df_dieta_view = df_dieta[['data', 'alimentacao_saudavel', 'alimentacao_besteirol']].copy()
+        df_dieta_view['data'] = pd.to_datetime(df_dieta_view['data']).dt.strftime('%d/%m/%Y')
+        st.dataframe(df_dieta_view.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
+
+# ==========================================
+# ABA 4: REGISTRO DE PESO
+# ==========================================
+with tab_peso:
+    with st.form("registro_peso", clear_on_submit=True):
+        st.markdown("<h3 style='margin-bottom: 20px;'>⚖️ Registrar Peso Diário</h3>", unsafe_allow_html=True)
+        st.info("Basta preencher isso uma vez ao dia para acompanhar sua evolução.")
+        
+        c_p1, c_p2 = st.columns(2)
+        with c_p1:
+            data_peso = st.date_input("Data da Pesagem", value=datetime.today(), key="data_peso")
+        with c_p2:
+            peso_corporal_input = st.number_input("Seu Peso (kg)", min_value=0.0, step=0.1)
+
+        if st.form_submit_button("💾 Salvar Peso", use_container_width=True):
+            dados_peso = {
+                "data": str(data_peso), "horario": "00:00:00", 
+                "grupo_muscular": "Métricas", "exercicio": "Peso Diário", 
+                "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0,
+                "alimentacao_saudavel": "", "alimentacao_besteirol": "",
+                "peso_corporal": float(peso_corporal_input),
+                "dados_extras": {}
+            }
+            supabase.table("treinos").insert(dados_peso).execute()
+            st.success("Peso registrado com sucesso!")
+            st.rerun()
+
+# ==========================================
+# ABA 5: REGISTRO DE ESTUDOS E POMODORO
+# ==========================================
+with tab_estudo:
+    st.markdown("<h3 style='margin-bottom: 20px;'>📚 Central de Foco e Estudos</h3>", unsafe_allow_html=True)
+    
+    col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
+    
+    # --- ÁREA DO POMODORO ---
+    with col_pomodoro:
+        with st.container(border=True):
+            st.markdown("#### 🍅 Timer Pomodoro")
+            minutos_pomodoro = st.number_input("Tempo de Foco (minutos)", min_value=1, value=25, step=5)
+            
+            relogio_placeholder = st.empty()
+            
+            if st.button("▶️ Iniciar Pomodoro", use_container_width=True):
+                tempo_total_segundos = int(minutos_pomodoro * 60)
+                
+                for t in range(tempo_total_segundos, -1, -1):
+                    mins, secs = divmod(t, 60)
+                    relogio_placeholder.markdown(
+                        f"<h1 style='text-align: center; font-size: 60px; color: #009CA6; margin: 0;'>{mins:02d}:{secs:02d}</h1>", 
+                        unsafe_allow_html=True
+                    )
+                    time.sleep(1)
+                
+                st.success("🎯 Pomodoro concluído! Hora de registrar seu progresso ao lado.")
+
+    # --- ÁREA DE REGISTRO ---
+    with col_registro:
+        with st.form("registro_estudo", clear_on_submit=True):
+            st.markdown("#### 📝 Registrar Sessão")
+            
+            c_estudo1, c_estudo2 = st.columns(2)
+            with c_estudo1:
+                data_estudo = st.date_input("Data do Estudo", value=datetime.today())
+                disciplina = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO)
+            
+            with c_estudo2:
+                tempo_estudo = st.number_input("Tempo Líquido Estudado (min)", min_value=0, step=15)
+                questoes_feitas = st.number_input("Questões Resolvidas", min_value=0, step=1)
+                
+            topico_estudado = st.text_input("Tópico Específico (Opcional)", placeholder="Ex: Limpeza de dados com Pandas, Modelagem DAX...")
+            humor_estudo = st.selectbox("Nível de Foco", ["Alto", "Médio", "Baixo", "Disperso"])
+
+            if st.form_submit_button("💾 Salvar Sessão de Estudo", use_container_width=True):
+                mochila_estudo_json = {
+                    "humor_foco": humor_estudo,
+                    "topico": topico_estudado
+                }
+                
+                # CORREÇÃO APLICADA AQUI: strftime("%H:%M:%S") no lugar de strftime("%H:%M:%00")
+                dados_estudo = {
+                    "data": str(data_estudo), "horario": datetime.now().strftime("%H:%M:%S"), 
+                    "grupo_muscular": "Estudos", "exercicio": disciplina, 
+                    "series": 0, "repeticoes": int(questoes_feitas), 
+                    "carga_kg": 0.0, "descanso_seg": 0, "duracao_min": int(tempo_estudo),
+                    "distancia_km": 0.0, "alimentacao_saudavel": "", "alimentacao_besteirol": "",
+                    "peso_corporal": 0.0, 
+                    "dados_extras": mochila_estudo_json 
+                }
+                
+                supabase.table("treinos").insert(dados_estudo).execute()
+                st.success("Sessão de estudo registrada com sucesso!")
+                st.rerun()
 
 # ==========================================
 # ABA 6: DASHBOARD DE ESTUDOS
