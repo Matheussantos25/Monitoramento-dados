@@ -138,15 +138,21 @@ if filtro_disc != "Todas" and not df_estudos.empty:
 
 # --- INTERFACE ---
 st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1px;'>⚡ Monitoramento Físico & Mental</h1>", unsafe_allow_html=True)
+
+# CORREÇÃO DO BUG DAS ABAS:
+# A variável texto_filtro garante que o st.markdown seja sempre chamado, 
+# mantendo a árvore de elementos intacta e impedindo o reset das abas.
+texto_filtro = ""
 if filtro_ex != "Todos" or filtro_disc != "Todas" or filtro_tempo != "Todo o Histórico":
-    st.markdown(f"<p style='text-align: center; color: #FF4B4B; margin-top: -15px;'>Filtros ativos: {filtro_tempo}</p>", unsafe_allow_html=True)
+    texto_filtro = f"<p style='text-align: center; color: #FF4B4B; margin-top: -15px;'>Filtros ativos: {filtro_tempo}</p>"
+
+st.markdown(texto_filtro, unsafe_allow_html=True)
 st.write("")
 
 # Abas reorganizadas
 tab_registro, tab_dash_treino, tab_dieta, tab_peso, tab_estudo, tab_dash_estudo, tab_gerenciar = st.tabs([
     "📝 Treino", "📊 Dash Físico", "🥗 Dieta", "⚖️ Peso", "📚 Estudar", "📈 Dash Estudos", "⚙️ Config"
 ])
-
 # ==========================================
 # ABA 1: REGISTRO DE TREINO 
 # ==========================================
