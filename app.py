@@ -32,13 +32,17 @@ ALIMENTOS_SAUDAVEIS.sort()
 ALIMENTOS_BESTEIROL = ["Refrigerante", "Hambúrguer", "Pizza", "Lasanha", "Churros", "Pastel", "Coxinha", "Sorvete", "Batata Frita", "Sonho de Valsa", "Biscoito Recheado", "Chocotone"]
 ALIMENTOS_BESTEIROL.sort()
 
+# --- ATUALIZADO: DISCIPLINAS DO EDITAL FGV ---
 DISCIPLINAS_ESTUDO = [
-    "Business Intelligence (Power BI/SQL)", 
-    "Ciência de Dados", 
-    "Engenharia de Dados",
-    "Estatística / Matemática", 
-    "Inglês", 
-    "Machine Learning", 
+    "Atualidades e IA", 
+    "Banco de Dados (SQL/NoSQL/Big Data)", 
+    "Ciência de Dados (ML/DL/PLN/Visão)", 
+    "Legislação (LAI/Marco Civil/LGPD)",
+    "Linguagens (Python/R/Spark/SAS)",
+    "Língua Inglesa", 
+    "Língua Portuguesa", 
+    "Matemática e Estatística Aplicada", 
+    "Raciocínio Lógico", 
     "TCC", 
     "Outro"
 ]
