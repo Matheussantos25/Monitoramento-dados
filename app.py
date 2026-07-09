@@ -32,7 +32,7 @@ ALIMENTOS_SAUDAVEIS.sort()
 ALIMENTOS_BESTEIROL = ["Refrigerante", "Hambúrguer", "Pizza", "Lasanha", "Churros", "Pastel", "Coxinha", "Sorvete", "Batata Frita", "Sonho de Valsa", "Biscoito Recheado", "Chocotone"]
 ALIMENTOS_BESTEIROL.sort()
 
-# --- ATUALIZADO: DISCIPLINAS DO EDITAL FGV ---
+# --- DISCIPLINAS DO EDITAL FGV ---
 DISCIPLINAS_ESTUDO = [
     "Atualidades e IA", 
     "Banco de Dados (SQL/NoSQL/Big Data)", 
@@ -81,6 +81,7 @@ st.markdown("""
     .card-red { background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%); box-shadow: 0 4px 20px rgba(255, 65, 108, 0.4); }
     .card-purple { background: linear-gradient(135deg, #B224EF 0%, #7579FF 100%); box-shadow: 0 4px 20px rgba(117, 121, 255, 0.4); }
     .card-blue { background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%); box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4); }
+    .card-green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); box-shadow: 0 4px 20px rgba(56, 239, 125, 0.4); }
     
     span[data-baseweb="tag"] { background-color: #FF4B4B !important; color: white !important; }
 </style>
@@ -104,7 +105,8 @@ st.sidebar.markdown("## 🔍 Filtros")
 st.sidebar.write("---")
 
 filtro_tempo = st.sidebar.selectbox("Período:", ["Todo o Histórico", "Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Este Ano"])
-filtro_ex = st.sidebar.selectbox("Detalhar Exercício:", ["Todos"] + TODOS_EXERCICIOS)
+filtro_ex = st.sidebar.selectbox("Detalhar Treino Físico:", ["Todos"] + TODOS_EXERCICIOS)
+filtro_disc = st.sidebar.selectbox("Detalhar Disciplina:", ["Todas"] + DISCIPLINAS_ESTUDO)
 
 if not df_raw.empty:
     df_raw['data'] = pd.to_datetime(df_raw['data'])
@@ -131,14 +133,18 @@ else:
 if filtro_ex != "Todos" and not df_treinos.empty:
     df_treinos = df_treinos[df_treinos['exercicio'] == filtro_ex].copy()
 
+if filtro_disc != "Todas" and not df_estudos.empty:
+    df_estudos = df_estudos[df_estudos['exercicio'] == filtro_disc].copy()
+
 # --- INTERFACE ---
 st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1px;'>⚡ Monitoramento Físico & Mental</h1>", unsafe_allow_html=True)
-if filtro_ex != "Todos" or filtro_tempo != "Todo o Histórico":
-    st.markdown(f"<p style='text-align: center; color: #FF4B4B; margin-top: -15px;'>Filtros ativos: {filtro_tempo} | {filtro_ex}</p>", unsafe_allow_html=True)
+if filtro_ex != "Todos" or filtro_disc != "Todas" or filtro_tempo != "Todo o Histórico":
+    st.markdown(f"<p style='text-align: center; color: #FF4B4B; margin-top: -15px;'>Filtros ativos: {filtro_tempo}</p>", unsafe_allow_html=True)
 st.write("")
 
-tab_registro, tab_dieta, tab_peso, tab_estudo, tab_dashboard, tab_gerenciar = st.tabs([
-    "📝 Novo Treino", "🥗 Alimentação", "⚖️ Peso", "📚 Estudos", "📊 Dashboard", "⚙️ Gerenciar"
+# Abas reestruturadas para os dois Dashboards
+tab_registro, tab_dieta, tab_peso, tab_estudo, tab_dash_treino, tab_dash_estudo, tab_gerenciar = st.tabs([
+    "📝 Treino", "🥗 Dieta", "⚖️ Peso", "📚 Estudar", "📊 Dash Físico", "📈 Dash Estudos", "⚙️ Config"
 ])
 
 # ==========================================
@@ -335,9 +341,9 @@ with tab_estudo:
                 st.rerun()
 
 # ==========================================
-# ABA 5: DASHBOARD (ORGANIZADO)
+# ABA 5: DASHBOARD FÍSICO
 # ==========================================
-with tab_dashboard:
+with tab_dash_treino:
     if not df_treinos.empty:
         df_treinos['reps_totais'] = df_treinos['repeticoes']
         df_treinos['reps_por_serie'] = df_treinos.apply(lambda row: row['repeticoes'] / row['series'] if row['series'] > 0 else row['repeticoes'], axis=1)
@@ -481,10 +487,89 @@ with tab_dashboard:
         df_display['data'] = df_display['data'].dt.strftime('%d/%m/%Y')
         st.dataframe(df_display.sort_values(by='data', ascending=False), use_container_width=True, hide_index=True)
     else:
-        st.warning("Nenhum dado encontrado para o filtro selecionado.")
+        st.warning("Nenhum treino encontrado para o filtro selecionado.")
 
 # ==========================================
-# ABA 6: GERENCIAR
+# ABA 6: DASHBOARD DE ESTUDOS
+# ==========================================
+with tab_dash_estudo:
+    st.markdown("### 📈 Estatísticas de Estudo")
+    if not df_estudos.empty:
+        # Cálculos de métricas
+        total_dias_estudo = len(df_estudos['data'].unique())
+        tempo_total_min = int(df_estudos['duracao_min'].sum())
+        tempo_total_horas = tempo_total_min / 60
+        total_questoes = int(df_estudos['repeticoes'].sum())
+        
+        st.markdown(f"""
+        <div class="card-container">
+            <div class="neon-card card-blue">
+                <div class="card-title">⏳ TEMPO TOTAL</div>
+                <div class="card-value">{tempo_total_horas:.1f}h</div>
+            </div>
+            <div class="neon-card card-purple">
+                <div class="card-title">🎯 QUESTÕES RESOLVIDAS</div>
+                <div class="card-value">{total_questoes}</div>
+            </div>
+            <div class="neon-card card-green">
+                <div class="card-title">📅 DIAS DE ESTUDO</div>
+                <div class="card-value">{total_dias_estudo}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Insights
+        st.markdown("#### 🧠 Insights Rápidos")
+        if tempo_total_min > 0:
+            disciplina_fav = df_estudos.groupby('exercicio')['duracao_min'].sum().idxmax()
+            st.info(f"💡 **Disciplina mais estudada:** Você dedicou a maior parte do seu tempo a **{disciplina_fav}**.")
+        
+        if total_questoes > 0 and total_dias_estudo > 0:
+            media_questoes = total_questoes / total_dias_estudo
+            st.success(f"📈 **Ritmo de Questões:** Em média, você resolve **{media_questoes:.0f} questões** por dia de estudo.")
+
+        st.markdown("---")
+
+        c_dash_e1, c_dash_e2 = st.columns(2)
+        
+        with c_dash_e1:
+            with st.container(border=True):
+                st.markdown("#### 📊 Questões Feitas por Dia")
+                df_q_dia = df_estudos.groupby('data', as_index=False)['repeticoes'].sum()
+                df_q_dia = df_q_dia.sort_values('data')
+                df_q_dia['data_formatada'] = df_q_dia['data'].dt.strftime('%d/%m')
+                
+                fig_q = px.bar(df_q_dia, x='data_formatada', y='repeticoes', text_auto=True)
+                fig_q.update_traces(marker_color='#B224EF')
+                fig_q.update_layout(xaxis_title="", yaxis_title="Qtd Questões", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=0))
+                st.plotly_chart(fig_q, use_container_width=True)
+
+        with c_dash_e2:
+            with st.container(border=True):
+                st.markdown("#### ⏳ Tempo por Disciplina (Horas)")
+                df_disc = df_estudos.groupby('exercicio', as_index=False)['duracao_min'].sum()
+                df_disc['horas'] = df_disc['duracao_min'] / 60
+                
+                fig_d = px.pie(df_disc, values='horas', names='exercicio', hole=0.4, color_discrete_sequence=px.colors.sequential.Teal)
+                fig_d.update_layout(showlegend=True, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=0))
+                st.plotly_chart(fig_d, use_container_width=True)
+
+        with st.container(border=True):
+            st.markdown("#### 🗓️ Tempo de Estudo por Dia (Minutos)")
+            df_t_dia = df_estudos.groupby('data', as_index=False)['duracao_min'].sum()
+            df_t_dia = df_t_dia.sort_values('data')
+            df_t_dia['data_formatada'] = df_t_dia['data'].dt.strftime('%d/%m')
+            
+            fig_t = px.line(df_t_dia, x='data_formatada', y='duracao_min', markers=True, text='duracao_min')
+            fig_t.update_traces(line_color='#00F2FE', marker=dict(size=8, color='#4FACFE'), textposition="top center")
+            fig_t.update_layout(xaxis_title="", yaxis_title="Minutos", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EDEDED"), margin=dict(l=0, r=0, t=20, b=0), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#262626"))
+            st.plotly_chart(fig_t, use_container_width=True)
+
+    else:
+        st.warning("Nenhum dado de estudo encontrado para o período selecionado.")
+
+# ==========================================
+# ABA 7: GERENCIAR
 # ==========================================
 with tab_gerenciar:
     if not df_raw.empty:
