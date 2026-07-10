@@ -796,8 +796,6 @@ with tab_estudo:
     with col_registro:
         st.markdown("#### 📝 Input de Produtividade")
 
-        # Disciplina fica FORA do form para que, ao trocar, a lista de Tópicos do Edital
-        # (que depende da disciplina escolhida) seja atualizada na hora.
         index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
         disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO, index=index_recomendado, key="disciplina_estudo_select")
         topicos_disponiveis = TOPICOS_EDITAL.get(disciplina, ["Geral"])
@@ -812,15 +810,12 @@ with tab_estudo:
                 certas = st.number_input("✅ Questões Corretas", min_value=0, step=1)
                 erradas = st.number_input("❌ Questões Erradas", min_value=0, step=1)
                 
-            detalhe_extra = st.text_input("Detalhe / Micro-tópico (opcional)", placeholder="Ex: Pandas groupby, exercício específico...")
             humor_estudo = st.selectbox("Estado de Fluxo", ["Foco Extremo", "Alto", "Médio", "Baixo", "Disperso/Brain Fog"])
 
             if st.form_submit_button("💾 Computar Sessão", use_container_width=True):
                 total_q = certas + erradas
-                topico_final = f"{topico_edital} — {detalhe_extra.strip()}" if detalhe_extra.strip() else topico_edital
                 mochila_estudo_json = {
                     "humor_foco": humor_estudo,
-                    "topico": topico_final,
                     "topico_edital": topico_edital,
                     "q_certas": certas,
                     "q_erradas": erradas
@@ -835,7 +830,7 @@ with tab_estudo:
                     "peso_corporal": 0.0, "dados_extras": mochila_estudo_json 
                 }
                 supabase.table("treinos").insert(dados_estudo).execute()
-                st.success("Arquivado na base de conhecimento!")
+                st.success("Sessão arquivada na base de conhecimento!")
                 st.rerun()
 
 # ==========================================
@@ -846,14 +841,15 @@ with tab_dash_estudo:
     if not df_estudos.empty:
         df_estudos['q_certas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
         df_estudos['q_erradas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
-        df_estudos['topico'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'topico', ''))
+        
+        # Lê a chave nova "topico_edital" mas deixa "topico" como fallback de segurança para registros antigos
+        df_estudos['topico_edital'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', safe_get(x, 'topico', 'Geral')))
         
         total_certas = df_estudos['q_certas'].sum()
         total_erradas = df_estudos['q_erradas'].sum()
         total_questoes = int(df_estudos['repeticoes'].sum()) 
         
         taxa_acerto = (total_certas / (total_certas + total_erradas) * 100) if (total_certas + total_erradas) > 0 else 0
-        
         tempo_total_min = int(df_estudos['duracao_min'].sum())
         
         st.markdown(f"""
@@ -876,27 +872,27 @@ with tab_dash_estudo:
         st.markdown("---")
         
         st.markdown("#### 🧠 Sistema de Revisão Espaçada Ativa")
-        df_valid_topics = df_estudos[(df_estudos['topico'] != '') & (df_estudos['topico'].notna())].copy()
+        df_valid_topics = df_estudos[(df_estudos['topico_edital'] != '') & (df_estudos['topico_edital'].notna())].copy()
         
         if not df_valid_topics.empty:
-            last_studied = df_valid_topics.groupby(['exercicio', 'topico'], as_index=False)['data'].max()
+            last_studied = df_valid_topics.groupby(['exercicio', 'topico_edital'], as_index=False)['data'].max()
             last_studied['dias_passados'] = (pd.Timestamp.today().normalize() - pd.to_datetime(last_studied['data'])).dt.days
             
             revisoes_hoje = last_studied[last_studied['dias_passados'].isin([1, 7, 30, 31])]
             
             if not revisoes_hoje.empty:
                 for _, row in revisoes_hoje.iterrows():
-                    st.warning(f"🔔 **{row['exercicio']}**: Revisar '{row['topico']}' (Visto há {row['dias_passados']} dia(s))")
+                    st.warning(f"🔔 **{row['exercicio']}**: Revisar '{row['topico_edital']}' (Visto há {row['dias_passados']} dia(s))")
             else:
                 st.info("✔️ Nada pendente no algoritmo de revisão para hoje. Foco no avanço do edital!")
         else:
-            st.info("Cadastre os 'Micro-tópicos' nas próximas sessões para a IA calcular suas janelas de revisão.")
+            st.info("Cadastre sessões para a IA calcular suas janelas de revisão.")
         
         st.write("")
         c_dash_e1, c_dash_e2 = st.columns(2)
         with c_dash_e1:
             with st.container(border=True):
-                st.markdown("#### ⏳ Alocação de Tempo (Horas)")
+                st.markdown("#### ⏳ Alocação de Tempo por Disciplina")
                 df_disc = df_estudos.groupby('exercicio', as_index=False)['duracao_min'].sum()
                 df_disc['horas'] = df_disc['duracao_min'] / 60
                 fig_d = px.pie(df_disc, values='horas', names='exercicio', hole=0.5, color_discrete_sequence=px.colors.sequential.Teal)
@@ -917,8 +913,56 @@ with tab_dash_estudo:
                     st.plotly_chart(fig_a, use_container_width=True)
                 else:
                     st.info("Registre 'Questões Corretas/Erradas' para gerar este gráfico.")
-    else:
-        st.warning("Sem dados de estudo arquivados.")
+
+        st.markdown("---")
+        st.markdown("#### 📖 Análise Granular por Tópico do Edital")
+        st.write("Filtre uma disciplina para analisar exatamente em qual assunto do edital estão os seus pontos de melhoria.")
+        
+        disciplinas_unicas = df_estudos['exercicio'].unique().tolist()
+        disciplina_selecionada = st.selectbox("Filtrar Tópicos por Disciplina:", ["Visão Geral (Todas)"] + disciplinas_unicas)
+        
+        df_tops = df_estudos.copy()
+        if disciplina_selecionada != "Visão Geral (Todas)":
+            df_tops = df_tops[df_tops['exercicio'] == disciplina_selecionada]
+            
+        df_topicos_agg = df_tops.groupby(['exercicio', 'topico_edital'], as_index=False).agg(
+            duracao_min=('duracao_min', 'sum'),
+            certas=('q_certas', 'sum'),
+            erradas=('q_erradas', 'sum')
+        )
+        df_topicos_agg['horas'] = df_topicos_agg['duracao_min'] / 60
+        df_topicos_agg['total_q'] = df_topicos_agg['certas'] + df_topicos_agg['erradas']
+        df_topicos_agg['% Acerto'] = (df_topicos_agg['certas'] / df_topicos_agg['total_q']) * 100
+        df_topicos_agg['% Acerto'] = df_topicos_agg['% Acerto'].fillna(0)
+        
+        # Encurtar o nome do tópico para caber perfeitamente no gráfico sem quebrar
+        df_topicos_agg['topico_curto'] = df_topicos_agg['topico_edital'].apply(lambda x: x[:45] + '...' if len(x) > 45 else x)
+        
+        c_top1, c_top2 = st.columns(2)
+        
+        with c_top1:
+            with st.container(border=True):
+                st.markdown("##### ⏳ Tempo Investido (Horas)")
+                # Pega os 10 tópicos com mais horas estudadas
+                df_top_horas = df_topicos_agg.sort_values('horas', ascending=True).tail(10)
+                if df_top_horas['horas'].sum() > 0:
+                    fig_t = px.bar(df_top_horas, y='topico_curto', x='horas', text_auto='.1f', orientation='h', color='horas', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'exercicio': True})
+                    fig_t.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False)
+                    st.plotly_chart(fig_t, use_container_width=True)
+                else:
+                    st.info("Sem registro de horas para os tópicos filtrados.")
+                
+        with c_top2:
+            with st.container(border=True):
+                st.markdown("##### 🎯 Taxa de Acerto (%)")
+                # Filtra apenas tópicos que tiveram resolução de questões
+                df_top_acertos = df_topicos_agg[df_topicos_agg['total_q'] > 0].sort_values('% Acerto', ascending=True).tail(10)
+                if not df_top_acertos.empty:
+                    fig_q = px.bar(df_top_acertos, y='topico_curto', x='% Acerto', text_auto='.1f', orientation='h', color='% Acerto', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'total_q': True, 'exercicio': True})
+                    fig_q.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False)
+                    st.plotly_chart(fig_q, use_container_width=True)
+                else:
+                    st.info("Cadastre Acertos/Erros para mapear seu desempenho por tópico.")
 
 # ==========================================
 # ABA 7: CRUZAMENTO DE DADOS 
