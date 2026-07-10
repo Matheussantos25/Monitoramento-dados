@@ -411,7 +411,7 @@ with tab_estudo:
 
     col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
     
-   with col_pomodoro:
+    with col_pomodoro:
         with st.container(border=True):
             st.markdown("#### 🍅 Protocolo de Deep Work")
             minutos_pomodoro = st.number_input("Ciclo (minutos)", min_value=1, value=50, step=5)
