@@ -414,105 +414,116 @@ with tab_estudo:
     with col_pomodoro:
         with st.container(border=True):
             st.markdown("#### 🍅 Protocolo de Deep Work")
-            minutos_pomodoro = st.number_input("Ciclo (minutos)", min_value=1, value=50, step=5)
+            
+            c_pom1, c_pom2 = st.columns(2)
+            with c_pom1:
+                minutos_pomodoro = st.number_input("Minutos", min_value=0, value=50, step=1)
+            with c_pom2:
+                segundos_pomodoro = st.number_input("Segundos", min_value=0, max_value=59, value=0, step=5)
+                
             relogio_placeholder = st.empty()
             cinema_placeholder = st.empty() # Placeholder para o modo cinema
             
             if st.button("▶️ Iniciar Ciclo", use_container_width=True):
-                # Loop do Timer
-                for t in range(int(minutos_pomodoro * 60), -1, -1):
-                    mins, secs = divmod(t, 60)
-                    relogio_placeholder.markdown(
-                        f"<h1 style='text-align: center; font-size: 65px; color: #009CA6; margin: 0; text-shadow: 0 0 15px rgba(0,156,166,0.5);'>{mins:02d}:{secs:02d}</h1>", 
-                        unsafe_allow_html=True
-                    )
-                    time.sleep(1)
+                total_segundos = int((minutos_pomodoro * 60) + segundos_pomodoro)
                 
-                # Zera o cronômetro visualmente ao terminar
-                relogio_placeholder.empty()
-                st.success("🎯 Ciclo encerrado! Recompensa ativada.")
-                
-                # Lógica do Modo Cinema (Fullscreen com Base64)
-                pasta_videos = "edits_motivacionais"
-                try:
-                    videos = [v for v in os.listdir(pasta_videos) if v.endswith(".mp4")]
-                    if videos:
-                        video_escolhido = random.choice(videos)
-                        caminho_video = os.path.join(pasta_videos, video_escolhido)
-                        
-                        # Converte o vídeo para Base64
-                        with open(caminho_video, 'rb') as v:
-                            video_base64 = base64.b64encode(v.read()).decode('utf-8')
-                        
-                        # HTML e CSS injetado
-                        html_cinema = f"""
-                        <style>
-                            .cinema-overlay {{
-                                position: fixed;
-                                top: 0;
-                                left: 0;
-                                width: 100vw;
-                                height: 100vh;
-                                background-color: rgba(5, 5, 5, 0.95);
-                                z-index: 9999999;
-                                display: flex;
-                                flex-direction: column;
-                                justify-content: center;
-                                align-items: center;
-                                backdrop-filter: blur(10px);
-                            }}
-                            .cinema-video {{
-                                width: 80vw;
-                                max-height: 80vh;
-                                border: 2px solid #009CA6;
-                                border-radius: 12px;
-                                box-shadow: 0 0 50px rgba(0, 156, 166, 0.5);
-                                outline: none;
-                            }}
-                            .btn-fechar {{
-                                margin-top: 25px;
-                                padding: 12px 30px;
-                                background-color: transparent;
-                                color: #009CA6;
-                                border: 1px solid #009CA6;
-                                border-radius: 8px;
-                                font-size: 16px;
-                                font-weight: bold;
-                                cursor: pointer;
-                                transition: all 0.3s ease;
-                                font-family: sans-serif;
-                            }}
-                            .btn-fechar:hover {{
-                                background-color: #009CA6;
-                                color: #000;
-                                box-shadow: 0 0 20px rgba(0,156,166,0.6);
-                            }}
-                        </style>
-                        
-                        <div class="cinema-overlay" id="cinema-modal">
-                            <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ RECOMPENSA DESBLOQUEADA ⚡</h2>
-                            <video class="cinema-video" id="vid-player" autoplay controls>
-                                <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
-                            </video>
-                            <button class="btn-fechar" onclick="document.getElementById('cinema-modal').style.display='none'">FECHAR E VOLTAR AO MODO OPERANTE</button>
-                        </div>
-                        
-                        <script>
-                            setTimeout(function() {{
-                                var vid = document.getElementById('vid-player');
-                                if(vid) {{
-                                    vid.play().catch(function(e) {{
-                                        console.log("Navegador bloqueou autoplay sem clique prévio.");
-                                    }});
+                if total_segundos > 0:
+                    # Loop do Timer
+                    for t in range(total_segundos, -1, -1):
+                        mins, secs = divmod(t, 60)
+                        relogio_placeholder.markdown(
+                            f"<h1 style='text-align: center; font-size: 65px; color: #009CA6; margin: 0; text-shadow: 0 0 15px rgba(0,156,166,0.5);'>{mins:02d}:{secs:02d}</h1>", 
+                            unsafe_allow_html=True
+                        )
+                        time.sleep(1)
+                    
+                    # Zera o cronômetro visualmente ao terminar
+                    relogio_placeholder.empty()
+                    st.success("🎯 Ciclo encerrado! Recompensa ativada.")
+                    
+                    # Lógica do Modo Cinema (Fullscreen com Base64)
+                    pasta_videos = "edits_motivacionais"
+                    try:
+                        videos = [v for v in os.listdir(pasta_videos) if v.endswith(".mp4")]
+                        if videos:
+                            video_escolhido = random.choice(videos)
+                            caminho_video = os.path.join(pasta_videos, video_escolhido)
+                            
+                            # Converte o vídeo para Base64
+                            with open(caminho_video, 'rb') as v:
+                                video_base64 = base64.b64encode(v.read()).decode('utf-8')
+                            
+                            # HTML e CSS injetado com JS de fechamento robusto
+                            html_cinema = f"""
+                            <style>
+                                .cinema-overlay {{
+                                    position: fixed;
+                                    top: 0;
+                                    left: 0;
+                                    width: 100vw;
+                                    height: 100vh;
+                                    background-color: rgba(5, 5, 5, 0.95);
+                                    z-index: 9999999;
+                                    display: flex;
+                                    flex-direction: column;
+                                    justify-content: center;
+                                    align-items: center;
+                                    backdrop-filter: blur(10px);
                                 }}
-                            }}, 500);
-                        </script>
-                        """
-                        cinema_placeholder.markdown(html_cinema, unsafe_allow_html=True)
-                    else:
-                        st.info("Nenhuma edit encontrada na pasta.")
-                except FileNotFoundError:
-                    st.warning("⚠️ Pasta não encontrada.")
+                                .cinema-video {{
+                                    width: 80vw;
+                                    max-height: 80vh;
+                                    border: 2px solid #009CA6;
+                                    border-radius: 12px;
+                                    box-shadow: 0 0 50px rgba(0, 156, 166, 0.5);
+                                    outline: none;
+                                }}
+                                .btn-fechar {{
+                                    margin-top: 25px;
+                                    padding: 12px 30px;
+                                    background-color: transparent;
+                                    color: #009CA6;
+                                    border: 1px solid #009CA6;
+                                    border-radius: 8px;
+                                    font-size: 16px;
+                                    font-weight: bold;
+                                    cursor: pointer;
+                                    transition: all 0.3s ease;
+                                    font-family: sans-serif;
+                                }}
+                                .btn-fechar:hover {{
+                                    background-color: #009CA6;
+                                    color: #000;
+                                    box-shadow: 0 0 20px rgba(0,156,166,0.6);
+                                }}
+                            </style>
+                            
+                            <div class="cinema-overlay" id="cinema-modal">
+                                <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ RECOMPENSA DESBLOQUEADA ⚡</h2>
+                                <video class="cinema-video" id="vid-player" autoplay controls>
+                                    <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+                                </video>
+                                <button class="btn-fechar" onclick="this.parentElement.style.display='none'; this.previousElementSibling.pause();">FECHAR E VOLTAR AO MODO OPERANTE</button>
+                            </div>
+                            
+                            <script>
+                                setTimeout(function() {{
+                                    var vid = document.getElementById('vid-player');
+                                    if(vid) {{
+                                        vid.play().catch(function(e) {{
+                                            console.log("Navegador bloqueou autoplay sem clique prévio.");
+                                        }});
+                                    }}
+                                }}, 500);
+                            </script>
+                            """
+                            cinema_placeholder.markdown(html_cinema, unsafe_allow_html=True)
+                        else:
+                            st.info("Nenhuma edit encontrada na pasta.")
+                    except FileNotFoundError:
+                        st.warning("⚠️ Pasta não encontrada.")
+                else:
+                    st.warning("⏱️ Por favor, defina um tempo maior que zero para o ciclo.")
 
     with col_registro:
         with st.form("registro_estudo", clear_on_submit=True):
