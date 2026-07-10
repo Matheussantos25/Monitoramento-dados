@@ -441,87 +441,117 @@ with tab_estudo:
                     relogio_placeholder.empty()
                     st.success("🎯 Ciclo encerrado! Recompensa ativada.")
                     
-                    # Lógica do Modo Cinema (Fullscreen com Base64)
+                    # Lógica do Alarme e Modo Cinema
                     pasta_videos = "edits_motivacionais"
+                    video_base64 = ""
+                    
                     try:
                         videos = [v for v in os.listdir(pasta_videos) if v.endswith(".mp4")]
                         if videos:
                             video_escolhido = random.choice(videos)
                             caminho_video = os.path.join(pasta_videos, video_escolhido)
-                            
-                            # Converte o vídeo para Base64
                             with open(caminho_video, 'rb') as v:
                                 video_base64 = base64.b64encode(v.read()).decode('utf-8')
-                            
-                            # HTML e CSS injetado com JS de fechamento robusto
-                            html_cinema = f"""
-                            <style>
-                                .cinema-overlay {{
-                                    position: fixed;
-                                    top: 0;
-                                    left: 0;
-                                    width: 100vw;
-                                    height: 100vh;
-                                    background-color: rgba(5, 5, 5, 0.95);
-                                    z-index: 9999999;
-                                    display: flex;
-                                    flex-direction: column;
-                                    justify-content: center;
-                                    align-items: center;
-                                    backdrop-filter: blur(10px);
-                                }}
-                                .cinema-video {{
-                                    width: 80vw;
-                                    max-height: 80vh;
-                                    border: 2px solid #009CA6;
-                                    border-radius: 12px;
-                                    box-shadow: 0 0 50px rgba(0, 156, 166, 0.5);
-                                    outline: none;
-                                }}
-                                .btn-fechar {{
-                                    margin-top: 25px;
-                                    padding: 12px 30px;
-                                    background-color: transparent;
-                                    color: #009CA6;
-                                    border: 1px solid #009CA6;
-                                    border-radius: 8px;
-                                    font-size: 16px;
-                                    font-weight: bold;
-                                    cursor: pointer;
-                                    transition: all 0.3s ease;
-                                    font-family: sans-serif;
-                                }}
-                                .btn-fechar:hover {{
-                                    background-color: #009CA6;
-                                    color: #000;
-                                    box-shadow: 0 0 20px rgba(0,156,166,0.6);
-                                }}
-                            </style>
-                            
-                            <div class="cinema-overlay" id="cinema-modal">
-                                <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ RECOMPENSA DESBLOQUEADA ⚡</h2>
-                                <video class="cinema-video" id="vid-player" autoplay controls>
-                                    <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
-                                </video>
-                                <button class="btn-fechar" onclick="this.parentElement.style.display='none'; this.previousElementSibling.pause();">FECHAR E VOLTAR AO MODO OPERANTE</button>
-                            </div>
-                            
-                            <script>
-                                setTimeout(function() {{
-                                    var vid = document.getElementById('vid-player');
-                                    if(vid) {{
-                                        vid.play().catch(function(e) {{
-                                            console.log("Navegador bloqueou autoplay sem clique prévio.");
-                                        }});
-                                    }}
-                                }}, 500);
-                            </script>
-                            """
-                            cinema_placeholder.markdown(html_cinema, unsafe_allow_html=True)
-                        else:
-                            st.info("Nenhuma edit encontrada na pasta.")
                     except FileNotFoundError:
-                        st.warning("⚠️ Pasta não encontrada.")
+                        pass # Continua sem o vídeo, mas o alarme vai tocar
+
+                    # Injeção de CSS, HTML do Modal e Alarme JavaScript
+                    html_cinema = f"""
+                    <style>
+                        .cinema-overlay {{
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100vw;
+                            height: 100vh;
+                            background-color: rgba(5, 5, 5, 0.95);
+                            z-index: 9999999;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+                            align-items: center;
+                            backdrop-filter: blur(10px);
+                        }}
+                        .cinema-video {{
+                            width: 80vw;
+                            max-height: 75vh;
+                            border: 2px solid #009CA6;
+                            border-radius: 12px;
+                            box-shadow: 0 0 50px rgba(0, 156, 166, 0.5);
+                            outline: none;
+                        }}
+                        .btn-fechar {{
+                            margin-top: 25px;
+                            padding: 12px 30px;
+                            background-color: #0A0A0A;
+                            color: #009CA6;
+                            border: 2px solid #009CA6;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                            font-family: sans-serif;
+                        }}
+                        .btn-fechar:hover {{
+                            background-color: #009CA6;
+                            color: #000;
+                            box-shadow: 0 0 20px rgba(0,156,166,0.6);
+                        }}
+                    </style>
+                    
+                    <div class="cinema-overlay" id="cinema-modal">
+                        <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ RECOMPENSA DESBLOQUEADA ⚡</h2>
+                        {"<video class='cinema-video' id='vid-player' controls><source src='data:video/mp4;base64," + video_base64 + "' type='video/mp4'></video>" if video_base64 else "<p style='color:#E0E0E0;'>Nenhum vídeo encontrado, mas o ciclo terminou!</p>"}
+                        <button class="btn-fechar" onclick="fecharModal()">FECHAR E VOLTAR AO MODO OPERANTE</button>
+                    </div>
+                    
+                    <script>
+                        // 1. Toca o Alarme Sonoro de Notificação (Web Audio API)
+                        try {{
+                            var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                            function playBeep(time, freq, duration) {{
+                                var osc = audioCtx.createOscillator();
+                                var gain = audioCtx.createGain();
+                                osc.connect(gain);
+                                gain.connect(audioCtx.destination);
+                                osc.type = "square";
+                                osc.frequency.setValueAtTime(freq, time);
+                                gain.gain.setValueAtTime(0.1, time); // Volume controlado
+                                gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+                                osc.start(time);
+                                osc.stop(time + duration);
+                            }}
+                            
+                            // Sequência de alarme digital (Beep, Beep, Beep, Beeeeep)
+                            playBeep(audioCtx.currentTime, 880, 0.15);
+                            playBeep(audioCtx.currentTime + 0.3, 880, 0.15);
+                            playBeep(audioCtx.currentTime + 0.6, 880, 0.15);
+                            playBeep(audioCtx.currentTime + 0.9, 1100, 0.6);
+                        }} catch(e) {{
+                            console.log("Audio API não suportada neste navegador.");
+                        }}
+
+                        // 2. Dá o Play no Vídeo logo após o alarme
+                        setTimeout(function() {{
+                            var vid = document.getElementById('vid-player');
+                            if(vid) {{
+                                vid.play().catch(function(e) {{
+                                    console.log("O navegador bloqueou o autoplay do vídeo.");
+                                }});
+                            }}
+                        }}, 1500);
+
+                        // 3. Função Destrutiva (Remove o Modal da Memória e trava o Áudio)
+                        function fecharModal() {{
+                            var modal = document.getElementById('cinema-modal');
+                            if(modal) {{
+                                modal.outerHTML = ''; // Destrói o elemento completamente
+                            }}
+                        }}
+                    </script>
+                    """
+                    cinema_placeholder.markdown(html_cinema, unsafe_allow_html=True)
                 else:
                     st.warning("⏱️ Por favor, defina um tempo maior que zero para o ciclo.")
 
