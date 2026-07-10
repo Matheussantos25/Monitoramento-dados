@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import plotly.express as px
 import json
 import time
+import os
+import random
 
 # --- FUNÇÕES AUXILIARES ---
 def safe_get(val, key, default=None):
@@ -409,17 +411,43 @@ with tab_estudo:
 
     col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
     
-    with col_pomodoro:
+   with col_pomodoro:
         with st.container(border=True):
             st.markdown("#### 🍅 Protocolo de Deep Work")
             minutos_pomodoro = st.number_input("Ciclo (minutos)", min_value=1, value=50, step=5)
             relogio_placeholder = st.empty()
+            video_placeholder = st.empty() # Placeholder reservado para o vídeo
+            
             if st.button("▶️ Iniciar Ciclo", use_container_width=True):
+                # Loop do Timer
                 for t in range(int(minutos_pomodoro * 60), -1, -1):
                     mins, secs = divmod(t, 60)
-                    relogio_placeholder.markdown(f"<h1 style='text-align: center; font-size: 65px; color: #009CA6; margin: 0; text-shadow: 0 0 15px rgba(0,156,166,0.5);'>{mins:02d}:{secs:02d}</h1>", unsafe_allow_html=True)
+                    relogio_placeholder.markdown(
+                        f"<h1 style='text-align: center; font-size: 65px; color: #009CA6; margin: 0; text-shadow: 0 0 15px rgba(0,156,166,0.5);'>{mins:02d}:{secs:02d}</h1>", 
+                        unsafe_allow_html=True
+                    )
                     time.sleep(1)
-                st.success("🎯 Ciclo encerrado. Analise os resultados ao lado.")
+                
+                # Zera o cronômetro visualmente ao terminar
+                relogio_placeholder.empty()
+                st.success("🎯 Ciclo encerrado! Recompensa de dopamina ativada.")
+                
+                # Lógica para sortear e exibir o vídeo motivacional
+                pasta_videos = "edits_motivacionais"
+                try:
+                    videos = [v for v in os.listdir(pasta_videos) if v.endswith(".mp4")]
+                    if videos:
+                        video_escolhido = random.choice(videos)
+                        caminho_video = os.path.join(pasta_videos, video_escolhido)
+                        
+                        # Renderiza o vídeo com autoplay
+                        with video_placeholder.container():
+                            st.markdown(f"<p style='text-align: center; color: #E0E0E0; font-size: 14px;'>Now playing: {video_escolhido}</p>", unsafe_allow_html=True)
+                            st.video(caminho_video, autoplay=True)
+                    else:
+                        st.info(f"Nenhum arquivo .mp4 encontrado na pasta '{pasta_videos}'.")
+                except FileNotFoundError:
+                    st.warning(f"⚠️ Pasta '{pasta_videos}' não encontrada. Crie a pasta e adicione seus vídeos.")
 
     with col_registro:
         with st.form("registro_estudo", clear_on_submit=True):
