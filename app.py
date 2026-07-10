@@ -7,6 +7,7 @@ import json
 import time
 import os
 import random
+import base64
 
 # --- FUNÇÕES AUXILIARES ---
 def safe_get(val, key, default=None):
@@ -258,7 +259,6 @@ with tab_registro:
 with tab_dash_treino:
     if not df_treinos.empty:
         df_treinos['reps_totais'] = df_treinos['repeticoes']
-        # Evitar divisão por zero na média de reps
         df_treinos['reps_por_serie'] = df_treinos.apply(lambda row: row['repeticoes'] / row['series'] if row['series'] > 0 else 0, axis=1)
         
         total_dias = len(df_treinos['data'].unique())
@@ -416,7 +416,7 @@ with tab_estudo:
             st.markdown("#### 🍅 Protocolo de Deep Work")
             minutos_pomodoro = st.number_input("Ciclo (minutos)", min_value=1, value=50, step=5)
             relogio_placeholder = st.empty()
-            video_placeholder = st.empty() # Placeholder reservado para o vídeo
+            cinema_placeholder = st.empty() # Placeholder para o modo cinema
             
             if st.button("▶️ Iniciar Ciclo", use_container_width=True):
                 # Loop do Timer
@@ -430,9 +430,9 @@ with tab_estudo:
                 
                 # Zera o cronômetro visualmente ao terminar
                 relogio_placeholder.empty()
-                st.success("🎯 Ciclo encerrado! Recompensa de dopamina ativada.")
+                st.success("🎯 Ciclo encerrado! Recompensa ativada.")
                 
-                # Lógica para sortear e exibir o vídeo motivacional
+                # Lógica do Modo Cinema (Fullscreen com Base64)
                 pasta_videos = "edits_motivacionais"
                 try:
                     videos = [v for v in os.listdir(pasta_videos) if v.endswith(".mp4")]
@@ -440,14 +440,79 @@ with tab_estudo:
                         video_escolhido = random.choice(videos)
                         caminho_video = os.path.join(pasta_videos, video_escolhido)
                         
-                        # Renderiza o vídeo com autoplay
-                        with video_placeholder.container():
-                            st.markdown(f"<p style='text-align: center; color: #E0E0E0; font-size: 14px;'>Now playing: {video_escolhido}</p>", unsafe_allow_html=True)
-                            st.video(caminho_video, autoplay=True)
+                        # Converte o vídeo para Base64
+                        with open(caminho_video, 'rb') as v:
+                            video_base64 = base64.b64encode(v.read()).decode('utf-8')
+                        
+                        # HTML e CSS injetado
+                        html_cinema = f"""
+                        <style>
+                            .cinema-overlay {{
+                                position: fixed;
+                                top: 0;
+                                left: 0;
+                                width: 100vw;
+                                height: 100vh;
+                                background-color: rgba(5, 5, 5, 0.95);
+                                z-index: 9999999;
+                                display: flex;
+                                flex-direction: column;
+                                justify-content: center;
+                                align-items: center;
+                                backdrop-filter: blur(10px);
+                            }}
+                            .cinema-video {{
+                                width: 80vw;
+                                max-height: 80vh;
+                                border: 2px solid #009CA6;
+                                border-radius: 12px;
+                                box-shadow: 0 0 50px rgba(0, 156, 166, 0.5);
+                                outline: none;
+                            }}
+                            .btn-fechar {{
+                                margin-top: 25px;
+                                padding: 12px 30px;
+                                background-color: transparent;
+                                color: #009CA6;
+                                border: 1px solid #009CA6;
+                                border-radius: 8px;
+                                font-size: 16px;
+                                font-weight: bold;
+                                cursor: pointer;
+                                transition: all 0.3s ease;
+                                font-family: sans-serif;
+                            }}
+                            .btn-fechar:hover {{
+                                background-color: #009CA6;
+                                color: #000;
+                                box-shadow: 0 0 20px rgba(0,156,166,0.6);
+                            }}
+                        </style>
+                        
+                        <div class="cinema-overlay" id="cinema-modal">
+                            <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ RECOMPENSA DESBLOQUEADA ⚡</h2>
+                            <video class="cinema-video" id="vid-player" autoplay controls>
+                                <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+                            </video>
+                            <button class="btn-fechar" onclick="document.getElementById('cinema-modal').style.display='none'">FECHAR E VOLTAR AO MODO OPERANTE</button>
+                        </div>
+                        
+                        <script>
+                            setTimeout(function() {{
+                                var vid = document.getElementById('vid-player');
+                                if(vid) {{
+                                    vid.play().catch(function(e) {{
+                                        console.log("Navegador bloqueou autoplay sem clique prévio.");
+                                    }});
+                                }}
+                            }}, 500);
+                        </script>
+                        """
+                        cinema_placeholder.markdown(html_cinema, unsafe_allow_html=True)
                     else:
-                        st.info(f"Nenhum arquivo .mp4 encontrado na pasta '{pasta_videos}'.")
+                        st.info("Nenhuma edit encontrada na pasta.")
                 except FileNotFoundError:
-                    st.warning(f"⚠️ Pasta '{pasta_videos}' não encontrada. Crie a pasta e adicione seus vídeos.")
+                    st.warning("⚠️ Pasta não encontrada.")
 
     with col_registro:
         with st.form("registro_estudo", clear_on_submit=True):
