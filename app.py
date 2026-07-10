@@ -61,6 +61,106 @@ DISCIPLINAS_ESTUDO = [
 ]
 DISCIPLINAS_ESTUDO.sort()
 
+# --- TÓPICOS DO EDITAL POR DISCIPLINA (usado no seletor dinâmico e na Cobertura) ---
+TOPICOS_EDITAL = {
+    "Matemática e Estatística Aplicada": [
+        "I.1 Cálculo: funções, limites, derivadas, derivadas parciais, máximos e mínimos, integrais",
+        "I.2 Álgebra linear: vetores, matrizes, produto escalar/vetorial, matriz identidade/inversa/transposta, transformações lineares, normas L1/L2, autovalores e autovetores",
+        "II.1 Probabilidade: modelo, probabilidade condicional, independência, variáveis aleatórias, esperança/variância/covariância, distribuições contínuas e discretas, distribuições multidimensionais",
+        "II.2 Estatística descritiva: Teorema do Limite Central, teste de hipótese e intervalo de confiança, máxima verossimilhança, inferência bayesiana, correlação de Pearson, boxplot e outliers",
+    ],
+    "Ciência de Dados (ML/DL/PLN/Visão)": [
+        "1 Aprendizado supervisionado: regressão, classificação, métricas, overfitting/underfitting, regularização, validação cruzada, viés-variância, regressão linear/logística, árvores/random forest, SVM, K-NN",
+        "2 Aprendizado não supervisionado: PCA, K-Means, mistura de Gaussianas, regras de associação",
+        "3 Redes neurais artificiais: arquitetura, funções de ativação, gradiente/SGD/backpropagation, regularização L1/L2, CNN",
+        "4 Machine Learning aplicado: visão computacional com CNN, classificação/detecção de imagens, noções de PLN",
+        "5 ETL",
+        "6 Manipulação, tratamento e visualização de dados",
+        "7.1 Análise de dados (Pandas, NumPy, Jupyter, R)",
+        "7.2 Aprendizado de máquina: classificação, regressão, agrupamento, redução de dimensionalidade, associação, sistemas de recomendação",
+        "8 Processamento de linguagem natural (PLN)",
+        "9 Visão computacional",
+        "10 Deep learning",
+        "11 Mineração de dados",
+        "12 Ferramenta SAS",
+    ],
+    "Linguagens (Python/R/Spark/SAS)": [
+        "1 Python e bibliotecas: NumPy, Matplotlib, Seaborn, Streamlit, Pandas, SciPy, TensorFlow, Keras, PyTorch",
+        "2 R e suas bibliotecas",
+        "3 Apache Hadoop e Apache Spark",
+    ],
+    "Banco de Dados (SQL/NoSQL/Big Data)": [
+        "1 Modelagem de dados (conceitual, lógica e física)",
+        "2 Abordagem relacional",
+        "3 Normalização das estruturas de dados",
+        "4 Integridade referencial",
+        "5 Metadados",
+        "6 Modelagem dimensional",
+        "7 Linguagem de consulta estruturada (SQL)",
+        "8 Linguagem de definição de dados (DDL)",
+        "9 Linguagem de manipulação de dados (DML)",
+        "10 SGBD",
+        "11 Propriedades de banco de dados",
+        "12 Banco de dados NoSQL",
+        "13 Banco de dados em memória",
+        "14 Data lakes e soluções para big data",
+    ],
+    "Língua Portuguesa": [
+        "1 Compreensão e interpretação de textos",
+        "2 Tipos e gêneros textuais",
+        "3 Ortografia oficial",
+        "4.1 Coesão: referenciação, substituição, repetição, conectores",
+        "4.2 Emprego de tempos e modos verbais",
+        "5.1 Classes de palavras",
+        "5.2 Coordenação entre orações e termos",
+        "5.3 Subordinação entre orações e termos",
+        "5.4 Sinais de pontuação",
+        "5.5 Concordância verbal e nominal",
+        "5.6 Regência verbal e nominal",
+        "5.7 Emprego do sinal indicativo de crase",
+        "5.8 Colocação dos pronomes átonos",
+        "6.1 Significação das palavras",
+        "6.2 Substituição de palavras/trechos de texto",
+        "6.3 Reorganização da estrutura de orações e períodos",
+        "6.4 Reescrita de textos (gêneros e formalidade)",
+    ],
+    "Língua Inglesa": [
+        "1 Compreensão de textos em língua inglesa e itens gramaticais relevantes",
+    ],
+    "Raciocínio Lógico": [
+        "1 Estruturas lógicas",
+        "2 Lógica de argumentação: analogias, inferências, deduções e conclusões",
+        "3.1 Proposições simples e compostas",
+        "3.2 Tabelas-verdade",
+        "3.3 Equivalências",
+        "3.4 Diagramas lógicos",
+        "4 Lógica de primeira ordem",
+        "5 Problemas aritméticos, geométricos e matriciais",
+    ],
+    "Atualidades e IA": [
+        "1 Tópicos atuais: segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, sustentabilidade e ecologia",
+        "2 IA: fundamentos, aplicações e aprendizado de máquina; modelos generativos e de linguagem",
+        "2.1 Ética, governança e privacidade em IA",
+    ],
+    "Legislação (LAI/Marco Civil/LGPD)": [
+        "1 Lei nº 12.527/2011 (LAI) — Cap. I, II, III, IV e V; Dec. nº 7.724 e nº 7.845",
+        "2 Lei nº 12.737/2012 (Delitos Informáticos) — Art. 2º",
+        "3 Lei nº 12.965/2014 (Marco Civil da Internet) — Cap. II Seção I e Cap. III Seções I e II",
+        "4 Lei nº 13.709/2018 (LGPD) — Cap. I, II, III, IV, VII e VIII",
+    ],
+    "TCC": [
+        "Definição do tema",
+        "Revisão bibliográfica",
+        "Metodologia",
+        "Desenvolvimento",
+        "Redação final",
+        "Defesa",
+    ],
+    "Outro": [
+        "Geral",
+    ],
+}
+
 # Rota estratégica intercalando Exatas, Humanas e TI para evitar fadiga mental
 ROTA_ESTRATEGICA = [
     "Matemática e Estatística Aplicada", 
@@ -587,27 +687,34 @@ with tab_estudo:
                     st.warning("⏱️ Por favor, defina um tempo maior que zero para o ciclo.")
 
     with col_registro:
+        st.markdown("#### 📝 Input de Produtividade")
+
+        # Disciplina fica FORA do form para que, ao trocar, a lista de Tópicos do Edital
+        # (que depende da disciplina escolhida) seja atualizada na hora.
+        index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
+        disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO, index=index_recomendado, key="disciplina_estudo_select")
+        topicos_disponiveis = TOPICOS_EDITAL.get(disciplina, ["Geral"])
+
         with st.form("registro_estudo", clear_on_submit=True):
-            st.markdown("#### 📝 Input de Produtividade")
             c_est1, c_est2 = st.columns(2)
             with c_est1:
                 data_estudo = st.date_input("Data da Sessão", value=datetime.today())
-                # Auto-preenche com a recomendação da bússola
-                index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
-                disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO, index=index_recomendado)
+                topico_edital = st.selectbox("📖 Tópico do Edital", topicos_disponiveis)
                 tempo_estudo = st.number_input("Tempo Líquido (min)", min_value=0, step=15)
             with c_est2:
                 certas = st.number_input("✅ Questões Corretas", min_value=0, step=1)
                 erradas = st.number_input("❌ Questões Erradas", min_value=0, step=1)
                 
-            topico_estudado = st.text_input("Micro-tópico (Crucial para Revisão)", placeholder="Ex: Pandas groupby, LGPD Art 5...")
+            detalhe_extra = st.text_input("Detalhe / Micro-tópico (opcional)", placeholder="Ex: Pandas groupby, exercício específico...")
             humor_estudo = st.selectbox("Estado de Fluxo", ["Foco Extremo", "Alto", "Médio", "Baixo", "Disperso/Brain Fog"])
 
             if st.form_submit_button("💾 Computar Sessão", use_container_width=True):
                 total_q = certas + erradas
+                topico_final = f"{topico_edital} — {detalhe_extra.strip()}" if detalhe_extra.strip() else topico_edital
                 mochila_estudo_json = {
                     "humor_foco": humor_estudo,
-                    "topico": topico_estudado,
+                    "topico": topico_final,
+                    "topico_edital": topico_edital,
                     "q_certas": certas,
                     "q_erradas": erradas
                 }
