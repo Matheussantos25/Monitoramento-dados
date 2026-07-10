@@ -491,7 +491,7 @@ with tab_peso:
 with tab_estudo:
     st.markdown("<h3 style='margin-bottom: 20px; color: #009CA6;'>📚 Central de Foco: Operação FGV</h3>", unsafe_allow_html=True)
     
-    # --- NOVO: MOTOR DE RECOMENDAÇÃO INTELIGENTE ---
+    # --- MOTOR DE RECOMENDAÇÃO INTELIGENTE ---
     prox_disciplina = ROTA_ESTRATEGICA[0]
     if not df_estudos.empty:
         # Pega a última disciplina estudada validando datas
@@ -514,177 +514,284 @@ with tab_estudo:
     
     with col_pomodoro:
         with st.container(border=True):
-            st.markdown("#### 🍅 Protocolo de Deep Work")
+            st.markdown("#### ⏱️ Modos de Foco")
             
-            c_pom1, c_pom2 = st.columns(2)
-            with c_pom1:
-                minutos_pomodoro = st.number_input("Minutos", min_value=0, value=50, step=1)
-            with c_pom2:
-                segundos_pomodoro = st.number_input("Segundos", min_value=0, max_value=59, value=0, step=5)
-                
-            relogio_placeholder = st.empty()
-            
-            if st.button("▶️ Iniciar Ciclo", use_container_width=True):
-                total_segundos = int((minutos_pomodoro * 60) + segundos_pomodoro)
-                
-                if total_segundos > 0:
-                    # Loop do Timer
-                    for t in range(total_segundos, -1, -1):
-                        mins, secs = divmod(t, 60)
-                        relogio_placeholder.markdown(
-                            f"<h1 style='text-align: center; font-size: 65px; color: #009CA6; margin: 0; text-shadow: 0 0 15px rgba(0,156,166,0.5);'>{mins:02d}:{secs:02d}</h1>", 
-                            unsafe_allow_html=True
-                        )
-                        time.sleep(1)
-                    
-                    # Zera o cronômetro visualmente ao terminar
-                    relogio_placeholder.empty()
-                    st.success("🎯 Ciclo encerrado! Recompensa ativada.")
-                    
-                    # Lógica do Alarme e Modo Cinema
-                    pasta_videos = "edits_motivacionais"
-                    video_base64 = ""
-                    
-                    try:
-                        videos = [v for v in os.listdir(pasta_videos) if v.endswith(".mp4")]
-                        if videos:
-                            video_escolhido = random.choice(videos)
-                            caminho_video = os.path.join(pasta_videos, video_escolhido)
-                            with open(caminho_video, 'rb') as v:
-                                video_base64 = base64.b64encode(v.read()).decode('utf-8')
-                    except FileNotFoundError:
-                        pass # Continua sem o vídeo, mas o alarme vai tocar
+            # --- MOTOR DE RECOMPENSA (Carrega a Base64 para os dois modos) ---
+            pasta_videos = "edits_motivacionais"
+            video_base64 = ""
+            try:
+                videos = [v for v in os.listdir(pasta_videos) if v.endswith(".mp4")]
+                if videos:
+                    video_escolhido = random.choice(videos)
+                    caminho_video = os.path.join(pasta_videos, video_escolhido)
+                    with open(caminho_video, 'rb') as v:
+                        video_base64 = base64.b64encode(v.read()).decode('utf-8')
+            except FileNotFoundError:
+                pass
 
-                    video_tag = (
-                        "<video class='cinema-video' id='vid-player' controls autoplay>"
-                        f"<source src='data:video/mp4;base64,{video_base64}' type='video/mp4'></video>"
-                    ) if video_base64 else "<p style='color:#E0E0E0;'>Nenhum vídeo encontrado, mas o ciclo terminou!</p>"
+            video_tag = (
+                "<video class='cinema-video' id='vid-player' controls autoplay>"
+                f"<source src='data:video/mp4;base64,{video_base64}' type='video/mp4'></video>"
+            ) if video_base64 else "<p style='color:#E0E0E0;'>Nenhum vídeo encontrado, mas o ciclo terminou!</p>"
+            # ------------------------------------------------------------------
 
-                    # IMPORTANTE: usamos components.html (e não st.markdown) porque
-                    # scripts injetados via st.markdown/unsafe_allow_html nunca são
-                    # executados pelo navegador (limitação de segurança do innerHTML).
-                    # Aqui o script roda de verdade dentro de um iframe e manipula o
-                    # documento PAI (window.parent) para o overlay cobrir a aplicação
-                    # inteira e o botão "Fechar" realmente remover o modal.
-                    html_cinema = f"""
+            tipo_timer = st.radio("Selecione o Protocolo:", ["🍅 Pomodoro (Estudo Longo)", "⏱️ Cronômetro (Questões)"], horizontal=False)
+            st.write("---")
+
+            if "Pomodoro" in tipo_timer:
+                c_pom1, c_pom2 = st.columns(2)
+                with c_pom1:
+                    minutos_pomodoro = st.number_input("Minutos", min_value=0, value=50, step=1)
+                with c_pom2:
+                    segundos_pomodoro = st.number_input("Segundos", min_value=0, max_value=59, value=0, step=5)
+                    
+                relogio_placeholder = st.empty()
+                
+                if st.button("▶️ Iniciar Ciclo", use_container_width=True):
+                    total_segundos = int((minutos_pomodoro * 60) + segundos_pomodoro)
+                    
+                    if total_segundos > 0:
+                        for t in range(total_segundos, -1, -1):
+                            mins, secs = divmod(t, 60)
+                            relogio_placeholder.markdown(
+                                f"<h1 style='text-align: center; font-size: 65px; color: #009CA6; margin: 0; text-shadow: 0 0 15px rgba(0,156,166,0.5);'>{mins:02d}:{secs:02d}</h1>", 
+                                unsafe_allow_html=True
+                            )
+                            time.sleep(1)
+                        
+                        relogio_placeholder.empty()
+                        st.success("🎯 Ciclo encerrado! Recompensa ativada.")
+                        
+                        html_cinema = f"""
+                        <script>
+                        (function() {{
+                            var parentDoc = window.parent.document;
+                            var oldOverlay = parentDoc.getElementById('cinema-modal');
+                            if (oldOverlay) oldOverlay.remove();
+                            var oldStyle = parentDoc.getElementById('cinema-style');
+                            if (oldStyle) oldStyle.remove();
+
+                            var style = parentDoc.createElement('style');
+                            style.id = 'cinema-style';
+                            style.innerHTML = `
+                                .cinema-overlay {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(5, 5, 5, 0.95); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }}
+                                .cinema-video {{ width: 80vw; max-height: 75vh; border: 2px solid #009CA6; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }}
+                                .btn-fechar {{ margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }}
+                                .btn-fechar:hover {{ background-color: #009CA6; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }}
+                            `;
+                            parentDoc.head.appendChild(style);
+
+                            var overlay = parentDoc.createElement('div');
+                            overlay.className = 'cinema-overlay';
+                            overlay.id = 'cinema-modal';
+                            overlay.innerHTML = `
+                                <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ RECOMPENSA DESBLOQUEADA ⚡</h2>
+                                {video_tag}
+                                <button class="btn-fechar" id="btn-fechar-cinema">FECHAR E VOLTAR AO MODO OPERANTE</button>
+                            `;
+                            parentDoc.body.appendChild(overlay);
+
+                            var btnFechar = parentDoc.getElementById('btn-fechar-cinema');
+                            btnFechar.addEventListener('click', function() {{
+                                var vid = parentDoc.getElementById('vid-player');
+                                if (vid) {{ vid.pause(); }}
+                                overlay.remove();
+                                style.remove();
+                            }});
+
+                            try {{
+                                var AudioCtxClass = window.parent.AudioContext || window.parent.webkitAudioContext;
+                                var audioCtx = new AudioCtxClass();
+                                if (audioCtx.state === 'suspended') {{ audioCtx.resume(); }}
+                                function playBeep(time, freq, duration) {{
+                                    var osc = audioCtx.createOscillator();
+                                    var gain = audioCtx.createGain();
+                                    osc.connect(gain);
+                                    gain.connect(audioCtx.destination);
+                                    osc.type = "square";
+                                    osc.frequency.setValueAtTime(freq, time);
+                                    gain.gain.setValueAtTime(0.1, time);
+                                    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+                                    osc.start(time);
+                                    osc.stop(time + duration);
+                                }}
+                                playBeep(audioCtx.currentTime, 880, 0.15);
+                                playBeep(audioCtx.currentTime + 0.3, 880, 0.15);
+                                playBeep(audioCtx.currentTime + 0.6, 880, 0.15);
+                                playBeep(audioCtx.currentTime + 0.9, 1100, 0.6);
+                            }} catch(e) {{ console.log("Audio API Error:", e); }}
+
+                            setTimeout(function() {{
+                                var vid = parentDoc.getElementById('vid-player');
+                                if (vid) {{ vid.play().catch(function(e) {{ console.log("Autoplay block:", e); }}); }}
+                            }}, 1500);
+                        }})();
+                        </script>
+                        """
+                        components.html(html_cinema, height=0, width=0)
+                    else:
+                        st.warning("⏱️ Por favor, defina um tempo maior que zero para o ciclo.")
+
+            else:
+                # --- WIDGET DO CRONÔMETRO (HTML/JS INJETADO NO STREAMLIT) ---
+                html_cronometro = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{
+                            background-color: transparent;
+                            color: #E0E0E0;
+                            font-family: sans-serif;
+                            text-align: center;
+                            margin: 0;
+                            padding: 0;
+                        }}
+                        .time {{
+                            font-size: 65px;
+                            color: #009CA6;
+                            text-shadow: 0 0 15px rgba(0,156,166,0.5);
+                            font-weight: bold;
+                            margin: 10px 0 20px 0;
+                        }}
+                        .btn-group {{
+                            display: flex;
+                            justify-content: center;
+                            gap: 10px;
+                            flex-wrap: wrap;
+                        }}
+                        .btn {{
+                            padding: 10px 20px;
+                            background-color: #0A0A0A;
+                            color: #009CA6;
+                            border: 2px solid #009CA6;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            font-weight: bold;
+                            transition: all 0.3s;
+                        }}
+                        .btn:hover {{
+                            background-color: #009CA6;
+                            color: #000;
+                            box-shadow: 0 0 10px rgba(0,156,166,0.5);
+                        }}
+                        .btn-finish {{
+                            border-color: #8B5CF6;
+                            color: #8B5CF6;
+                        }}
+                        .btn-finish:hover {{
+                            background-color: #8B5CF6;
+                            color: #000;
+                            box-shadow: 0 0 10px rgba(139,92,246,0.5);
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="time" id="display">00:00</div>
+                    <div class="btn-group">
+                        <button class="btn" onclick="start()">▶️ Iniciar</button>
+                        <button class="btn" onclick="pause()">⏸️ Pausar</button>
+                        <button class="btn btn-finish" onclick="finish()">✅ Finalizar & Edit</button>
+                    </div>
+
                     <script>
-                    (function() {{
-                        var parentDoc = window.parent.document;
+                        let timer;
+                        let secs = 0;
+                        let running = false;
+                        const display = document.getElementById('display');
 
-                        // Remove overlay/estilo antigos, se existirem (evita duplicar em reinícios)
-                        var oldOverlay = parentDoc.getElementById('cinema-modal');
-                        if (oldOverlay) oldOverlay.remove();
-                        var oldStyle = parentDoc.getElementById('cinema-style');
-                        if (oldStyle) oldStyle.remove();
-
-                        // Injeta o CSS no <head> do documento pai
-                        var style = parentDoc.createElement('style');
-                        style.id = 'cinema-style';
-                        style.innerHTML = `
-                            .cinema-overlay {{
-                                position: fixed;
-                                top: 0; left: 0;
-                                width: 100vw; height: 100vh;
-                                background-color: rgba(5, 5, 5, 0.95);
-                                z-index: 999999;
-                                display: flex;
-                                flex-direction: column;
-                                justify-content: center;
-                                align-items: center;
-                                backdrop-filter: blur(10px);
-                            }}
-                            .cinema-video {{
-                                width: 80vw;
-                                max-height: 75vh;
-                                border: 2px solid #009CA6;
-                                border-radius: 12px;
-                                box-shadow: 0 0 50px rgba(0, 156, 166, 0.5);
-                                outline: none;
-                            }}
-                            .btn-fechar {{
-                                margin-top: 25px;
-                                padding: 12px 30px;
-                                background-color: #0A0A0A;
-                                color: #009CA6;
-                                border: 2px solid #009CA6;
-                                border-radius: 8px;
-                                font-size: 16px;
-                                font-weight: bold;
-                                cursor: pointer;
-                                transition: all 0.3s ease;
-                                font-family: sans-serif;
-                            }}
-                            .btn-fechar:hover {{
-                                background-color: #009CA6;
-                                color: #000;
-                                box-shadow: 0 0 20px rgba(0,156,166,0.6);
-                            }}
-                        `;
-                        parentDoc.head.appendChild(style);
-
-                        // Cria a overlay no documento pai (cobre a aplicação inteira)
-                        var overlay = parentDoc.createElement('div');
-                        overlay.className = 'cinema-overlay';
-                        overlay.id = 'cinema-modal';
-                        overlay.innerHTML = `
-                            <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ RECOMPENSA DESBLOQUEADA ⚡</h2>
-                            {video_tag}
-                            <button class="btn-fechar" id="btn-fechar-cinema">FECHAR E VOLTAR AO MODO OPERANTE</button>
-                        `;
-                        parentDoc.body.appendChild(overlay);
-
-                        // Fecha ao clicar no botão (listener vinculado direto no elemento)
-                        var btnFechar = parentDoc.getElementById('btn-fechar-cinema');
-                        btnFechar.addEventListener('click', function() {{
-                            var vid = parentDoc.getElementById('vid-player');
-                            if (vid) {{ vid.pause(); }}
-                            overlay.remove();
-                            style.remove();
-                        }});
-
-                        // Alarme sonoro (Web Audio API), tocado no contexto da janela pai
-                        try {{
-                            var AudioCtxClass = window.parent.AudioContext || window.parent.webkitAudioContext;
-                            var audioCtx = new AudioCtxClass();
-                            if (audioCtx.state === 'suspended') {{ audioCtx.resume(); }}
-
-                            function playBeep(time, freq, duration) {{
-                                var osc = audioCtx.createOscillator();
-                                var gain = audioCtx.createGain();
-                                osc.connect(gain);
-                                gain.connect(audioCtx.destination);
-                                osc.type = "square";
-                                osc.frequency.setValueAtTime(freq, time);
-                                gain.gain.setValueAtTime(0.1, time);
-                                gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
-                                osc.start(time);
-                                osc.stop(time + duration);
-                            }}
-
-                            // Sequência de alarme digital (Beep, Beep, Beep, Beeeeep)
-                            playBeep(audioCtx.currentTime, 880, 0.15);
-                            playBeep(audioCtx.currentTime + 0.3, 880, 0.15);
-                            playBeep(audioCtx.currentTime + 0.6, 880, 0.15);
-                            playBeep(audioCtx.currentTime + 0.9, 1100, 0.6);
-                        }} catch(e) {{
-                            console.log("Audio API não suportada ou bloqueada:", e);
+                        function formatTime(s) {{
+                            const m = Math.floor(s / 60);
+                            const rs = s % 60;
+                            return (m < 10 ? '0' : '') + m + ':' + (rs < 10 ? '0' : '') + rs;
                         }}
 
-                        // Dá o play no vídeo logo após o alarme (fallback caso o atributo autoplay seja bloqueado)
-                        setTimeout(function() {{
-                            var vid = parentDoc.getElementById('vid-player');
-                            if (vid) {{
-                                vid.play().catch(function(e) {{
-                                    console.log("O navegador bloqueou o autoplay do vídeo:", e);
-                                }});
+                        function start() {{
+                            if(!running) {{
+                                running = true;
+                                timer = setInterval(() => {{ secs++; display.innerText = formatTime(secs); }}, 1000);
                             }}
-                        }}, 1500);
-                    }})();
+                        }}
+
+                        function pause() {{
+                            running = false;
+                            clearInterval(timer);
+                        }}
+
+                        function finish() {{
+                            if(secs === 0) return; // Evita disparar se não cronometrou nada
+                            pause();
+                            
+                            var parentDoc = window.parent.document;
+                            var oldOverlay = parentDoc.getElementById('cinema-modal');
+                            if (oldOverlay) oldOverlay.remove();
+                            var oldStyle = parentDoc.getElementById('cinema-style');
+                            if (oldStyle) oldStyle.remove();
+
+                            var style = parentDoc.createElement('style');
+                            style.id = 'cinema-style';
+                            style.innerHTML = `
+                                .cinema-overlay {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(5, 5, 5, 0.95); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }}
+                                .cinema-video {{ width: 80vw; max-height: 75vh; border: 2px solid #009CA6; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }}
+                                .btn-fechar {{ margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }}
+                                .btn-fechar:hover {{ background-color: #009CA6; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }}
+                            `;
+                            parentDoc.head.appendChild(style);
+
+                            var overlay = parentDoc.createElement('div');
+                            overlay.className = 'cinema-overlay';
+                            overlay.id = 'cinema-modal';
+                            
+                            // Injete a mesma tag de vídeo carregada no Python
+                            overlay.innerHTML = `
+                                <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ TEMPO DE RESOLUÇÃO: ${{formatTime(secs)}} ⚡</h2>
+                                {video_tag}
+                                <button class="btn-fechar" id="btn-fechar-cinema">FECHAR E VOLTAR AO MODO OPERANTE</button>
+                            `;
+                            parentDoc.body.appendChild(overlay);
+
+                            var btnFechar = parentDoc.getElementById('btn-fechar-cinema');
+                            btnFechar.addEventListener('click', function() {{
+                                var vid = parentDoc.getElementById('vid-player');
+                                if (vid) {{ vid.pause(); }}
+                                overlay.remove();
+                                style.remove();
+                                secs = 0; // Zera o cronômetro local após fechar o edit
+                                display.innerText = "00:00";
+                            }});
+
+                            // Som
+                            try {{
+                                var AudioCtxClass = window.parent.AudioContext || window.parent.webkitAudioContext;
+                                var audioCtx = new AudioCtxClass();
+                                if (audioCtx.state === 'suspended') {{ audioCtx.resume(); }}
+                                function playBeep(time, freq, duration) {{
+                                    var osc = audioCtx.createOscillator();
+                                    var gain = audioCtx.createGain();
+                                    osc.connect(gain);
+                                    gain.connect(audioCtx.destination);
+                                    osc.type = "square";
+                                    osc.frequency.setValueAtTime(freq, time);
+                                    gain.gain.setValueAtTime(0.1, time);
+                                    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+                                    osc.start(time);
+                                    osc.stop(time + duration);
+                                }}
+                                playBeep(audioCtx.currentTime, 880, 0.15);
+                                playBeep(audioCtx.currentTime + 0.3, 1100, 0.6);
+                            }} catch(e) {{ console.log("Audio API error:", e); }}
+
+                            setTimeout(function() {{
+                                var vid = parentDoc.getElementById('vid-player');
+                                if (vid) {{ vid.play().catch(e => console.log("Autoplay block:", e)); }}
+                            }}, 1500);
+                        }}
                     </script>
-                    """
-                    components.html(html_cinema, height=0, width=0)
-                else:
-                    st.warning("⏱️ Por favor, defina um tempo maior que zero para o ciclo.")
+                </body>
+                </html>
+                """
+                components.html(html_cronometro, height=180)
 
     with col_registro:
         st.markdown("#### 📝 Input de Produtividade")
