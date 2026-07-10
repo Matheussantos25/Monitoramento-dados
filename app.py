@@ -57,6 +57,19 @@ DISCIPLINAS_ESTUDO = [
 ]
 DISCIPLINAS_ESTUDO.sort()
 
+# Rota estratégica intercalando Exatas, Humanas e TI para evitar fadiga mental
+ROTA_ESTRATEGICA = [
+    "Matemática e Estatística Aplicada", 
+    "Legislação (LAI/Marco Civil/LGPD)", 
+    "Banco de Dados (SQL/NoSQL/Big Data)", 
+    "Raciocínio Lógico", 
+    "Língua Portuguesa", 
+    "Ciência de Dados (ML/DL/PLN/Visão)", 
+    "Atualidades e IA", 
+    "Linguagens (Python/R/Spark/SAS)", 
+    "Língua Inglesa" 
+]
+
 # --- CONFIGURAÇÕES DA PÁGINA ---
 st.set_page_config(page_title="Monitoramento Físico & Mental", page_icon="⚡", layout="wide")
 
@@ -375,6 +388,25 @@ with tab_peso:
 with tab_estudo:
     st.markdown("<h3 style='margin-bottom: 20px; color: #009CA6;'>📚 Central de Foco: Operação FGV</h3>", unsafe_allow_html=True)
     
+    # --- NOVO: MOTOR DE RECOMENDAÇÃO INTELIGENTE ---
+    prox_disciplina = ROTA_ESTRATEGICA[0]
+    if not df_estudos.empty:
+        # Pega a última disciplina estudada validando datas
+        ultima_disciplina = df_estudos.sort_values(by=['data', 'horario'], ascending=[False, False]).iloc[0]['exercicio']
+        if ultima_disciplina in ROTA_ESTRATEGICA:
+            idx_atual = ROTA_ESTRATEGICA.index(ultima_disciplina)
+            idx_prox = (idx_atual + 1) % len(ROTA_ESTRATEGICA)
+            prox_disciplina = ROTA_ESTRATEGICA[idx_prox]
+            
+    st.markdown(f"""
+    <div style="background-color: #0A0A0A; border-left: 4px solid #8B5CF6; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        <span style="color: #009CA6; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Estratégica (Recomendação)</span><br>
+        <span style="color: #AAA; font-size: 14px;">Para evitar fadiga cognitiva, seu próximo alvo no ciclo de 30 dias deve ser:</span><br>
+        <span style="color: #FFF; font-size: 24px; font-weight: 700; display: inline-block; margin-top: 8px;">🎯 {prox_disciplina}</span>
+    </div>
+    """, unsafe_allow_html=True)
+    # -----------------------------------------------
+
     col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
     
     with col_pomodoro:
@@ -395,10 +427,11 @@ with tab_estudo:
             c_est1, c_est2 = st.columns(2)
             with c_est1:
                 data_estudo = st.date_input("Data da Sessão", value=datetime.today())
-                disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO)
+                # Auto-preenche com a recomendação da bússola
+                index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
+                disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO, index=index_recomendado)
                 tempo_estudo = st.number_input("Tempo Líquido (min)", min_value=0, step=15)
             with c_est2:
-                # Sistema de Eficiência (Nova Funcionalidade)
                 certas = st.number_input("✅ Questões Corretas", min_value=0, step=1)
                 erradas = st.number_input("❌ Questões Erradas", min_value=0, step=1)
                 
@@ -417,7 +450,7 @@ with tab_estudo:
                 dados_estudo = {
                     "data": str(data_estudo), "horario": datetime.now().strftime("%H:%M:%S"), 
                     "grupo_muscular": "Estudos", "exercicio": disciplina, 
-                    "series": 0, "repeticoes": int(total_q), # Mantém total na coluna antiga por compatibilidade
+                    "series": 0, "repeticoes": int(total_q), 
                     "carga_kg": 0.0, "descanso_seg": 0, "duracao_min": int(tempo_estudo),
                     "distancia_km": 0.0, "alimentacao_saudavel": "", "alimentacao_besteirol": "",
                     "peso_corporal": 0.0, "dados_extras": mochila_estudo_json 
@@ -432,12 +465,10 @@ with tab_estudo:
 with tab_dash_estudo:
     st.markdown("### 📈 Analytics Acadêmico")
     if not df_estudos.empty:
-        # Extração das novas métricas via json
         df_estudos['q_certas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
         df_estudos['q_erradas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
         df_estudos['topico'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'topico', ''))
         
-        # O total pode vir da soma ou da coluna antiga (retrocompatibilidade)
         total_certas = df_estudos['q_certas'].sum()
         total_erradas = df_estudos['q_erradas'].sum()
         total_questoes = int(df_estudos['repeticoes'].sum()) 
@@ -465,7 +496,6 @@ with tab_dash_estudo:
         
         st.markdown("---")
         
-        # Algoritmo de Revisão Espaçada Automática
         st.markdown("#### 🧠 Sistema de Revisão Espaçada Ativa")
         df_valid_topics = df_estudos[(df_estudos['topico'] != '') & (df_estudos['topico'].notna())].copy()
         
@@ -473,7 +503,6 @@ with tab_dash_estudo:
             last_studied = df_valid_topics.groupby(['exercicio', 'topico'], as_index=False)['data'].max()
             last_studied['dias_passados'] = (pd.Timestamp.today().normalize() - pd.to_datetime(last_studied['data'])).dt.days
             
-            # Filtra os tópicos que caem nas janelas de 1, 7 ou ~30 dias
             revisoes_hoje = last_studied[last_studied['dias_passados'].isin([1, 7, 30, 31])]
             
             if not revisoes_hoje.empty:
@@ -500,7 +529,7 @@ with tab_dash_estudo:
                 st.markdown("#### 📊 Taxa de Acerto por Disciplina")
                 df_acertos = df_estudos.groupby('exercicio', as_index=False)[['q_certas', 'q_erradas']].sum()
                 df_acertos['total'] = df_acertos['q_certas'] + df_acertos['q_erradas']
-                df_acertos = df_acertos[df_acertos['total'] > 0] # só mostra o que tem questão
+                df_acertos = df_acertos[df_acertos['total'] > 0] 
                 
                 if not df_acertos.empty:
                     df_acertos['% Acerto'] = (df_acertos['q_certas'] / df_acertos['total']) * 100
@@ -513,27 +542,24 @@ with tab_dash_estudo:
         st.warning("Sem dados de estudo arquivados.")
 
 # ==========================================
-# ABA 7: CRUZAMENTO DE DADOS (NOVA ABA)
+# ABA 7: CRUZAMENTO DE DADOS 
 # ==========================================
 with tab_cruzamento:
     st.markdown("### 🧬 Data Lab: Cruzamento de Variáveis")
     st.write("Identifique padrões ocultos entre sua rotina física e seu rendimento cognitivo.")
     
     if not df_raw.empty and not df_estudos.empty and not df_treinos.empty:
-        # Prepara df diário de treinos
         df_t_dia = df_treinos.groupby('data', as_index=False).agg(
             total_reps=('repeticoes', 'sum'),
             treinou=('exercicio', 'count')
         )
         
-        # Prepara df diário de estudos
         df_e_dia = df_estudos.groupby('data', as_index=False).agg(
             minutos_estudados=('duracao_min', 'sum'),
             total_certas=('q_certas', 'sum'),
             total_erradas=('q_erradas', 'sum')
         )
         
-        # Merge pela data
         df_merged = pd.merge(df_t_dia, df_e_dia, on='data', how='outer').fillna(0)
         df_merged['data_format'] = df_merged['data'].dt.strftime('%d/%m')
         
