@@ -4,15 +4,15 @@ from supabase import create_client, Client
 from datetime import datetime, timedelta
 import plotly.express as px
 import json
-import time
 import os
 import random
 import base64
 import streamlit.components.v1 as components
 
-# --- FUNÇÕES AUXILIARES ---
+# --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
 def safe_get(val, key, default=None):
-    if pd.isna(val) or val == "": return default
+    if val is None or val == "": return default
+    if isinstance(val, float) and pd.isna(val): return default
     if isinstance(val, str):
         try: val = json.loads(val)
         except: return default
@@ -61,7 +61,7 @@ DISCIPLINAS_ESTUDO = [
 ]
 DISCIPLINAS_ESTUDO.sort()
 
-# --- TÓPICOS DO EDITAL POR DISCIPLINA (usado no seletor dinâmico e na Cobertura) ---
+# --- TÓPICOS DO EDITAL POR DISCIPLINA ---
 TOPICOS_EDITAL = {
     "Matemática e Estatística Aplicada": [
         "I.1 Cálculo: funções, limites, derivadas, derivadas parciais, máximos e mínimos, integrais",
@@ -508,7 +508,6 @@ with tab_estudo:
         <span style="color: #FFF; font-size: 24px; font-weight: 700; display: inline-block; margin-top: 8px;">🎯 {prox_disciplina}</span>
     </div>
     """, unsafe_allow_html=True)
-    # -----------------------------------------------
 
     col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
     
@@ -516,7 +515,7 @@ with tab_estudo:
         with st.container(border=True):
             st.markdown("#### ⏱️ Modos de Foco")
             
-            # --- MOTOR DE RECOMPENSA (Carrega a Base64 para os dois modos) ---
+            # --- MOTOR DE RECOMPENSA EM BASE64 ---
             pasta_videos = "edits_motivacionais"
             video_base64 = ""
             try:
@@ -529,11 +528,11 @@ with tab_estudo:
             except FileNotFoundError:
                 pass
 
-            video_tag = (
-                "<video class='cinema-video' id='vid-player' controls autoplay>"
-                f"<source src='data:video/mp4;base64,{video_base64}' type='video/mp4'></video>"
-            ) if video_base64 else "<p style='color:#E0E0E0;'>Nenhum vídeo encontrado, mas o ciclo terminou!</p>"
-            # ------------------------------------------------------------------
+            video_tag = ""
+            if video_base64:
+                video_tag = "<video class='cinema-video' id='vid-player' controls autoplay><source src='data:video/mp4;base64," + video_base64 + "' type='video/mp4'></video>"
+            else:
+                video_tag = "<p style='color:#E0E0E0;'>Nenhum vídeo encontrado, mas o ciclo terminou!</p>"
 
             tipo_timer = st.radio("Selecione o Protocolo:", ["🍅 Pomodoro (Estudo Longo)", "⏱️ Cronômetro (Questões)"], horizontal=False)
             st.write("---")
@@ -544,147 +543,128 @@ with tab_estudo:
                     minutos_pomodoro = st.number_input("Minutos", min_value=0, value=50, step=1)
                 with c_pom2:
                     segundos_pomodoro = st.number_input("Segundos", min_value=0, max_value=59, value=0, step=5)
-                    
-                relogio_placeholder = st.empty()
                 
-                if st.button("▶️ Iniciar Ciclo", use_container_width=True):
-                    total_segundos = int((minutos_pomodoro * 60) + segundos_pomodoro)
-                    
-                    if total_segundos > 0:
-                        for t in range(total_segundos, -1, -1):
-                            mins, secs = divmod(t, 60)
-                            relogio_placeholder.markdown(
-                                f"<h1 style='text-align: center; font-size: 65px; color: #009CA6; margin: 0; text-shadow: 0 0 15px rgba(0,156,166,0.5);'>{mins:02d}:{secs:02d}</h1>", 
-                                unsafe_allow_html=True
-                            )
-                            time.sleep(1)
-                        
-                        relogio_placeholder.empty()
-                        st.success("🎯 Ciclo encerrado! Recompensa ativada.")
-                        
-                        html_cinema = f"""
+                total_segundos = int((minutos_pomodoro * 60) + segundos_pomodoro)
+                
+                if total_segundos > 0:
+                    # Pomodoro reescrito para rodar no frontend e nunca travar o servidor (evita o erro 'Oh no')
+                    html_pomodoro = """
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            body { background-color: transparent; color: #E0E0E0; font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
+                            .time { font-size: 65px; color: #009CA6; text-shadow: 0 0 15px rgba(0,156,166,0.5); font-weight: bold; margin: 10px 0 20px 0; }
+                            .btn { padding: 10px 20px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+                            .btn:hover { background-color: #009CA6; color: #000; box-shadow: 0 0 10px rgba(0,156,166,0.5); }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="time" id="display">[INITIAL_TIME]</div>
+                        <button class="btn" onclick="startPomodoro()">▶️ Iniciar Foco</button>
+
                         <script>
-                        (function() {{
-                            var parentDoc = window.parent.document;
-                            var oldOverlay = parentDoc.getElementById('cinema-modal');
-                            if (oldOverlay) oldOverlay.remove();
-                            var oldStyle = parentDoc.getElementById('cinema-style');
-                            if (oldStyle) oldStyle.remove();
+                            let secs = [TOTAL_SECS];
+                            let running = false;
+                            const display = document.getElementById('display');
 
-                            var style = parentDoc.createElement('style');
-                            style.id = 'cinema-style';
-                            style.innerHTML = `
-                                .cinema-overlay {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(5, 5, 5, 0.95); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }}
-                                .cinema-video {{ width: 80vw; max-height: 75vh; border: 2px solid #009CA6; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }}
-                                .btn-fechar {{ margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }}
-                                .btn-fechar:hover {{ background-color: #009CA6; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }}
-                            `;
-                            parentDoc.head.appendChild(style);
+                            function formatTime(s) {
+                                const m = Math.floor(s / 60);
+                                const rs = s % 60;
+                                return (m < 10 ? '0' : '') + m + ':' + (rs < 10 ? '0' : '') + rs;
+                            }
 
-                            var overlay = parentDoc.createElement('div');
-                            overlay.className = 'cinema-overlay';
-                            overlay.id = 'cinema-modal';
-                            overlay.innerHTML = `
-                                <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ RECOMPENSA DESBLOQUEADA ⚡</h2>
-                                {video_tag}
-                                <button class="btn-fechar" id="btn-fechar-cinema">FECHAR E VOLTAR AO MODO OPERANTE</button>
-                            `;
-                            parentDoc.body.appendChild(overlay);
+                            function startPomodoro() {
+                                if(!running && secs > 0) {
+                                    running = true;
+                                    let timer = setInterval(() => {
+                                        secs--;
+                                        display.innerText = formatTime(secs);
+                                        if(secs <= 0) {
+                                            clearInterval(timer);
+                                            running = false;
+                                            triggerCinema();
+                                        }
+                                    }, 1000);
+                                }
+                            }
 
-                            var btnFechar = parentDoc.getElementById('btn-fechar-cinema');
-                            btnFechar.addEventListener('click', function() {{
-                                var vid = parentDoc.getElementById('vid-player');
-                                if (vid) {{ vid.pause(); }}
-                                overlay.remove();
-                                style.remove();
-                            }});
+                            function triggerCinema() {
+                                var parentDoc = window.parent.document;
+                                var style = parentDoc.createElement('style');
+                                style.id = 'cinema-style';
+                                style.innerHTML = `
+                                    .cinema-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(5, 5, 5, 0.95); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+                                    .cinema-video { width: 80vw; max-height: 75vh; border: 2px solid #009CA6; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }
+                                    .btn-fechar { margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }
+                                    .btn-fechar:hover { background-color: #009CA6; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }
+                                `;
+                                parentDoc.head.appendChild(style);
 
-                            try {{
-                                var AudioCtxClass = window.parent.AudioContext || window.parent.webkitAudioContext;
-                                var audioCtx = new AudioCtxClass();
-                                if (audioCtx.state === 'suspended') {{ audioCtx.resume(); }}
-                                function playBeep(time, freq, duration) {{
-                                    var osc = audioCtx.createOscillator();
-                                    var gain = audioCtx.createGain();
-                                    osc.connect(gain);
-                                    gain.connect(audioCtx.destination);
-                                    osc.type = "square";
-                                    osc.frequency.setValueAtTime(freq, time);
-                                    gain.gain.setValueAtTime(0.1, time);
-                                    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
-                                    osc.start(time);
-                                    osc.stop(time + duration);
-                                }}
-                                playBeep(audioCtx.currentTime, 880, 0.15);
-                                playBeep(audioCtx.currentTime + 0.3, 880, 0.15);
-                                playBeep(audioCtx.currentTime + 0.6, 880, 0.15);
-                                playBeep(audioCtx.currentTime + 0.9, 1100, 0.6);
-                            }} catch(e) {{ console.log("Audio API Error:", e); }}
+                                var overlay = parentDoc.createElement('div');
+                                overlay.className = 'cinema-overlay';
+                                overlay.id = 'cinema-modal';
+                                overlay.innerHTML = `
+                                    <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ CICLO CONCLUÍDO! RECOMPENSA DESBLOQUEADA ⚡</h2>
+                                    [VIDEO_TAG]
+                                    <button class="btn-fechar" id="btn-fechar-cinema">FECHAR E VOLTAR AO MODO OPERANTE</button>
+                                `;
+                                parentDoc.body.appendChild(overlay);
 
-                            setTimeout(function() {{
-                                var vid = parentDoc.getElementById('vid-player');
-                                if (vid) {{ vid.play().catch(function(e) {{ console.log("Autoplay block:", e); }}); }}
-                            }}, 1500);
-                        }})();
+                                var btnFechar = parentDoc.getElementById('btn-fechar-cinema');
+                                btnFechar.addEventListener('click', function() {
+                                    var vid = parentDoc.getElementById('vid-player');
+                                    if (vid) { vid.pause(); }
+                                    overlay.remove();
+                                    style.remove();
+                                });
+
+                                try {
+                                    var AudioCtxClass = window.parent.AudioContext || window.parent.webkitAudioContext;
+                                    var audioCtx = new AudioCtxClass();
+                                    if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+                                    function playBeep(time, freq, duration) {
+                                        var osc = audioCtx.createOscillator();
+                                        var gain = audioCtx.createGain();
+                                        osc.connect(gain); gain.connect(audioCtx.destination);
+                                        osc.type = "square"; osc.frequency.setValueAtTime(freq, time);
+                                        gain.gain.setValueAtTime(0.1, time); gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+                                        osc.start(time); osc.stop(time + duration);
+                                    }
+                                    playBeep(audioCtx.currentTime, 880, 0.15);
+                                    playBeep(audioCtx.currentTime + 0.3, 880, 0.15);
+                                    playBeep(audioCtx.currentTime + 0.6, 880, 0.15);
+                                    playBeep(audioCtx.currentTime + 0.9, 1100, 0.6);
+                                } catch(e) {}
+
+                                setTimeout(function() {
+                                    var vid = parentDoc.getElementById('vid-player');
+                                    if (vid) { vid.play().catch(e => console.log(e)); }
+                                }, 1500);
+                            }
                         </script>
-                        """
-                        components.html(html_cinema, height=0, width=0)
-                    else:
-                        st.warning("⏱️ Por favor, defina um tempo maior que zero para o ciclo.")
+                    </body>
+                    </html>
+                    """
+                    # Uso do replace no lugar de f-strings para garantir blindagem contra falhas
+                    html_pomodoro = html_pomodoro.replace("[TOTAL_SECS]", str(total_segundos)).replace("[INITIAL_TIME]", f"{minutos_pomodoro:02d}:{segundos_pomodoro:02d}").replace("[VIDEO_TAG]", video_tag)
+                    components.html(html_pomodoro, height=180)
+                else:
+                    st.warning("⏱️ Por favor, defina um tempo maior que zero para o ciclo.")
 
             else:
-                # --- WIDGET DO CRONÔMETRO (HTML/JS INJETADO NO STREAMLIT) ---
-                html_cronometro = f"""
+                html_cronometro = """
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <style>
-                        body {{
-                            background-color: transparent;
-                            color: #E0E0E0;
-                            font-family: sans-serif;
-                            text-align: center;
-                            margin: 0;
-                            padding: 0;
-                        }}
-                        .time {{
-                            font-size: 65px;
-                            color: #009CA6;
-                            text-shadow: 0 0 15px rgba(0,156,166,0.5);
-                            font-weight: bold;
-                            margin: 10px 0 20px 0;
-                        }}
-                        .btn-group {{
-                            display: flex;
-                            justify-content: center;
-                            gap: 10px;
-                            flex-wrap: wrap;
-                        }}
-                        .btn {{
-                            padding: 10px 20px;
-                            background-color: #0A0A0A;
-                            color: #009CA6;
-                            border: 2px solid #009CA6;
-                            border-radius: 8px;
-                            cursor: pointer;
-                            font-size: 14px;
-                            font-weight: bold;
-                            transition: all 0.3s;
-                        }}
-                        .btn:hover {{
-                            background-color: #009CA6;
-                            color: #000;
-                            box-shadow: 0 0 10px rgba(0,156,166,0.5);
-                        }}
-                        .btn-finish {{
-                            border-color: #8B5CF6;
-                            color: #8B5CF6;
-                        }}
-                        .btn-finish:hover {{
-                            background-color: #8B5CF6;
-                            color: #000;
-                            box-shadow: 0 0 10px rgba(139,92,246,0.5);
-                        }}
+                        body { background-color: transparent; color: #E0E0E0; font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
+                        .time { font-size: 65px; color: #009CA6; text-shadow: 0 0 15px rgba(0,156,166,0.5); font-weight: bold; margin: 10px 0 20px 0; }
+                        .btn-group { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+                        .btn { padding: 10px 20px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+                        .btn:hover { background-color: #009CA6; color: #000; box-shadow: 0 0 10px rgba(0,156,166,0.5); }
+                        .btn-finish { border-color: #8B5CF6; color: #8B5CF6; }
+                        .btn-finish:hover { background-color: #8B5CF6; color: #000; box-shadow: 0 0 10px rgba(139,92,246,0.5); }
                     </style>
                 </head>
                 <body>
@@ -701,96 +681,85 @@ with tab_estudo:
                         let running = false;
                         const display = document.getElementById('display');
 
-                        function formatTime(s) {{
+                        function formatTime(s) {
                             const m = Math.floor(s / 60);
                             const rs = s % 60;
                             return (m < 10 ? '0' : '') + m + ':' + (rs < 10 ? '0' : '') + rs;
-                        }}
+                        }
 
-                        function start() {{
-                            if(!running) {{
+                        function start() {
+                            if(!running) {
                                 running = true;
-                                timer = setInterval(() => {{ secs++; display.innerText = formatTime(secs); }}, 1000);
-                            }}
-                        }}
+                                timer = setInterval(() => { secs++; display.innerText = formatTime(secs); }, 1000);
+                            }
+                        }
 
-                        function pause() {{
+                        function pause() {
                             running = false;
                             clearInterval(timer);
-                        }}
+                        }
 
-                        function finish() {{
-                            if(secs === 0) return; // Evita disparar se não cronometrou nada
+                        function finish() {
+                            if(secs === 0) return;
                             pause();
                             
                             var parentDoc = window.parent.document;
-                            var oldOverlay = parentDoc.getElementById('cinema-modal');
-                            if (oldOverlay) oldOverlay.remove();
-                            var oldStyle = parentDoc.getElementById('cinema-style');
-                            if (oldStyle) oldStyle.remove();
-
                             var style = parentDoc.createElement('style');
                             style.id = 'cinema-style';
                             style.innerHTML = `
-                                .cinema-overlay {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(5, 5, 5, 0.95); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }}
-                                .cinema-video {{ width: 80vw; max-height: 75vh; border: 2px solid #009CA6; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }}
-                                .btn-fechar {{ margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }}
-                                .btn-fechar:hover {{ background-color: #009CA6; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }}
+                                .cinema-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(5, 5, 5, 0.95); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+                                .cinema-video { width: 80vw; max-height: 75vh; border: 2px solid #009CA6; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }
+                                .btn-fechar { margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }
+                                .btn-fechar:hover { background-color: #009CA6; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }
                             `;
                             parentDoc.head.appendChild(style);
 
                             var overlay = parentDoc.createElement('div');
                             overlay.className = 'cinema-overlay';
                             overlay.id = 'cinema-modal';
-                            
-                            // Injete a mesma tag de vídeo carregada no Python
                             overlay.innerHTML = `
-                                <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ TEMPO DE RESOLUÇÃO: ${{formatTime(secs)}} ⚡</h2>
-                                {video_tag}
-                                <button class="btn-fechar" id="btn-fechar-cinema">FECHAR E VOLTAR AO MODO OPERANTE</button>
+                                <h2 style="color: #FFF; font-weight: 800; letter-spacing: 2px; margin-bottom: 20px;">⚡ TEMPO DE RESOLUÇÃO: ${formatTime(secs)} ⚡</h2>
+                                [VIDEO_TAG]
+                                <button class="btn-fechar" id="btn-fechar-cinema">FECHAR E VOLTAR</button>
                             `;
                             parentDoc.body.appendChild(overlay);
 
                             var btnFechar = parentDoc.getElementById('btn-fechar-cinema');
-                            btnFechar.addEventListener('click', function() {{
+                            btnFechar.addEventListener('click', function() {
                                 var vid = parentDoc.getElementById('vid-player');
-                                if (vid) {{ vid.pause(); }}
+                                if (vid) { vid.pause(); }
                                 overlay.remove();
                                 style.remove();
-                                secs = 0; // Zera o cronômetro local após fechar o edit
+                                secs = 0; 
                                 display.innerText = "00:00";
-                            }});
+                            });
 
-                            // Som
-                            try {{
+                            try {
                                 var AudioCtxClass = window.parent.AudioContext || window.parent.webkitAudioContext;
                                 var audioCtx = new AudioCtxClass();
-                                if (audioCtx.state === 'suspended') {{ audioCtx.resume(); }}
-                                function playBeep(time, freq, duration) {{
+                                if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+                                function playBeep(time, freq, duration) {
                                     var osc = audioCtx.createOscillator();
                                     var gain = audioCtx.createGain();
-                                    osc.connect(gain);
-                                    gain.connect(audioCtx.destination);
-                                    osc.type = "square";
-                                    osc.frequency.setValueAtTime(freq, time);
-                                    gain.gain.setValueAtTime(0.1, time);
-                                    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
-                                    osc.start(time);
-                                    osc.stop(time + duration);
-                                }}
+                                    osc.connect(gain); gain.connect(audioCtx.destination);
+                                    osc.type = "square"; osc.frequency.setValueAtTime(freq, time);
+                                    gain.gain.setValueAtTime(0.1, time); gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+                                    osc.start(time); osc.stop(time + duration);
+                                }
                                 playBeep(audioCtx.currentTime, 880, 0.15);
                                 playBeep(audioCtx.currentTime + 0.3, 1100, 0.6);
-                            }} catch(e) {{ console.log("Audio API error:", e); }}
+                            } catch(e) {}
 
-                            setTimeout(function() {{
+                            setTimeout(function() {
                                 var vid = parentDoc.getElementById('vid-player');
-                                if (vid) {{ vid.play().catch(e => console.log("Autoplay block:", e)); }}
-                            }}, 1500);
-                        }}
+                                if (vid) { vid.play().catch(e => console.log(e)); }
+                            }, 1500);
+                        }
                     </script>
                 </body>
                 </html>
                 """
+                html_cronometro = html_cronometro.replace("[VIDEO_TAG]", video_tag)
                 components.html(html_cronometro, height=180)
 
     with col_registro:
@@ -841,8 +810,6 @@ with tab_dash_estudo:
     if not df_estudos.empty:
         df_estudos['q_certas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
         df_estudos['q_erradas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
-        
-        # Lê a chave nova "topico_edital" mas deixa "topico" como fallback de segurança para registros antigos
         df_estudos['topico_edital'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', safe_get(x, 'topico', 'Geral')))
         
         total_certas = df_estudos['q_certas'].sum()
@@ -925,44 +892,45 @@ with tab_dash_estudo:
         if disciplina_selecionada != "Visão Geral (Todas)":
             df_tops = df_tops[df_tops['exercicio'] == disciplina_selecionada]
             
-        df_topicos_agg = df_tops.groupby(['exercicio', 'topico_edital'], as_index=False).agg(
-            duracao_min=('duracao_min', 'sum'),
-            certas=('q_certas', 'sum'),
-            erradas=('q_erradas', 'sum')
-        )
-        df_topicos_agg['horas'] = df_topicos_agg['duracao_min'] / 60
-        df_topicos_agg['total_q'] = df_topicos_agg['certas'] + df_topicos_agg['erradas']
-        df_topicos_agg['% Acerto'] = (df_topicos_agg['certas'] / df_topicos_agg['total_q']) * 100
-        df_topicos_agg['% Acerto'] = df_topicos_agg['% Acerto'].fillna(0)
-        
-        # Encurtar o nome do tópico para caber perfeitamente no gráfico sem quebrar
-        df_topicos_agg['topico_curto'] = df_topicos_agg['topico_edital'].apply(lambda x: x[:45] + '...' if len(x) > 45 else x)
-        
-        c_top1, c_top2 = st.columns(2)
-        
-        with c_top1:
-            with st.container(border=True):
-                st.markdown("##### ⏳ Tempo Investido (Horas)")
-                # Pega os 10 tópicos com mais horas estudadas
-                df_top_horas = df_topicos_agg.sort_values('horas', ascending=True).tail(10)
-                if df_top_horas['horas'].sum() > 0:
-                    fig_t = px.bar(df_top_horas, y='topico_curto', x='horas', text_auto='.1f', orientation='h', color='horas', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'exercicio': True})
-                    fig_t.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False)
-                    st.plotly_chart(fig_t, use_container_width=True)
-                else:
-                    st.info("Sem registro de horas para os tópicos filtrados.")
-                
-        with c_top2:
-            with st.container(border=True):
-                st.markdown("##### 🎯 Taxa de Acerto (%)")
-                # Filtra apenas tópicos que tiveram resolução de questões
-                df_top_acertos = df_topicos_agg[df_topicos_agg['total_q'] > 0].sort_values('% Acerto', ascending=True).tail(10)
-                if not df_top_acertos.empty:
-                    fig_q = px.bar(df_top_acertos, y='topico_curto', x='% Acerto', text_auto='.1f', orientation='h', color='% Acerto', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'total_q': True, 'exercicio': True})
-                    fig_q.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False)
-                    st.plotly_chart(fig_q, use_container_width=True)
-                else:
-                    st.info("Cadastre Acertos/Erros para mapear seu desempenho por tópico.")
+        # Proteção extra: se a filtragem esvaziar o DataFrame
+        if not df_tops.empty:
+            df_topicos_agg = df_tops.groupby(['exercicio', 'topico_edital'], as_index=False).agg(
+                duracao_min=('duracao_min', 'sum'),
+                certas=('q_certas', 'sum'),
+                erradas=('q_erradas', 'sum')
+            )
+            df_topicos_agg['horas'] = df_topicos_agg['duracao_min'] / 60
+            df_topicos_agg['total_q'] = df_topicos_agg['certas'] + df_topicos_agg['erradas']
+            df_topicos_agg['% Acerto'] = (df_topicos_agg['certas'] / df_topicos_agg['total_q']) * 100
+            df_topicos_agg['% Acerto'] = df_topicos_agg['% Acerto'].fillna(0)
+            
+            df_topicos_agg['topico_curto'] = df_topicos_agg['topico_edital'].apply(lambda x: str(x)[:45] + '...' if len(str(x)) > 45 else str(x))
+            
+            c_top1, c_top2 = st.columns(2)
+            
+            with c_top1:
+                with st.container(border=True):
+                    st.markdown("##### ⏳ Tempo Investido (Horas)")
+                    df_top_horas = df_topicos_agg.sort_values('horas', ascending=True).tail(10)
+                    if df_top_horas['horas'].sum() > 0:
+                        fig_t = px.bar(df_top_horas, y='topico_curto', x='horas', text_auto='.1f', orientation='h', color='horas', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'exercicio': True})
+                        fig_t.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False)
+                        st.plotly_chart(fig_t, use_container_width=True)
+                    else:
+                        st.info("Sem registro de horas para os tópicos filtrados.")
+                    
+            with c_top2:
+                with st.container(border=True):
+                    st.markdown("##### 🎯 Taxa de Acerto (%)")
+                    df_top_acertos = df_topicos_agg[df_topicos_agg['total_q'] > 0].sort_values('% Acerto', ascending=True).tail(10)
+                    if not df_top_acertos.empty:
+                        fig_q = px.bar(df_top_acertos, y='topico_curto', x='% Acerto', text_auto='.1f', orientation='h', color='% Acerto', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'total_q': True, 'exercicio': True})
+                        fig_q.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False)
+                        st.plotly_chart(fig_q, use_container_width=True)
+                    else:
+                        st.info("Cadastre Acertos/Erros para mapear seu desempenho por tópico.")
+        else:
+            st.info("Nenhuma sessão acadêmica cadastrada para essa disciplina.")
 
 # ==========================================
 # ABA 7: CRUZAMENTO DE DADOS 
