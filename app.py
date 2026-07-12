@@ -303,32 +303,24 @@ with tab_registro:
         horario = f"{hora}:{minuto}:00"
         st.markdown("---")
         
-        tipo_treino = st.radio("Selecione a Modalidade do Exercício:", ["Hipertrofia / Força Pura", "Skill / Isometria (Ex: Handstand)"], horizontal=True)
+        exercicio_input = st.selectbox("Exercício", TODOS_EXERCICIOS)
         st.write("")
         
+        st.markdown("#### 📊 Métricas do Exercício (Preencha apenas o que for aplicável)")
         c1, c2, c3 = st.columns(3)
         with c1:
-            exercicio_input = st.selectbox("Exercício", TODOS_EXERCICIOS)
-            duracao = st.number_input("Duração Cardio (min)", min_value=0)
+            series = st.number_input("Séries / Tentativas", min_value=0, value=1, step=1)
+            reps = st.number_input("Repetições (Total)", min_value=0, step=1)
+            carga = st.number_input("Carga (kg)", min_value=0.0)
+        with c2:
+            isometria_segundos = st.number_input("Isometria: Tempo Sustentado (seg)", min_value=0, step=1)
+            intervalo = st.number_input("Intervalo de Descanso (seg)", min_value=0, step=15)
+        with c3:
+            duracao = st.number_input("Cardio: Duração (min)", min_value=0)
+            distancia = st.number_input("Cardio: Distância (km)", min_value=0.0)
             
-        if "Hipertrofia" in tipo_treino:
-            with c2:
-                series = st.number_input("Séries", min_value=1, value=1, step=1)
-                reps = st.number_input("Repetições (Total)", min_value=0, step=1)
-            with c3:
-                carga = st.number_input("Carga (kg)", min_value=0.0)
-                intervalo = st.number_input("Intervalo (seg)", min_value=0, step=15)
-                distancia = st.number_input("Distância Cardio (km)", min_value=0.0)
-            isometria_tentativas, isometria_segundos = 0, 0
-        else:
-            with c2:
-                isometria_tentativas = st.number_input("Tentativas / Entradas", min_value=1, value=1, step=1)
-                isometria_segundos = st.number_input("Tempo Máx Sustentado (segundos)", min_value=0, step=1)
-            with c3:
-                intervalo = st.number_input("Intervalo (seg)", min_value=0, step=15)
-                distancia = 0.0
-            series, reps, carga = 0, 0, 0.0
-            
+        isometria_tentativas = series  # Para manter compatibilidade com seus registros anteriores de isometria
+        
         st.markdown("---")
         humor = st.selectbox("Estado Mental no Treino", ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"])
         
@@ -337,7 +329,6 @@ with tab_registro:
             
             mochila_json = {
                 "humor": humor,
-                "modalidade": "Skill" if "Skill" in tipo_treino else "Hipertrofia",
                 "isometria_tentativas": isometria_tentativas,
                 "isometria_segundos": isometria_segundos
             }
@@ -646,7 +637,6 @@ with tab_estudo:
                     </body>
                     </html>
                     """
-                    # Uso do replace no lugar de f-strings para garantir blindagem contra falhas
                     html_pomodoro = html_pomodoro.replace("[TOTAL_SECS]", str(total_segundos)).replace("[INITIAL_TIME]", f"{minutos_pomodoro:02d}:{segundos_pomodoro:02d}").replace("[VIDEO_TAG]", video_tag)
                     components.html(html_pomodoro, height=180)
                 else:
@@ -892,7 +882,6 @@ with tab_dash_estudo:
         if disciplina_selecionada != "Visão Geral (Todas)":
             df_tops = df_tops[df_tops['exercicio'] == disciplina_selecionada]
             
-        # Proteção extra: se a filtragem esvaziar o DataFrame
         if not df_tops.empty:
             df_topicos_agg = df_tops.groupby(['exercicio', 'topico_edital'], as_index=False).agg(
                 duracao_min=('duracao_min', 'sum'),
