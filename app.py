@@ -121,7 +121,7 @@ TOPICOS_EDITAL = {
         "5.8 Colocação dos pronomes átonos",
         "6.1 Significação das palavras",
         "6.2 Substituição de palavras/trechos de texto",
-        "6.3 Reorganização da estrutura de orações e períodos",
+        "6.3 Reorganização da structure de orações e períodos",
         "6.4 Reescrita de textos (gêneros e formalidade)",
     ],
     "Língua Inglesa": [
@@ -319,7 +319,7 @@ with tab_registro:
             duracao = st.number_input("Cardio: Duração (min)", min_value=0)
             distancia = st.number_input("Cardio: Distância (km)", min_value=0.0)
             
-        isometria_tentativas = series  # Para manter compatibilidade com seus registros anteriores de isometria
+        isometria_tentativas = series  
         
         st.markdown("---")
         humor = st.selectbox("Estado Mental no Treino", ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"])
@@ -350,6 +350,15 @@ with tab_registro:
 # ==========================================
 with tab_dash_treino:
     if not df_treinos.empty:
+        df_treinos['isometria_segundos'] = df_treinos['dados_extras'].apply(lambda x: safe_get(x, 'isometria_segundos', 0))
+        
+        # Tripla checagem: Reps -> Isometria -> Séries
+        df_treinos['volume_grafico'] = df_treinos.apply(
+            lambda row: row['repeticoes'] if row['repeticoes'] > 0 
+            else (row['isometria_segundos'] if row['isometria_segundos'] > 0 else row['series']), 
+            axis=1
+        )
+        
         df_treinos['reps_totais'] = df_treinos['repeticoes']
         df_treinos['reps_por_serie'] = df_treinos.apply(lambda row: row['repeticoes'] / row['series'] if row['series'] > 0 else 0, axis=1)
         
@@ -405,13 +414,14 @@ with tab_dash_treino:
 
         with col_graf2:
             with st.container(border=True):
-                st.markdown(f"#### 📊 Volume (Reps) por Dia")
+                st.markdown(f"#### 📊 Volume Dinâmico (Reps / Seg / Séries) por Dia")
                 if not df_grafico_reps.empty:
                     dias_map = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
                     df_grafico_reps['dia_formatado'] = df_grafico_reps['data'].dt.weekday.map(dias_map) + df_grafico_reps['data'].dt.strftime(' (%d/%m)')
-                    df_reps_dia = df_grafico_reps.groupby(['data', 'dia_formatado'], as_index=False)['reps_totais'].sum().sort_values('data')
+                    
+                    df_reps_dia = df_grafico_reps.groupby(['data', 'dia_formatado'], as_index=False)['volume_grafico'].sum().sort_values('data')
 
-                    fig_reps = px.bar(df_reps_dia, x='dia_formatado', y='reps_totais', text_auto=True)
+                    fig_reps = px.bar(df_reps_dia, x='dia_formatado', y='volume_grafico', text_auto=True)
                     fig_reps.update_traces(marker_color='#009CA6', textfont_color='white')
                     fig_reps.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), margin=dict(l=0, r=0, t=20, b=0), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#1F1F1F"))
                     st.plotly_chart(fig_reps, use_container_width=True)
@@ -538,7 +548,6 @@ with tab_estudo:
                 total_segundos = int((minutos_pomodoro * 60) + segundos_pomodoro)
                 
                 if total_segundos > 0:
-                    # Pomodoro reescrito para rodar no frontend e nunca travar o servidor (evita o erro 'Oh no')
                     html_pomodoro = """
                     <!DOCTYPE html>
                     <html>
