@@ -34,7 +34,7 @@ EXERCICIOS_PRESETADOS = {
     "Peitoral": ["Flexão"],
     "Pernas": ["Agachamento"],
     "Rosto": ["Massagem Facial", "Mewing com borracha"],
-    "Skills / Calistenia": ["Handstand (Parada de Mãos)", "L-Sit", "Planche"]
+    "Skills / Calistenia": ["Handstand (Parada de Mãos)", "L-Sit"]
 }
 
 TODOS_EXERCICIOS = [ex for lista in EXERCICIOS_PRESETADOS.values() for ex in lista]
@@ -768,13 +768,10 @@ with tab_estudo:
             with c_est2:
                 certas = st.number_input("✅ Questões Corretas", min_value=0, step=1)
                 erradas = st.number_input("❌ Questões Erradas", min_value=0, step=1)
-                
-            humor_estudo = st.selectbox("Estado de Fluxo", ["Foco Extremo", "Alto", "Médio", "Baixo", "Disperso/Brain Fog"])
 
             if st.form_submit_button("💾 Computar Sessão", use_container_width=True):
                 total_q = certas + erradas
                 mochila_estudo_json = {
-                    "humor_foco": humor_estudo,
                     "topico_edital": topico_edital,
                     "q_certas": certas,
                     "q_erradas": erradas
