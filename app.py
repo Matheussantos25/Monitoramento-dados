@@ -766,7 +766,9 @@ with tab_estudo:
 
         index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
         disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO, index=index_recomendado, key="disciplina_estudo_select")
-        topicos_disponiveis = TOPICOS_EDITAL.get(disciplina, ["Geral"])
+        
+        # Inserindo a opção de Simulado / Visão Geral no topo de qualquer disciplina escolhida
+        topicos_disponiveis = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(disciplina, ["Geral"])
 
         with st.form("registro_estudo", clear_on_submit=True):
             c_est1, c_est2 = st.columns(2)
