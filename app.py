@@ -817,6 +817,9 @@ with tab_dash_estudo:
         taxa_acerto = (total_certas / (total_certas + total_erradas) * 100) if (total_certas + total_erradas) > 0 else 0
         tempo_total_min = int(df_estudos['duracao_min'].sum())
         
+        # CÁLCULO DA MÉDIA DE MINUTO POR QUESTÃO
+        media_min_questao = (tempo_total_min / total_questoes) if total_questoes > 0 else 0
+        
         st.markdown(f"""
         <div class="card-container">
             <div class="neon-card card-cyan">
@@ -830,6 +833,10 @@ with tab_dash_estudo:
             <div class="neon-card card-emerald">
                 <div class="card-title">📝 BATERIA DE QUESTÕES</div>
                 <div class="card-value">{total_questoes}</div>
+            </div>
+            <div class="neon-card card-crimson">
+                <div class="card-title">⏱️ MÉDIA MIN/QUESTÃO</div>
+                <div class="card-value">{media_min_questao:.1f} min</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -873,8 +880,18 @@ with tab_dash_estudo:
                 
                 if not df_acertos.empty:
                     df_acertos['% Acerto'] = (df_acertos['q_certas'] / df_acertos['total']) * 100
-                    fig_a = px.bar(df_acertos, x='exercicio', y='% Acerto', text_auto='.1f', color='% Acerto', color_continuous_scale="Teal")
-                    fig_a.update_layout(xaxis_title="", yaxis_title="%", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False)
+                    fig_a = px.bar(df_acertos, x='exercicio', y='% Acerto', color='% Acerto', color_continuous_scale="Teal")
+                    fig_a.update_traces(texttemplate='%{y:.1f}%', textposition='auto') # Retorna o sinal % no número
+                    fig_a.update_layout(
+                        xaxis_title="", 
+                        yaxis_title="", # Retirado o título '%' do eixo
+                        plot_bgcolor="rgba(0,0,0,0)", 
+                        paper_bgcolor="rgba(0,0,0,0)", 
+                        font=dict(color="#E0E0E0"), 
+                        coloraxis_showscale=False,
+                        yaxis=dict(showgrid=False), # Removed Grid
+                        xaxis=dict(showgrid=False)
+                    )
                     st.plotly_chart(fig_a, use_container_width=True)
                 else:
                     st.info("Registre 'Questões Corretas/Erradas' para gerar este gráfico.")
@@ -910,8 +927,9 @@ with tab_dash_estudo:
                     st.markdown("##### ⏳ Tempo Investido (Horas)")
                     df_top_horas = df_topicos_agg.sort_values('horas', ascending=True).tail(10)
                     if df_top_horas['horas'].sum() > 0:
-                        fig_t = px.bar(df_top_horas, y='topico_curto', x='horas', text_auto='.1f', orientation='h', color='horas', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'exercicio': True})
-                        fig_t.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False)
+                        fig_t = px.bar(df_top_horas, y='topico_curto', x='horas', orientation='h', color='horas', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'exercicio': True})
+                        fig_t.update_traces(texttemplate='%{x:.1f}h', textposition='auto')
+                        fig_t.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False)) # Removed Grid
                         st.plotly_chart(fig_t, use_container_width=True)
                     else:
                         st.info("Sem registro de horas para os tópicos filtrados.")
@@ -921,8 +939,9 @@ with tab_dash_estudo:
                     st.markdown("##### 🎯 Taxa de Acerto (%)")
                     df_top_acertos = df_topicos_agg[df_topicos_agg['total_q'] > 0].sort_values('% Acerto', ascending=True).tail(10)
                     if not df_top_acertos.empty:
-                        fig_q = px.bar(df_top_acertos, y='topico_curto', x='% Acerto', text_auto='.1f', orientation='h', color='% Acerto', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'total_q': True, 'exercicio': True})
-                        fig_q.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False)
+                        fig_q = px.bar(df_top_acertos, y='topico_curto', x='% Acerto', orientation='h', color='% Acerto', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'total_q': True, 'exercicio': True})
+                        fig_q.update_traces(texttemplate='%{x:.1f}%', textposition='auto')
+                        fig_q.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False)) # Removed Grid
                         st.plotly_chart(fig_q, use_container_width=True)
                     else:
                         st.info("Cadastre Acertos/Erros para mapear seu desempenho por tópico.")
