@@ -804,6 +804,24 @@ with tab_estudo:
 # ABA 6: DASHBOARD DE ESTUDOS
 # ==========================================
 with tab_dash_estudo:
+    
+    # 1. CAIXA ENORME COM O EDITAL (Requisito da Solicitação)
+    st.markdown("### 📜 Edital Completo (Caixa de Consulta)")
+    st.markdown("""
+    <div style="height: 250px; overflow-y: scroll; background-color: #0D0D0D; padding: 15px; border: 1px solid #1A1A1A; border-radius: 8px; color: #AAA; font-size: 13px; line-height: 1.6; margin-bottom: 25px;">
+        <strong>MATEMÁTICA E ESTATÍSTICA APLICADA:</strong> I MATEMÁTICA: 1 Cálculo: Funções. Limites. Derivadas. Derivadas Parciais. Máximos e mínimos. Integrais. 2 Álgebra linear: Notação de vetores e matrizes. Produto escalar e produto vetorial. Matriz identidade, inversa e transposta. Transformações lineares. Normas L1 e L2. Autovalores e autovetores. II ESTATÍSTICA: 1 Conceitos de probabilidade. Modelo de probabilidade. Probabilidade condicional. Independência. Variáveis aleatórias. Esperança, variância e covariância. Distribuições contínuas e discretas. Distribuições multidimensionais: matriz de covariância. 2 Estatísticas descritivas. Teorema do Limite Central. Teste de hipótese e intervalo de confiança. Estimador de máxima verossimilhança. Inferência bayesiana. Coeficiente de correlação de Pearson. Diagrama boxplot e avaliação de outliers.<br><br>
+        <strong>CIÊNCIA DE DADOS:</strong> 1 Aprendizado supervisionado: Regressão e Classificação. Métricas de avaliação. Overfitting e underfitting de modelos. Regularização. Seleção de modelos. Validação cruzada. Conjunto de treino, validação e teste. Trade off entre variância e viés. Regressão Linear e Regressão Logística. Árvores de Decisão e random forests. SVM. K-NN. 2 Aprendizado não-supervisionado: Redução de dimensionalidade: PCA. K-Means. Mistura de Gaussianas. Regras de Associação. 3 Redes neurais artificiais: Definições e arquitetura. Funções de ativação. Otimização: método do gradiente, método do gradiente estocástico e backpropagation. Métodos de regularização: penalização com normas L1 e L2. CNN. 4 Machine Learning aplicado. Noções de visão computacional com CNN. Classificação de imagens e detecção de objetos. Noções de processamento de linguagem natural. 5 ETL. 6 Manipulação, tratamento e visualização de dados. 7 Inteligência artificial. 7.1 Análise de dados (Pandas, NumPy, Jupiter, R). 7.2 Aprendizado de máquina. 7.2.1 Técnicas de classificação. 7.2.2 Técnicas de regressão. 7.2.3 Técnicas de agrupamento. 7.2.4 Técnicas de redução de dimensionalidade. 7.2.5 Técnicas de associação. 7.2.6 Sistemas de recomendação. 8 Processamento de linguagem natural (PLN). 9 Visão computacional. 10 Deep learning. 11 Mineração de Dados. 12 Ferramenta SAS.<br><br>
+        <strong>LINGUAGENS DE PROGRAMAÇÃO E SOFTWARES EM CIÊNCIAS DE DADOS:</strong> 1 Python e suas bibliotecas: Numpy, Matplotlib, Seaborn, Streamlit, Pandas, Scipy, TensorFlow, Keras e Pytorch. 2 R e suas bibliotecas. 3 Apache Hadoop e Apache Spark.<br><br>
+        <strong>BANCO DE DADOS:</strong> 1 Modelagem de dados (conceitual, lógica e física). 2 Abordagem relacional. 3 Normalização das estruturas de dados. 4 Integridade referencial. 5 Metadados. 6 Modelagem dimensional. 7 Linguagem de consulta estruturada (SQL). 8 Linguagem de definição de dados (DDL). 9 Linguagem de manipulação de dados (DML). 10 SGBD. 11 Propriedades de banco de dados. 12 Banco de dados NoSQL. 13 Banco de dados em memória. 14 Data lakes e soluções para big data.<br><br>
+        <strong>MODULO I - CONHECIMENTOS GERAIS (PARA TODOS OS CARGOS/PERFIS)</strong><br><br>
+        <strong>LÍNGUA PORTUGUESA:</strong> 1 Compreensão e interpretação de textos de gêneros variados. 2 Reconhecimento de tipos e gêneros textuais. 3 Domínio da ortografia oficial. 4 Domínio dos mecanismos de coesão textual. 4.1 Emprego de elementos de referenciação, substituição e repetição, de conectores e de outros elementos de sequenciação textual. 4.2 Emprego de tempos e modos verbais. 5 Domínio da estrutura morfossintática do período. 5.1 Emprego das classes de palavras. 5.2 Relações de coordenação entre orações e entre termos da oração. 5.3 Relações de subordinação entre orações e entre termos da oração. 5.4 Emprego dos sinais de pontuação. 5.5 Concordância verbal e nominal. 5.6 Regência verbal e nominal. 5.7 Emprego do sinal indicativo de crase. 5.8 Colocação dos pronomes átonos. 6 Reescrita de frases e parágrafos do texto. 6.1 Significação das palavras. 6.2 Substituição de palavras ou de trechos de texto. 6.3 Reorganização da estrutura de orações e de períodos do texto. 6.4 Reescrita de textos de diferentes gêneros e níveis de formalidade.<br><br>
+        <strong>LÍNGUA INGLESA:</strong> 1 Compreensão de textos em língua inglesa e itens gramaticais relevantes para o entendimento dos sentidos dos textos.<br><br>
+        <strong>RACIOCÍNIO LÓGICO:</strong> 1 Estruturas lógicas. 2 Lógica de argumentação: analogias, inferências, deduções e conclusões. 3 Lógica sentencial (ou proposicional). 3.1 Proposições simples e compostas. 3.2 Tabelas-verdade. 3.3 Equivalências. 3.4 Diagramas lógicos. 4 Lógica de primeira ordem. 5 Raciocínio lógico envolvendo problemas aritméticos, geométricos e matriciais.<br><br>
+        <strong>ATUALIDADES E INTELIGÊNCIA ARTIFICIAL:</strong> 1 Tópicos relevantes e atuais de diversas áreas, tais como segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, desenvolvimento sustentável e ecologia. 2 Inteligência Artificial: fundamentos e aplicações: conceitos de inteligência artificial; aprendizado da máquina; introdução aos modelos generativos e modelos de linguagem; ética, governança e privacidade em IA.<br><br>
+        <strong>LEGISLAÇÃO ACERCA DE SEGURANÇA DA INFORMAÇÃO E PROTEÇÃO DE DADOS:</strong> 1 Lei nº 12.527/2011 (Lei de Acesso à Informação): capítulos I, II, III, IV e V; Dec. nº 7.724 e nº 7845. 2 Lei nº 12.737/2012 (Lei de Delitos Informáticos): art. 2º. 3 Lei nº 12.965/2014 (Marco Civil da Internet): capítulos II, Seção I, e III, Seções I e II. 4 Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais – LGPD): capítulos I, II, III, IV, VII, VIII
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("### 📈 Analytics Acadêmico")
     if not df_estudos.empty:
         df_estudos['q_certas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
@@ -820,6 +838,7 @@ with tab_dash_estudo:
         # CÁLCULO DA MÉDIA DE MINUTO POR QUESTÃO
         media_min_questao = (tempo_total_min / total_questoes) if total_questoes > 0 else 0
         
+        # 2. MÉTRICAS EXISTENTES
         st.markdown(f"""
         <div class="card-container">
             <div class="neon-card card-cyan">
@@ -841,8 +860,61 @@ with tab_dash_estudo:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("---")
+        st.write("---")
         
+        # 3. GRÁFICO: QUANTIDADE DE QUESTÕES REALIZADAS POR DIA (Requisito da Solicitação)
+        st.markdown("#### 📅 Bateria de Questões por Dia")
+        df_q_dia = df_estudos.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
+        df_q_dia['data_format'] = pd.to_datetime(df_q_dia['data']).dt.strftime('%d/%m')
+        
+        fig_q_dia = px.bar(df_q_dia, x='data_format', y='repeticoes', text_auto=True)
+        fig_q_dia.update_traces(marker_color='#8B5CF6', textfont_color='white')
+        fig_q_dia.update_layout(
+            xaxis_title="", yaxis_title="Total de Questões", 
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
+            font=dict(color="#E0E0E0"), xaxis=dict(showgrid=False), 
+            yaxis=dict(showgrid=True, gridcolor="#1F1F1F"),
+            margin=dict(l=0, r=0, t=30, b=10)
+        )
+        st.plotly_chart(fig_q_dia, use_container_width=True)
+
+        st.write("---")
+
+        # 4. CRONOGRAMA / CALENDÁRIO MENSAL (Requisito da Solicitação)
+        st.markdown("#### 🗓️ Cronograma Estratégico (Próximos 30 Dias)")
+        st.write("Algoritmo calculado automaticamente intercalando matérias com base na sua Rota Estratégica e puxando as subdisciplinas do Edital.")
+        
+        hoje_cron = datetime.today()
+        dias_cron = [hoje_cron + timedelta(days=i) for i in range(30)]
+        dias_semana_map = {0:"Seg", 1:"Ter", 2:"Qua", 3:"Qui", 4:"Sex", 5:"Sáb", 6:"Dom"}
+        
+        indices_topicos = {disc: 0 for disc in ROTA_ESTRATEGICA}
+        cronograma_dados = []
+        
+        for i, dia in enumerate(dias_cron):
+            disc_atual = ROTA_ESTRATEGICA[i % len(ROTA_ESTRATEGICA)]
+            
+            # Filtra os tópicos ignorando a flag de simulado
+            lista_topicos = [t for t in TOPICOS_EDITAL.get(disc_atual, ["Geral"]) if "Simulado" not in t]
+            if not lista_topicos:
+                lista_topicos = ["Revisão / Exercícios Gerais"]
+            
+            # Escolhe o tópico atual baseado no índice para não repetir precocemente
+            topico_atual = lista_topicos[indices_topicos[disc_atual] % len(lista_topicos)]
+            indices_topicos[disc_atual] += 1
+            
+            cronograma_dados.append({
+                "Data": dia.strftime("%d/%m"),
+                "Dia da Semana": dias_semana_map[dia.weekday()],
+                "Disciplina Principal": disc_atual,
+                "Assunto Específico (Subdisciplina)": topico_atual
+            })
+            
+        df_cronograma = pd.DataFrame(cronograma_dados)
+        st.dataframe(df_cronograma, use_container_width=True, hide_index=True, height=250)
+
+        st.write("---")
+
         st.markdown("#### 🧠 Sistema de Revisão Espaçada Ativa")
         df_valid_topics = df_estudos[(df_estudos['topico_edital'] != '') & (df_estudos['topico_edital'].notna())].copy()
         
