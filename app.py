@@ -758,7 +758,7 @@ with tab_estudo:
                 html_cronometro = html_cronometro.replace("[VIDEO_TAG]", video_tag)
                 components.html(html_cronometro, height=180)
 
-   with col_registro:
+    with col_registro:
         st.markdown("#### 📝 Input de Produtividade")
 
         index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
@@ -825,7 +825,7 @@ with tab_estudo:
                 }
                 supabase.table("treinos").insert(dados_estudo).execute()
                 st.success("Sessão arquivada na base de conhecimento!")
-                st.rerun()
+                st.rerun()      
 
 # ==========================================
 # ABA 6: DASHBOARD DE ESTUDOS
@@ -1156,8 +1156,10 @@ with tab_gerenciar:
         def formatar_registro(row):
             if row['grupo_muscular'] == 'Nutrição': return "🍏 DIETA"
             elif row['grupo_muscular'] == 'Métricas': return f"⚖️ PESO ({row['peso_corporal']}kg)"
-            elif row['grupo_muscular'] == 'Estudos': return f"📚 ESTUDO: {row['exercicio']} ({row['duracao_min']} min)"
-            else: return f"🏋️ {row['exercicio']} ({row['repeticoes']} reps)"
+            elif row['grupo_muscular'] == 'Estudos': 
+                return f"📚 ESTUDO: {row['exercicio']} ({row['duracao_min']} min)"
+            else: 
+                return f"🏋️ {row['exercicio']} ({row['repeticoes']} reps)"
 
         opcoes_registros = df_raw.apply(lambda row: f"ID: {row['id']} | {row['data_formatada']} - {formatar_registro(row)}", axis=1).tolist()
         
@@ -1209,7 +1211,8 @@ with tab_gerenciar:
                 
                 c3, c4, c5 = st.columns(3)
                 with c3:
-                    new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(row_data['duracao_min'] if pd.notnull(row_data['duracao_min']) else 0))
+                    dur_val = row_data.get('duracao_min', 0)
+                    new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
                     new_vid = st.number_input("Tempo Vídeo (min)", min_value=0, value=int(extras.get('tempo_video', 0)))
                 with c4:
                     new_certas = st.number_input("Acertos", min_value=0, value=int(extras.get('q_certas', 0)))
@@ -1225,15 +1228,21 @@ with tab_gerenciar:
                 
                 c3, c4, c5 = st.columns(3)
                 with c3:
-                    new_series = st.number_input("Séries", min_value=0, value=int(row_data['series'] if pd.notnull(row_data['series']) else 0))
-                    new_reps = st.number_input("Repetições", min_value=0, value=int(row_data['repeticoes'] if pd.notnull(row_data['repeticoes']) else 0))
-                    new_carga = st.number_input("Carga (kg)", min_value=0.0, value=float(row_data['carga_kg'] if pd.notnull(row_data['carga_kg']) else 0.0))
+                    ser_val = row_data.get('series', 0)
+                    new_series = st.number_input("Séries", min_value=0, value=int(ser_val if pd.notnull(ser_val) else 0))
+                    rep_val = row_data.get('repeticoes', 0)
+                    new_reps = st.number_input("Repetições", min_value=0, value=int(rep_val if pd.notnull(rep_val) else 0))
+                    car_val = row_data.get('carga_kg', 0.0)
+                    new_carga = st.number_input("Carga (kg)", min_value=0.0, value=float(car_val if pd.notnull(car_val) else 0.0))
                 with c4:
                     new_iso = st.number_input("Isometria (seg)", min_value=0, value=int(extras.get('isometria_segundos', 0)))
-                    new_desc = st.number_input("Descanso (seg)", min_value=0, value=int(row_data['descanso_seg'] if pd.notnull(row_data['descanso_seg']) else 0))
+                    desc_val = row_data.get('descanso_seg', 0)
+                    new_desc = st.number_input("Descanso (seg)", min_value=0, value=int(desc_val if pd.notnull(desc_val) else 0))
                 with c5:
-                    new_dur = st.number_input("Duração Cardio (min)", min_value=0, value=int(row_data['duracao_min'] if pd.notnull(row_data['duracao_min']) else 0))
-                    new_dist = st.number_input("Distância (km)", min_value=0.0, value=float(row_data['distancia_km'] if pd.notnull(row_data['distancia_km']) else 0.0))
+                    dur_val = row_data.get('duracao_min', 0)
+                    new_dur = st.number_input("Duração Cardio (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
+                    dist_val = row_data.get('distancia_km', 0.0)
+                    new_dist = st.number_input("Distância (km)", min_value=0.0, value=float(dist_val if pd.notnull(dist_val) else 0.0))
                     
                 humores = ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"]
                 old_humor = extras.get('humor', 'Normal')
@@ -1245,7 +1254,8 @@ with tab_gerenciar:
                 new_besteira = st.text_area("Junk Food (Besteirol)", value=str(row_data['alimentacao_besteirol']))
                 
             elif is_peso:
-                new_peso = st.number_input("Peso Corporal (kg)", min_value=0.0, value=float(row_data['peso_corporal'] if pd.notnull(row_data['peso_corporal']) else 0.0))
+                peso_val = row_data.get('peso_corporal', 0.0)
+                new_peso = st.number_input("Peso Corporal (kg)", min_value=0.0, value=float(peso_val if pd.notnull(peso_val) else 0.0))
 
             submit_edit = st.form_submit_button("💾 Salvar Alterações", use_container_width=True)
 
