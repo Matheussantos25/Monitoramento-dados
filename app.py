@@ -1131,42 +1131,156 @@ with tab_cruzamento:
 # ==========================================
 with tab_gerenciar:
     if not df_raw.empty:
-        st.markdown("### ⚙️ Engine de Banco de Dados")
+        st.markdown("### ⚙️ Engine de Banco de Dados (Edição Completa)")
         df_raw['data_formatada'] = pd.to_datetime(df_raw['data']).dt.strftime('%d/%m/%Y')
         
         def formatar_registro(row):
             if row['grupo_muscular'] == 'Nutrição': return "🍏 DIETA"
             elif row['grupo_muscular'] == 'Métricas': return f"⚖️ PESO ({row['peso_corporal']}kg)"
             elif row['grupo_muscular'] == 'Estudos': return f"📚 ESTUDO: {row['exercicio']} ({row['duracao_min']} min)"
-            else: return f"🏋️ {row['exercicio']}"
+            else: return f"🏋️ {row['exercicio']} ({row['repeticoes']} reps)"
 
         opcoes_registros = df_raw.apply(lambda row: f"ID: {row['id']} | {row['data_formatada']} - {formatar_registro(row)}", axis=1).tolist()
         
-        registro_selecionado = st.selectbox("Selecione a Entidade de Dados:", opcoes_registros)
+        registro_selecionado = st.selectbox("Selecione o Registro para Editar/Excluir:", opcoes_registros)
         id_real = int(registro_selecionado.split("ID: ")[1].split(" |")[0])
         
         st.write("---")
-        col_edit, col_del = st.columns(2)
         
-        with col_edit:
-            with st.container(border=True):
-                st.markdown("#### ✏️ Alterar Nomenclatura")
-                registro_df = df_raw[df_raw['id'] == id_real].iloc[0]
-                is_estudo = registro_df['grupo_muscular'] == 'Estudos'
-                opcoes_renomear = DISCIPLINAS_ESTUDO if is_estudo else TODOS_EXERCICIOS
+        # Puxando os dados da linha selecionada
+        row_data = df_raw[df_raw['id'] == id_real].iloc[0]
+        is_estudo = row_data['grupo_muscular'] == 'Estudos'
+        is_nutricao = row_data['grupo_muscular'] == 'Nutrição'
+        is_peso = row_data['grupo_muscular'] == 'Métricas'
+        is_treino = not (is_estudo or is_nutricao or is_peso)
+        
+        # Tratamento seguro dos dados_extras (JSON)
+        extras = row_data['dados_extras']
+        if isinstance(extras, str):
+            try: extras = json.loads(extras)
+            except: extras = {}
+        elif not isinstance(extras, dict):
+            extras = {}
+            
+        with st.form(f"form_edit_{id_real}"):
+            st.markdown(f"#### ✏️ Editar Dados do Registro (ID: {id_real})")
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                new_date = st.date_input("Data", value=pd.to_datetime(row_data['data']).date())
+            with c2:
+                try:
+                    time_obj = pd.to_datetime(row_data['horario']).time()
+                except:
+                    time_obj = datetime.now().time()
+                new_time = st.time_input("Horário", value=time_obj)
+            
+            st.write("")
+            
+            # --- CAMPOS DINÂMICOS BASEADOS NO TIPO DE REGISTRO ---
+            if is_estudo:
+                idx_ex = DISCIPLINAS_ESTUDO.index(row_data['exercicio']) if row_data['exercicio'] in DISCIPLINAS_ESTUDO else 0
+                new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=idx_ex)
                 
-                novo_nome = st.selectbox("Mudar para qual?", opcoes_renomear)
-                if st.button("Aplicar Patch", use_container_width=True):
-                    novo_grupo = "Estudos" if is_estudo else next((g for g, l in EXERCICIOS_PRESETADOS.items() if novo_nome in l), "Outro")
-                    supabase.table("treinos").update({"exercicio": novo_nome, "grupo_muscular": novo_grupo}).eq("id", id_real).execute()
-                    st.success(f"Cluster atualizado: {novo_nome}")
-                    st.rerun()
+                topicos_disp = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(new_ex, ["Geral"])
+                old_topicos_str = extras.get('topico_edital', 'Geral')
+                old_topicos_list = [t.strip() for t in old_topicos_str.split(',')] if old_topicos_str else []
+                valid_old_topicos = [t for t in old_topicos_list if t in topicos_disp]
+                new_topicos = st.multiselect("Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
+                
+                c3, c4, c5 = st.columns(3)
+                with c3:
+                    new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(row_data['duracao_min'] if pd.notnull(row_data['duracao_min']) else 0))
+                    new_vid = st.number_input("Tempo Vídeo (min)", min_value=0, value=int(extras.get('tempo_video', 0)))
+                with c4:
+                    new_certas = st.number_input("Acertos", min_value=0, value=int(extras.get('q_certas', 0)))
+                    new_erradas = st.number_input("Erros", min_value=0, value=int(extras.get('q_erradas', 0)))
+                with c5:
+                    old_fonte = extras.get('fonte_questoes', 'Não Informada')
+                    idx_fonte = FONTES_QUESTOES.index(old_fonte) if old_fonte in FONTES_QUESTOES else 0
+                    new_fonte = st.selectbox("Fonte das Questões", FONTES_QUESTOES, index=idx_fonte)
+                    
+            elif is_treino:
+                idx_ex = TODOS_EXERCICIOS.index(row_data['exercicio']) if row_data['exercicio'] in TODOS_EXERCICIOS else 0
+                new_ex = st.selectbox("Exercício", TODOS_EXERCICIOS, index=idx_ex)
+                
+                c3, c4, c5 = st.columns(3)
+                with c3:
+                    new_series = st.number_input("Séries", min_value=0, value=int(row_data['series'] if pd.notnull(row_data['series']) else 0))
+                    new_reps = st.number_input("Repetições", min_value=0, value=int(row_data['repeticoes'] if pd.notnull(row_data['repeticoes']) else 0))
+                    new_carga = st.number_input("Carga (kg)", min_value=0.0, value=float(row_data['carga_kg'] if pd.notnull(row_data['carga_kg']) else 0.0))
+                with c4:
+                    new_iso = st.number_input("Isometria (seg)", min_value=0, value=int(extras.get('isometria_segundos', 0)))
+                    new_desc = st.number_input("Descanso (seg)", min_value=0, value=int(row_data['descanso_seg'] if pd.notnull(row_data['descanso_seg']) else 0))
+                with c5:
+                    new_dur = st.number_input("Duração Cardio (min)", min_value=0, value=int(row_data['duracao_min'] if pd.notnull(row_data['duracao_min']) else 0))
+                    new_dist = st.number_input("Distância (km)", min_value=0.0, value=float(row_data['distancia_km'] if pd.notnull(row_data['distancia_km']) else 0.0))
+                    
+                humores = ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"]
+                old_humor = extras.get('humor', 'Normal')
+                new_humor = st.selectbox("Estado Mental", humores, index=humores.index(old_humor) if old_humor in humores else 0)
 
-        with col_del:
-            with st.container(border=True):
-                st.markdown("#### 🗑️ Purge de Registro")
-                st.warning("⚠️ DROP irreversível da linha no banco Supabase.")
-                if st.button("Executar Delete", type="primary", use_container_width=True):
-                    supabase.table("treinos").delete().eq("id", id_real).execute()
-                    st.success("Linha expurgada com sucesso!")
-                    st.rerun()
+            elif is_nutricao:
+                st.info("💡 Edite os alimentos listados abaixo (separados por vírgula).")
+                new_saudavel = st.text_area("Alimentação Saudável", value=str(row_data['alimentacao_saudavel']))
+                new_besteira = st.text_area("Junk Food (Besteirol)", value=str(row_data['alimentacao_besteirol']))
+                
+            elif is_peso:
+                new_peso = st.number_input("Peso Corporal (kg)", min_value=0.0, value=float(row_data['peso_corporal'] if pd.notnull(row_data['peso_corporal']) else 0.0))
+
+            submit_edit = st.form_submit_button("💾 Salvar Alterações", use_container_width=True)
+
+        # Lógica de atualização no Supabase (disparada pelo botão do form)
+        if submit_edit:
+            update_data = {
+                "data": str(new_date),
+                "horario": str(new_time)
+            }
+            
+            if is_estudo:
+                update_data["exercicio"] = new_ex
+                update_data["duracao_min"] = new_dur
+                update_data["repeticoes"] = new_certas + new_erradas
+                extras["topico_edital"] = ", ".join(new_topicos) if new_topicos else "Geral"
+                extras["q_certas"] = new_certas
+                extras["q_erradas"] = new_erradas
+                extras["tempo_video"] = new_vid
+                extras["fonte_questoes"] = new_fonte
+                update_data["dados_extras"] = extras
+                
+            elif is_treino:
+                update_data["exercicio"] = new_ex
+                update_data["grupo_muscular"] = next((g for g, l in EXERCICIOS_PRESETADOS.items() if new_ex in l), "Outro")
+                update_data["series"] = new_series
+                update_data["repeticoes"] = new_reps
+                update_data["carga_kg"] = new_carga
+                update_data["descanso_seg"] = new_desc
+                update_data["duracao_min"] = new_dur
+                update_data["distancia_km"] = new_dist
+                extras["isometria_segundos"] = new_iso
+                extras["humor"] = new_humor
+                update_data["dados_extras"] = extras
+                
+            elif is_nutricao:
+                update_data["alimentacao_saudavel"] = new_saudavel
+                update_data["alimentacao_besteirol"] = new_besteira
+                
+            elif is_peso:
+                update_data["peso_corporal"] = new_peso
+            
+            supabase.table("treinos").update(update_data).eq("id", id_real).execute()
+            st.success("Registro atualizado com sucesso!")
+            st.rerun()
+
+        st.write("---")
+        
+        # Área de Purge (Delete) isolada
+        with st.container(border=True):
+            st.markdown("#### 🗑️ Purge de Registro")
+            st.warning("⚠️ DROP irreversível da linha no banco Supabase.")
+            if st.button("Executar Delete", type="primary", use_container_width=True):
+                supabase.table("treinos").delete().eq("id", id_real).execute()
+                st.success("Linha expurgada com sucesso!")
+                st.rerun()
+    else:
+        st.info("O Banco de Dados está vazio no momento.")
