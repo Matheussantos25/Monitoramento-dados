@@ -3,6 +3,7 @@ import pandas as pd
 from supabase import create_client, Client
 from datetime import datetime, timedelta
 import plotly.express as px
+import plotly.graph_objects as go
 import json
 import os
 import random
@@ -60,6 +61,17 @@ DISCIPLINAS_ESTUDO = [
     "Outro"
 ]
 DISCIPLINAS_ESTUDO.sort()
+
+FONTES_QUESTOES = [
+    "FGV",
+    "Gerado por IA",
+    "IA (Estilo FGV)",
+    "CEBRASPE",
+    "VUNESP",
+    "FCC",
+    "QConcursos / TEC",
+    "Outra"
+]
 
 # --- TÓPICOS DO EDITAL POR DISCIPLINA ---
 TOPICOS_EDITAL = {
@@ -163,12 +175,10 @@ TOPICOS_EDITAL = {
 
 # Rota estratégica intercalando Exatas, Humanas e TI para evitar fadiga mental
 ROTA_ESTRATEGICA = [
-    "Matemática e Estatística Aplicada", 
-    "Legislação (LAI/Marco Civil/LGPD)", 
     "Banco de Dados (SQL/NoSQL/Big Data)", 
     "Raciocínio Lógico", 
-    "Língua Portuguesa", 
     "Ciência de Dados (ML/DL/PLN/Visão)", 
+    "Legislação (LAI/Marco Civil/LGPD)",
     "Atualidades e IA", 
     "Linguagens (Python/R/Spark/SAS)", 
     "Língua Inglesa" 
@@ -236,12 +246,10 @@ def fetch_data():
 df_raw = fetch_data()
 
 # --- FILTROS NA SIDEBAR ---
-st.sidebar.markdown("## 🔍 Filtros")
+st.sidebar.markdown("## 🔍 Filtros Gerais")
 st.sidebar.write("---")
 
 filtro_tempo = st.sidebar.selectbox("Período:", ["Todo o Histórico", "Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Este Ano"])
-filtro_ex = st.sidebar.selectbox("Detalhar Treino Físico:", ["Todos"] + TODOS_EXERCICIOS)
-filtro_disc = st.sidebar.selectbox("Detalhar Disciplina:", ["Todas"] + DISCIPLINAS_ESTUDO)
 
 if not df_raw.empty:
     df_raw['data'] = pd.to_datetime(df_raw['data'])
@@ -265,20 +273,10 @@ else:
     df_dieta = pd.DataFrame()
     df_estudos = pd.DataFrame()
 
-if filtro_ex != "Todos" and not df_treinos.empty:
-    df_treinos = df_treinos[df_treinos['exercicio'] == filtro_ex].copy()
-
-if filtro_disc != "Todas" and not df_estudos.empty:
-    df_estudos = df_estudos[df_estudos['exercicio'] == filtro_disc].copy()
-
 # --- INTERFACE MAIN ---
 st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1px; color: #FFF;'>⚡ OS/System: Analytics</h1>", unsafe_allow_html=True)
-
-texto_filtro = ""
-if filtro_ex != "Todos" or filtro_disc != "Todas" or filtro_tempo != "Todo o Histórico":
-    texto_filtro = f"<p style='text-align: center; color: #009CA6; margin-top: -15px;'>[ Filtros ativos: {filtro_tempo} ]</p>"
-
-st.markdown(texto_filtro, unsafe_allow_html=True)
+if filtro_tempo != "Todo o Histórico":
+    st.markdown(f"<p style='text-align: center; color: #009CA6; margin-top: -15px;'>[ Período Ativo: {filtro_tempo} ]</p>", unsafe_allow_html=True)
 st.write("")
 
 # Abas expandidas
@@ -306,7 +304,7 @@ with tab_registro:
         exercicio_input = st.selectbox("Exercício", TODOS_EXERCICIOS)
         st.write("")
         
-        st.markdown("#### 📊 Métricas do Exercício (Preencha apenas o que for aplicável)")
+        st.markdown("#### 📊 Métricas do Exercício")
         c1, c2, c3 = st.columns(3)
         with c1:
             series = st.number_input("Séries / Tentativas", min_value=0, value=1, step=1)
@@ -352,18 +350,8 @@ with tab_dash_treino:
     if not df_treinos.empty:
         df_treinos['isometria_segundos'] = df_treinos['dados_extras'].apply(lambda x: safe_get(x, 'isometria_segundos', 0))
         
-        # Tripla checagem: Reps -> Isometria -> Séries
-        df_treinos['volume_grafico'] = df_treinos.apply(
-            lambda row: row['repeticoes'] if row['repeticoes'] > 0 
-            else (row['isometria_segundos'] if row['isometria_segundos'] > 0 else row['series']), 
-            axis=1
-        )
-        
-        df_treinos['reps_totais'] = df_treinos['repeticoes']
-        df_treinos['reps_por_serie'] = df_treinos.apply(lambda row: row['repeticoes'] / row['series'] if row['series'] > 0 else 0, axis=1)
-        
         total_dias = len(df_treinos['data'].unique())
-        total_reps = int(df_treinos['reps_totais'].sum())
+        total_reps = int(df_treinos['repeticoes'].sum())
         carga_max = df_treinos['carga_kg'].max()
         
         st.markdown(f"""
@@ -387,13 +375,32 @@ with tab_dash_treino:
         c_ctrl1, c_ctrl2 = st.columns(2)
         with c_ctrl1:
             ex_selecionados = st.multiselect("Quais exercícios visualizar?", options=TODOS_EXERCICIOS, default=[])
+            
+            # --- ALGORITMO PROGRESSIVE OVERLOAD ---
+            if len(ex_selecionados) == 1:
+                ex_alvo = ex_selecionados[0]
+                df_overload = df_treinos[df_treinos['exercicio'] == ex_alvo].sort_values(by=['data', 'horario'])
+                if not df_overload.empty:
+                    ult = df_overload.iloc[-1]
+                    reps_u = int(ult['repeticoes'])
+                    carga_u = ult['carga_kg']
+                    descanso_u = int(ult['descanso_seg'])
+                    
+                    st.markdown(f"""
+                    <div style="background-color: #0A0A0A; border-left: 4px solid #F43F5E; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                        <span style="color: #F43F5E; font-size: 13px; font-weight: 600; text-transform: uppercase;">📈 Algoritmo de Progressive Overload</span><br>
+                        <span style="color: #E0E0E0; font-size: 14px;">Último registro de <b>{ex_alvo}</b>: {reps_u} reps | {carga_u} kg | {descanso_u}s descanso.</span><br>
+                        <span style="color: #FFF; font-weight: bold; margin-top: 5px; display: inline-block;">🎯 Sugestão: Tente fazer {reps_u + 1} a {reps_u + 2} repetições, ou diminua o descanso para {max(0, descanso_u - 15)}s.</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+        
         with c_ctrl2:
             st.write("") 
             mostrar_peso_corporal = st.checkbox("Incluir gráfico de Evolução do Peso Corporal", value=True)
             
         st.write("---")
-        df_grafico_reps = df_treinos.copy()
-        if ex_selecionados: df_grafico_reps = df_grafico_reps[df_grafico_reps['exercicio'].isin(ex_selecionados)]
+        df_filtrado = df_treinos.copy()
+        if ex_selecionados: df_filtrado = df_filtrado[df_filtrado['exercicio'].isin(ex_selecionados)]
 
         col_graf1, col_graf2 = st.columns(2) if mostrar_peso_corporal else (None, st.container())
         
@@ -413,20 +420,33 @@ with tab_dash_treino:
                     else: st.info("Adicione dados de peso.")
 
         with col_graf2:
-            with st.container(border=True):
-                st.markdown(f"#### 📊 Volume Dinâmico (Reps / Seg / Séries) por Dia")
-                if not df_grafico_reps.empty:
-                    dias_map = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
-                    df_grafico_reps['dia_formatado'] = df_grafico_reps['data'].dt.weekday.map(dias_map) + df_grafico_reps['data'].dt.strftime(' (%d/%m)')
-                    
-                    df_reps_dia = df_grafico_reps.groupby(['data', 'dia_formatado'], as_index=False)['volume_grafico'].sum().sort_values('data')
+            st.markdown("#### 📊 Volume de Repetições Diárias")
+            df_reps = df_filtrado[df_filtrado['repeticoes'] > 0].copy()
+            if not df_reps.empty:
+                dias_map = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
+                df_reps['dia_formatado'] = df_reps['data'].dt.weekday.map(dias_map) + df_reps['data'].dt.strftime(' (%d/%m)')
+                df_reps_dia = df_reps.groupby(['data', 'dia_formatado'], as_index=False)['repeticoes'].sum().sort_values('data')
 
-                    fig_reps = px.bar(df_reps_dia, x='dia_formatado', y='volume_grafico', text_auto=True)
-                    fig_reps.update_traces(marker_color='#009CA6', textfont_color='white')
-                    fig_reps.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), margin=dict(l=0, r=0, t=20, b=0), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#1F1F1F"))
-                    st.plotly_chart(fig_reps, use_container_width=True)
-                else: st.info("Nenhum exercício selecionado/encontrado.")
+                fig_reps = px.bar(df_reps_dia, x='dia_formatado', y='repeticoes', text_auto=True)
+                fig_reps.update_traces(marker_color='#009CA6', textfont_color='white')
+                fig_reps.update_layout(xaxis_title="", yaxis_title="Total Reps", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), margin=dict(l=0, r=0, t=20, b=0), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#1F1F1F"))
+                st.plotly_chart(fig_reps, use_container_width=True)
+            else: st.info("Sem dados de repetições para os exercícios selecionados.")
 
+        st.markdown("#### ⏱️ Tempo Sustentado (Cardio / Isometria)")
+        df_dur = df_filtrado[(df_filtrado['isometria_segundos'] > 0) | (df_filtrado['duracao_min'] > 0)].copy()
+        if not df_dur.empty:
+            df_dur['tempo_total'] = df_dur.apply(lambda row: row['isometria_segundos'] if row['isometria_segundos'] > 0 else row['duracao_min'], axis=1)
+            df_dur['tipo_tempo'] = df_dur.apply(lambda row: 'Segundos' if row['isometria_segundos'] > 0 else 'Minutos', axis=1)
+            df_dur['dia_formatado'] = df_dur['data'].dt.strftime('%d/%m')
+            
+            fig_dur = px.bar(df_dur, x='dia_formatado', y='tempo_total', color='tipo_tempo', text_auto=True, barmode='group')
+            fig_dur.update_traces(textfont_color='white')
+            fig_dur.update_layout(xaxis_title="", yaxis_title="Tempo (Seg ou Min)", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), xaxis=dict(showgrid=False))
+            st.plotly_chart(fig_dur, use_container_width=True)
+        else:
+            st.info("Sem dados de tempo/isometria para os exercícios selecionados.")
+            
     else: st.warning("Nenhum treino encontrado para o filtro selecionado.")
 
 # ==========================================
@@ -494,19 +514,40 @@ with tab_estudo:
     
     # --- MOTOR DE RECOMENDAÇÃO INTELIGENTE ---
     prox_disciplina = ROTA_ESTRATEGICA[0]
+    prox_topico_sugerido = "Escolha um tópico novo"
+    
     if not df_estudos.empty:
-        # Pega a última disciplina estudada validando datas
-        ultima_disciplina = df_estudos.sort_values(by=['data', 'horario'], ascending=[False, False]).iloc[0]['exercicio']
-        if ultima_disciplina in ROTA_ESTRATEGICA:
+        # Pega a última disciplina estudada do ciclo rotativo validando datas
+        df_ciclo = df_estudos[df_estudos['exercicio'].isin(ROTA_ESTRATEGICA)]
+        if not df_ciclo.empty:
+            ultima_disciplina = df_ciclo.sort_values(by=['data', 'horario'], ascending=[False, False]).iloc[0]['exercicio']
             idx_atual = ROTA_ESTRATEGICA.index(ultima_disciplina)
             idx_prox = (idx_atual + 1) % len(ROTA_ESTRATEGICA)
             prox_disciplina = ROTA_ESTRATEGICA[idx_prox]
             
+            # Tentar sugerir o tópico seguinte da disciplina recomendada
+            topicos_possiveis = [t for t in TOPICOS_EDITAL.get(prox_disciplina, ["Geral"]) if "Simulado" not in t]
+            df_hist_prox = df_ciclo[df_ciclo['exercicio'] == prox_disciplina].copy()
+            if not df_hist_prox.empty and topicos_possiveis:
+                df_hist_prox['topico_edital'] = df_hist_prox['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', ''))
+                ultimo_topico = df_hist_prox.sort_values(by=['data', 'horario']).iloc[-1]['topico_edital']
+                # Se o último topico for uma lista string separada, pega o primeiro
+                ultimo_topico_str = ultimo_topico.split(',')[0] if ultimo_topico else ""
+                try:
+                    idx_topico = next(i for i, t in enumerate(topicos_possiveis) if t == ultimo_topico_str)
+                    prox_topico_sugerido = topicos_possiveis[(idx_topico + 1) % len(topicos_possiveis)]
+                except StopIteration:
+                    prox_topico_sugerido = topicos_possiveis[0]
+            elif topicos_possiveis:
+                prox_topico_sugerido = topicos_possiveis[0]
+
     st.markdown(f"""
     <div style="background-color: #0A0A0A; border-left: 4px solid #8B5CF6; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
         <span style="color: #009CA6; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Estratégica (Recomendação)</span><br>
-        <span style="color: #AAA; font-size: 14px;">Para evitar fadiga cognitiva, seu próximo alvo no ciclo de 30 dias deve ser:</span><br>
-        <span style="color: #FFF; font-size: 24px; font-weight: 700; display: inline-block; margin-top: 8px;">🎯 {prox_disciplina}</span>
+        <span style="color: #F43F5E; font-size: 14px; font-weight: bold; margin-top: 5px; display: block;">⚠️ REGRA DE OURO: Matemática e Português TODOS OS DIAS.</span>
+        <span style="color: #AAA; font-size: 14px; margin-top: 5px; display: block;">Além da rotina diária, seu alvo atual de rotação é:</span>
+        <span style="color: #FFF; font-size: 20px; font-weight: 700; display: block; margin-top: 8px;">🎯 {prox_disciplina}</span>
+        <span style="color: #10B981; font-size: 14px; font-weight: 600; display: block; margin-top: 4px;">📖 Tópico Sugerido: {prox_topico_sugerido}</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -618,29 +659,6 @@ with tab_estudo:
                                     overlay.remove();
                                     style.remove();
                                 });
-
-                                try {
-                                    var AudioCtxClass = window.parent.AudioContext || window.parent.webkitAudioContext;
-                                    var audioCtx = new AudioCtxClass();
-                                    if (audioCtx.state === 'suspended') { audioCtx.resume(); }
-                                    function playBeep(time, freq, duration) {
-                                        var osc = audioCtx.createOscillator();
-                                        var gain = audioCtx.createGain();
-                                        osc.connect(gain); gain.connect(audioCtx.destination);
-                                        osc.type = "square"; osc.frequency.setValueAtTime(freq, time);
-                                        gain.gain.setValueAtTime(0.1, time); gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
-                                        osc.start(time); osc.stop(time + duration);
-                                    }
-                                    playBeep(audioCtx.currentTime, 880, 0.15);
-                                    playBeep(audioCtx.currentTime + 0.3, 880, 0.15);
-                                    playBeep(audioCtx.currentTime + 0.6, 880, 0.15);
-                                    playBeep(audioCtx.currentTime + 0.9, 1100, 0.6);
-                                } catch(e) {}
-
-                                setTimeout(function() {
-                                    var vid = parentDoc.getElementById('vid-player');
-                                    if (vid) { vid.play().catch(e => console.log(e)); }
-                                }, 1500);
                             }
                         </script>
                     </body>
@@ -732,27 +750,6 @@ with tab_estudo:
                                 secs = 0; 
                                 display.innerText = "00:00";
                             });
-
-                            try {
-                                var AudioCtxClass = window.parent.AudioContext || window.parent.webkitAudioContext;
-                                var audioCtx = new AudioCtxClass();
-                                if (audioCtx.state === 'suspended') { audioCtx.resume(); }
-                                function playBeep(time, freq, duration) {
-                                    var osc = audioCtx.createOscillator();
-                                    var gain = audioCtx.createGain();
-                                    osc.connect(gain); gain.connect(audioCtx.destination);
-                                    osc.type = "square"; osc.frequency.setValueAtTime(freq, time);
-                                    gain.gain.setValueAtTime(0.1, time); gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
-                                    osc.start(time); osc.stop(time + duration);
-                                }
-                                playBeep(audioCtx.currentTime, 880, 0.15);
-                                playBeep(audioCtx.currentTime + 0.3, 1100, 0.6);
-                            } catch(e) {}
-
-                            setTimeout(function() {
-                                var vid = parentDoc.getElementById('vid-player');
-                                if (vid) { vid.play().catch(e => console.log(e)); }
-                            }, 1500);
                         }
                     </script>
                 </body>
@@ -767,25 +764,36 @@ with tab_estudo:
         index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
         disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO, index=index_recomendado, key="disciplina_estudo_select")
         
-        # Inserindo a opção de Simulado / Visão Geral no topo de qualquer disciplina escolhida
+        # Tópicos disponiveis no Edital
         topicos_disponiveis = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(disciplina, ["Geral"])
 
         with st.form("registro_estudo", clear_on_submit=True):
+            data_estudo = st.date_input("Data da Sessão", value=datetime.today())
+            
+            # --- NOVO: SELEÇÃO MÚLTIPLA DE TÓPICOS ---
+            topicos_selecionados = st.multiselect("📖 Tópico(s) do Edital", topicos_disponiveis)
+            topicos_str = ", ".join(topicos_selecionados) if topicos_selecionados else "Geral"
+            
             c_est1, c_est2 = st.columns(2)
             with c_est1:
-                data_estudo = st.date_input("Data da Sessão", value=datetime.today())
-                topico_edital = st.selectbox("📖 Tópico do Edital", topicos_disponiveis)
                 tempo_estudo = st.number_input("Tempo Líquido (min)", min_value=0, step=15)
+                # --- NOVO: TEMPO DE VÍDEO AULA ---
+                tempo_video = st.number_input("Tempo Vídeo Aula (min)", min_value=0, step=15)
             with c_est2:
                 certas = st.number_input("✅ Questões Corretas", min_value=0, step=1)
                 erradas = st.number_input("❌ Questões Erradas", min_value=0, step=1)
+                
+            # --- NOVO: FONTE DAS QUESTÕES ---
+            fonte_questoes = st.selectbox("Fonte das Questões", FONTES_QUESTOES)
 
             if st.form_submit_button("💾 Computar Sessão", use_container_width=True):
                 total_q = certas + erradas
                 mochila_estudo_json = {
-                    "topico_edital": topico_edital,
+                    "topico_edital": topicos_str,
                     "q_certas": certas,
-                    "q_erradas": erradas
+                    "q_erradas": erradas,
+                    "tempo_video": tempo_video,
+                    "fonte_questoes": fonte_questoes
                 }
                 
                 dados_estudo = {
@@ -805,38 +813,92 @@ with tab_estudo:
 # ==========================================
 with tab_dash_estudo:
     
-    # 1. CAIXA ENORME COM O EDITAL (Requisito da Solicitação)
     st.markdown("### 📜 Edital Completo (Caixa de Consulta)")
     st.markdown("""
-    <div style="height: 250px; overflow-y: scroll; background-color: #0D0D0D; padding: 15px; border: 1px solid #1A1A1A; border-radius: 8px; color: #AAA; font-size: 13px; line-height: 1.6; margin-bottom: 25px;">
-        <strong>MATEMÁTICA E ESTATÍSTICA APLICADA:</strong> I MATEMÁTICA: 1 Cálculo: Funções. Limites. Derivadas. Derivadas Parciais. Máximos e mínimos. Integrais. 2 Álgebra linear: Notação de vetores e matrizes. Produto escalar e produto vetorial. Matriz identidade, inversa e transposta. Transformações lineares. Normas L1 e L2. Autovalores e autovetores. II ESTATÍSTICA: 1 Conceitos de probabilidade. Modelo de probabilidade. Probabilidade condicional. Independência. Variáveis aleatórias. Esperança, variância e covariância. Distribuições contínuas e discretas. Distribuições multidimensionais: matriz de covariância. 2 Estatísticas descritivas. Teorema do Limite Central. Teste de hipótese e intervalo de confiança. Estimador de máxima verossimilhança. Inferência bayesiana. Coeficiente de correlação de Pearson. Diagrama boxplot e avaliação de outliers.<br><br>
-        <strong>CIÊNCIA DE DADOS:</strong> 1 Aprendizado supervisionado: Regressão e Classificação. Métricas de avaliação. Overfitting e underfitting de modelos. Regularização. Seleção de modelos. Validação cruzada. Conjunto de treino, validação e teste. Trade off entre variância e viés. Regressão Linear e Regressão Logística. Árvores de Decisão e random forests. SVM. K-NN. 2 Aprendizado não-supervisionado: Redução de dimensionalidade: PCA. K-Means. Mistura de Gaussianas. Regras de Associação. 3 Redes neurais artificiais: Definições e arquitetura. Funções de ativação. Otimização: método do gradiente, método do gradiente estocástico e backpropagation. Métodos de regularização: penalização com normas L1 e L2. CNN. 4 Machine Learning aplicado. Noções de visão computacional com CNN. Classificação de imagens e detecção de objetos. Noções de processamento de linguagem natural. 5 ETL. 6 Manipulação, tratamento e visualização de dados. 7 Inteligência artificial. 7.1 Análise de dados (Pandas, NumPy, Jupiter, R). 7.2 Aprendizado de máquina. 7.2.1 Técnicas de classificação. 7.2.2 Técnicas de regressão. 7.2.3 Técnicas de agrupamento. 7.2.4 Técnicas de redução de dimensionalidade. 7.2.5 Técnicas de associação. 7.2.6 Sistemas de recomendação. 8 Processamento de linguagem natural (PLN). 9 Visão computacional. 10 Deep learning. 11 Mineração de Dados. 12 Ferramenta SAS.<br><br>
-        <strong>LINGUAGENS DE PROGRAMAÇÃO E SOFTWARES EM CIÊNCIAS DE DADOS:</strong> 1 Python e suas bibliotecas: Numpy, Matplotlib, Seaborn, Streamlit, Pandas, Scipy, TensorFlow, Keras e Pytorch. 2 R e suas bibliotecas. 3 Apache Hadoop e Apache Spark.<br><br>
-        <strong>BANCO DE DADOS:</strong> 1 Modelagem de dados (conceitual, lógica e física). 2 Abordagem relacional. 3 Normalização das estruturas de dados. 4 Integridade referencial. 5 Metadados. 6 Modelagem dimensional. 7 Linguagem de consulta estruturada (SQL). 8 Linguagem de definição de dados (DDL). 9 Linguagem de manipulação de dados (DML). 10 SGBD. 11 Propriedades de banco de dados. 12 Banco de dados NoSQL. 13 Banco de dados em memória. 14 Data lakes e soluções para big data.<br><br>
-        <strong>MODULO I - CONHECIMENTOS GERAIS (PARA TODOS OS CARGOS/PERFIS)</strong><br><br>
-        <strong>LÍNGUA PORTUGUESA:</strong> 1 Compreensão e interpretação de textos de gêneros variados. 2 Reconhecimento de tipos e gêneros textuais. 3 Domínio da ortografia oficial. 4 Domínio dos mecanismos de coesão textual. 4.1 Emprego de elementos de referenciação, substituição e repetição, de conectores e de outros elementos de sequenciação textual. 4.2 Emprego de tempos e modos verbais. 5 Domínio da estrutura morfossintática do período. 5.1 Emprego das classes de palavras. 5.2 Relações de coordenação entre orações e entre termos da oração. 5.3 Relações de subordinação entre orações e entre termos da oração. 5.4 Emprego dos sinais de pontuação. 5.5 Concordância verbal e nominal. 5.6 Regência verbal e nominal. 5.7 Emprego do sinal indicativo de crase. 5.8 Colocação dos pronomes átonos. 6 Reescrita de frases e parágrafos do texto. 6.1 Significação das palavras. 6.2 Substituição de palavras ou de trechos de texto. 6.3 Reorganização da estrutura de orações e de períodos do texto. 6.4 Reescrita de textos de diferentes gêneros e níveis de formalidade.<br><br>
-        <strong>LÍNGUA INGLESA:</strong> 1 Compreensão de textos em língua inglesa e itens gramaticais relevantes para o entendimento dos sentidos dos textos.<br><br>
-        <strong>RACIOCÍNIO LÓGICO:</strong> 1 Estruturas lógicas. 2 Lógica de argumentação: analogias, inferências, deduções e conclusões. 3 Lógica sentencial (ou proposicional). 3.1 Proposições simples e compostas. 3.2 Tabelas-verdade. 3.3 Equivalências. 3.4 Diagramas lógicos. 4 Lógica de primeira ordem. 5 Raciocínio lógico envolvendo problemas aritméticos, geométricos e matriciais.<br><br>
-        <strong>ATUALIDADES E INTELIGÊNCIA ARTIFICIAL:</strong> 1 Tópicos relevantes e atuais de diversas áreas, tais como segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, desenvolvimento sustentável e ecologia. 2 Inteligência Artificial: fundamentos e aplicações: conceitos de inteligência artificial; aprendizado da máquina; introdução aos modelos generativos e modelos de linguagem; ética, governança e privacidade em IA.<br><br>
-        <strong>LEGISLAÇÃO ACERCA DE SEGURANÇA DA INFORMAÇÃO E PROTEÇÃO DE DADOS:</strong> 1 Lei nº 12.527/2011 (Lei de Acesso à Informação): capítulos I, II, III, IV e V; Dec. nº 7.724 e nº 7845. 2 Lei nº 12.737/2012 (Lei de Delitos Informáticos): art. 2º. 3 Lei nº 12.965/2014 (Marco Civil da Internet): capítulos II, Seção I, e III, Seções I e II. 4 Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais – LGPD): capítulos I, II, III, IV, VII, VIII
+    <div style="height: 150px; overflow-y: scroll; background-color: #0D0D0D; padding: 15px; border: 1px solid #1A1A1A; border-radius: 8px; color: #AAA; font-size: 13px; line-height: 1.6; margin-bottom: 25px;">
+        <strong>MATEMÁTICA E ESTATÍSTICA APLICADA:</strong> I MATEMÁTICA: 1 Cálculo: Funções. Limites. Derivadas... <br>
+        <strong>CIÊNCIA DE DADOS:</strong> 1 Aprendizado supervisionado: Regressão e Classificação...<br>
+        <strong>LINGUAGENS DE PROGRAMAÇÃO E SOFTWARES:</strong> 1 Python e suas bibliotecas: Numpy...<br>
+        <strong>BANCO DE DADOS:</strong> 1 Modelagem de dados (conceitual, lógica e física)...<br>
+        <strong>LÍNGUA PORTUGUESA:</strong> 1 Compreensão e interpretação de textos...<br>
+        <strong>LÍNGUA INGLESA:</strong> 1 Compreensão de textos em língua inglesa...<br>
+        <strong>RACIOCÍNIO LÓGICO:</strong> 1 Estruturas lógicas...<br>
+        <strong>ATUALIDADES E INTELIGÊNCIA ARTIFICIAL:</strong> 1 Tópicos relevantes e atuais...<br>
+        <strong>LEGISLAÇÃO ACERCA DE SEGURANÇA:</strong> 1 Lei nº 12.527/2011 (LAI)...
     </div>
     """, unsafe_allow_html=True)
 
+    # --- INÍCIO GATILHO URGÊNCIA META 120 QUESTÕES ---
+    meta_diaria = 120
+    questoes_hoje = 0
+    
+    if not df_estudos.empty:
+        df_estudos['data_real'] = pd.to_datetime(df_estudos['data'])
+        hoje_data = pd.Timestamp.today().normalize()
+        df_hoje_est = df_estudos[df_estudos['data_real'] == hoje_data]
+        if not df_hoje_est.empty:
+            questoes_hoje = int(df_hoje_est['repeticoes'].sum())
+            
+    faltam_questoes = max(0, meta_diaria - questoes_hoje)
+    
+    cor_alerta = "#F43F5E" if faltam_questoes > 0 else "#10B981"
+    msg_alerta = f"🚨 FALTAM {faltam_questoes} QUESTÕES HOJE!" if faltam_questoes > 0 else "🏆 META DIÁRIA BATIDA!"
+    bg_color = "rgba(244, 63, 94, 0.1)" if faltam_questoes > 0 else "rgba(16, 185, 129, 0.1)"
+    
+    st.markdown(f"""
+    <div style="background: {bg_color}; border: 2px solid {cor_alerta}; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 0 20px {cor_alerta}40; margin-bottom: 30px;">
+        <h2 style="color: {cor_alerta}; margin: 0; font-size: 42px; font-weight: 900; letter-spacing: 1px;">{msg_alerta}</h2>
+        <p style="color: #E0E0E0; font-size: 18px; margin-top: 10px; font-weight: bold;">Meta Inegociável: {meta_diaria} Questões | Realizadas Hoje: {questoes_hoje}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Gráfico de gauge para a meta
+    fig_gauge = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = questoes_hoje,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        title = {'text': "Progresso Diário", 'font': {'color': '#E0E0E0'}},
+        gauge = {
+            'axis': {'range': [None, meta_diaria], 'tickwidth': 1, 'tickcolor': "#E0E0E0"},
+            'bar': {'color': cor_alerta},
+            'bgcolor': "rgba(0,0,0,0)",
+            'borderwidth': 2,
+            'bordercolor': "#1F1F1F",
+            'steps': [
+                {'range': [0, meta_diaria*0.5], 'color': '#333'},
+                {'range': [meta_diaria*0.5, meta_diaria*0.9], 'color': '#555'}
+            ]
+        }
+    ))
+    fig_gauge.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), height=250, margin=dict(l=20, r=20, t=40, b=20))
+    st.plotly_chart(fig_gauge, use_container_width=True)
+    # --- FIM GATILHO URGÊNCIA ---
+
     st.markdown("### 📈 Analytics Acadêmico")
+    
     if not df_estudos.empty:
         df_estudos['q_certas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
         df_estudos['q_erradas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
         df_estudos['topico_edital'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', safe_get(x, 'topico', 'Geral')))
         
-        total_certas = df_estudos['q_certas'].sum()
-        total_erradas = df_estudos['q_erradas'].sum()
-        total_questoes = int(df_estudos['repeticoes'].sum()) 
+        # --- EXTRACAO DE NOVOS CAMPOS ---
+        df_estudos['tempo_video'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'tempo_video', 0))
+        df_estudos['fonte_questoes'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'fonte_questoes', 'Não Informada'))
         
+        # --- FILTRO POR FONTE ---
+        fontes_unicas = df_estudos['fonte_questoes'].unique().tolist()
+        fonte_filtro = st.selectbox("Filtrar Dashboard pela Fonte das Questões:", ["Todas as Fontes"] + fontes_unicas)
+        df_dash_est = df_estudos.copy()
+        if fonte_filtro != "Todas as Fontes":
+            df_dash_est = df_dash_est[df_dash_est['fonte_questoes'] == fonte_filtro]
+        
+        total_certas = df_dash_est['q_certas'].sum()
+        total_erradas = df_dash_est['q_erradas'].sum()
+        total_questoes = int(df_dash_est['repeticoes'].sum()) 
         taxa_acerto = (total_certas / (total_certas + total_erradas) * 100) if (total_certas + total_erradas) > 0 else 0
-        tempo_total_min = int(df_estudos['duracao_min'].sum())
-        
-        # CÁLCULO DA MÉDIA DE MINUTO POR QUESTÃO
+        tempo_total_min = int(df_dash_est['duracao_min'].sum())
         media_min_questao = (tempo_total_min / total_questoes) if total_questoes > 0 else 0
+        tempo_video_total_min = int(df_dash_est['tempo_video'].sum())
         
         # 2. MÉTRICAS EXISTENTES
         st.markdown(f"""
@@ -854,36 +916,42 @@ with tab_dash_estudo:
                 <div class="card-value">{total_questoes}</div>
             </div>
             <div class="neon-card card-crimson">
-                <div class="card-title">⏱️ MÉDIA MIN/QUESTÃO</div>
-                <div class="card-value">{media_min_questao:.1f} min</div>
+                <div class="card-title">🎥 HORAS EM VÍDEO AULA</div>
+                <div class="card-value">{(tempo_video_total_min / 60):.1f}h</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
         st.write("---")
         
-        # 3. GRÁFICO: QUANTIDADE DE QUESTÕES REALIZADAS POR DIA (Requisito da Solicitação)
-        st.markdown("#### 📅 Bateria de Questões por Dia")
-        df_q_dia = df_estudos.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
-        df_q_dia['data_format'] = pd.to_datetime(df_q_dia['data']).dt.strftime('%d/%m')
-        
-        fig_q_dia = px.bar(df_q_dia, x='data_format', y='repeticoes', text_auto=True)
-        fig_q_dia.update_traces(marker_color='#8B5CF6', textfont_color='white')
-        fig_q_dia.update_layout(
-            xaxis_title="", yaxis_title="Total de Questões", 
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
-            font=dict(color="#E0E0E0"), xaxis=dict(showgrid=False), 
-            yaxis=dict(showgrid=True, gridcolor="#1F1F1F"),
-            margin=dict(l=0, r=0, t=30, b=10)
-        )
-        st.plotly_chart(fig_q_dia, use_container_width=True)
+        c_v1, c_v2 = st.columns(2)
+        with c_v1:
+            st.markdown("#### 📅 Bateria de Questões por Dia")
+            df_q_dia = df_dash_est.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
+            df_q_dia['data_format'] = pd.to_datetime(df_q_dia['data']).dt.strftime('%d/%m')
+            
+            fig_q_dia = px.bar(df_q_dia, x='data_format', y='repeticoes', text_auto=True)
+            fig_q_dia.update_traces(marker_color='#8B5CF6', textfont_color='white')
+            fig_q_dia.update_layout(xaxis_title="", yaxis_title="Total de Questões", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor="#1F1F1F"), margin=dict(l=0, r=0, t=30, b=10))
+            st.plotly_chart(fig_q_dia, use_container_width=True)
+
+        with c_v2:
+            # --- GRÁFICO DE VÍDEO AULA ---
+            st.markdown("#### 🎥 Tempo de Vídeo por Disciplina (Horas)")
+            df_video_disc = df_dash_est.groupby('exercicio', as_index=False)['tempo_video'].sum()
+            df_video_disc = df_video_disc[df_video_disc['tempo_video'] > 0]
+            df_video_disc['horas_video'] = df_video_disc['tempo_video'] / 60
+            
+            if not df_video_disc.empty:
+                fig_v = px.bar(df_video_disc, x='horas_video', y='exercicio', orientation='h', text_auto='.1f', color='horas_video', color_continuous_scale="Reds")
+                fig_v.update_layout(xaxis_title="Horas em Vídeo", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
+                st.plotly_chart(fig_v, use_container_width=True)
+            else:
+                st.info("Nenhuma hora de vídeo aula registrada para os filtros atuais.")
 
         st.write("---")
 
-        # 4. CRONOGRAMA / CALENDÁRIO MENSAL (Requisito da Solicitação)
         st.markdown("#### 🗓️ Cronograma Estratégico (Próximos 30 Dias)")
-        st.write("Algoritmo calculado automaticamente intercalando matérias com base na sua Rota Estratégica e puxando as subdisciplinas do Edital.")
-        
         hoje_cron = datetime.today()
         dias_cron = [hoje_cron + timedelta(days=i) for i in range(30)]
         dias_semana_map = {0:"Seg", 1:"Ter", 2:"Qua", 3:"Qui", 4:"Sex", 5:"Sáb", 6:"Dom"}
@@ -893,51 +961,31 @@ with tab_dash_estudo:
         
         for i, dia in enumerate(dias_cron):
             disc_atual = ROTA_ESTRATEGICA[i % len(ROTA_ESTRATEGICA)]
-            
-            # Filtra os tópicos ignorando a flag de simulado
             lista_topicos = [t for t in TOPICOS_EDITAL.get(disc_atual, ["Geral"]) if "Simulado" not in t]
             if not lista_topicos:
                 lista_topicos = ["Revisão / Exercícios Gerais"]
             
-            # Escolhe o tópico atual baseado no índice para não repetir precocemente
             topico_atual = lista_topicos[indices_topicos[disc_atual] % len(lista_topicos)]
             indices_topicos[disc_atual] += 1
             
             cronograma_dados.append({
                 "Data": dia.strftime("%d/%m"),
                 "Dia da Semana": dias_semana_map[dia.weekday()],
-                "Disciplina Principal": disc_atual,
-                "Assunto Específico (Subdisciplina)": topico_atual
+                "Disciplina de Rodízio": disc_atual,
+                "Assunto (Subdisciplina)": topico_atual
             })
             
         df_cronograma = pd.DataFrame(cronograma_dados)
         st.dataframe(df_cronograma, use_container_width=True, hide_index=True, height=250)
+        st.write("*Lembre-se: Matemática e Português devem ser incluídos diariamente, independente da Disciplina de Rodízio do dia.*")
 
         st.write("---")
-
-        st.markdown("#### 🧠 Sistema de Revisão Espaçada Ativa")
-        df_valid_topics = df_estudos[(df_estudos['topico_edital'] != '') & (df_estudos['topico_edital'].notna())].copy()
         
-        if not df_valid_topics.empty:
-            last_studied = df_valid_topics.groupby(['exercicio', 'topico_edital'], as_index=False)['data'].max()
-            last_studied['dias_passados'] = (pd.Timestamp.today().normalize() - pd.to_datetime(last_studied['data'])).dt.days
-            
-            revisoes_hoje = last_studied[last_studied['dias_passados'].isin([1, 7, 30, 31])]
-            
-            if not revisoes_hoje.empty:
-                for _, row in revisoes_hoje.iterrows():
-                    st.warning(f"🔔 **{row['exercicio']}**: Revisar '{row['topico_edital']}' (Visto há {row['dias_passados']} dia(s))")
-            else:
-                st.info("✔️ Nada pendente no algoritmo de revisão para hoje. Foco no avanço do edital!")
-        else:
-            st.info("Cadastre sessões para a IA calcular suas janelas de revisão.")
-        
-        st.write("")
         c_dash_e1, c_dash_e2 = st.columns(2)
         with c_dash_e1:
             with st.container(border=True):
                 st.markdown("#### ⏳ Alocação de Tempo por Disciplina")
-                df_disc = df_estudos.groupby('exercicio', as_index=False)['duracao_min'].sum()
+                df_disc = df_dash_est.groupby('exercicio', as_index=False)['duracao_min'].sum()
                 df_disc['horas'] = df_disc['duracao_min'] / 60
                 fig_d = px.pie(df_disc, values='horas', names='exercicio', hole=0.5, color_discrete_sequence=px.colors.sequential.Teal)
                 fig_d.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), margin=dict(l=0, r=0, t=10, b=10))
@@ -946,36 +994,26 @@ with tab_dash_estudo:
         with c_dash_e2:
             with st.container(border=True):
                 st.markdown("#### 📊 Taxa de Acerto por Disciplina")
-                df_acertos = df_estudos.groupby('exercicio', as_index=False)[['q_certas', 'q_erradas']].sum()
+                df_acertos = df_dash_est.groupby('exercicio', as_index=False)[['q_certas', 'q_erradas']].sum()
                 df_acertos['total'] = df_acertos['q_certas'] + df_acertos['q_erradas']
                 df_acertos = df_acertos[df_acertos['total'] > 0] 
                 
                 if not df_acertos.empty:
                     df_acertos['% Acerto'] = (df_acertos['q_certas'] / df_acertos['total']) * 100
                     fig_a = px.bar(df_acertos, x='exercicio', y='% Acerto', color='% Acerto', color_continuous_scale="Teal")
-                    fig_a.update_traces(texttemplate='%{y:.1f}%', textposition='auto') # Retorna o sinal % no número
-                    fig_a.update_layout(
-                        xaxis_title="", 
-                        yaxis_title="", # Retirado o título '%' do eixo
-                        plot_bgcolor="rgba(0,0,0,0)", 
-                        paper_bgcolor="rgba(0,0,0,0)", 
-                        font=dict(color="#E0E0E0"), 
-                        coloraxis_showscale=False,
-                        yaxis=dict(showgrid=False), # Removed Grid
-                        xaxis=dict(showgrid=False)
-                    )
+                    fig_a.update_traces(texttemplate='%{y:.1f}%', textposition='auto')
+                    fig_a.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, yaxis=dict(showgrid=False), xaxis=dict(showgrid=False))
                     st.plotly_chart(fig_a, use_container_width=True)
                 else:
                     st.info("Registre 'Questões Corretas/Erradas' para gerar este gráfico.")
 
         st.markdown("---")
         st.markdown("#### 📖 Análise Granular por Tópico do Edital")
-        st.write("Filtre uma disciplina para analisar exatamente em qual assunto do edital estão os seus pontos de melhoria.")
         
-        disciplinas_unicas = df_estudos['exercicio'].unique().tolist()
+        disciplinas_unicas = df_dash_est['exercicio'].unique().tolist()
         disciplina_selecionada = st.selectbox("Filtrar Tópicos por Disciplina:", ["Visão Geral (Todas)"] + disciplinas_unicas)
         
-        df_tops = df_estudos.copy()
+        df_tops = df_dash_est.copy()
         if disciplina_selecionada != "Visão Geral (Todas)":
             df_tops = df_tops[df_tops['exercicio'] == disciplina_selecionada]
             
@@ -1001,7 +1039,7 @@ with tab_dash_estudo:
                     if df_top_horas['horas'].sum() > 0:
                         fig_t = px.bar(df_top_horas, y='topico_curto', x='horas', orientation='h', color='horas', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'exercicio': True})
                         fig_t.update_traces(texttemplate='%{x:.1f}h', textposition='auto')
-                        fig_t.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False)) # Removed Grid
+                        fig_t.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
                         st.plotly_chart(fig_t, use_container_width=True)
                     else:
                         st.info("Sem registro de horas para os tópicos filtrados.")
@@ -1013,12 +1051,14 @@ with tab_dash_estudo:
                     if not df_top_acertos.empty:
                         fig_q = px.bar(df_top_acertos, y='topico_curto', x='% Acerto', orientation='h', color='% Acerto', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'total_q': True, 'exercicio': True})
                         fig_q.update_traces(texttemplate='%{x:.1f}%', textposition='auto')
-                        fig_q.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False)) # Removed Grid
+                        fig_q.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
                         st.plotly_chart(fig_q, use_container_width=True)
                     else:
                         st.info("Cadastre Acertos/Erros para mapear seu desempenho por tópico.")
         else:
             st.info("Nenhuma sessão acadêmica cadastrada para essa disciplina.")
+    else:
+        st.info("Não há dados de estudo no período selecionado.")
 
 # ==========================================
 # ABA 7: CRUZAMENTO DE DADOS 
