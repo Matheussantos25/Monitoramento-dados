@@ -274,7 +274,7 @@ else:
     df_estudos = pd.DataFrame()
 
 # --- INTERFACE MAIN ---
-st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1px; color: #FFF;'>⚡ OS/System: Analytics</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1px; color: #FFF;'>Sistema Solem</h1>", unsafe_allow_html=True)
 if filtro_tempo != "Todo o Histórico":
     st.markdown(f"<p style='text-align: center; color: #009CA6; margin-top: -15px;'>[ Período Ativo: {filtro_tempo} ]</p>", unsafe_allow_html=True)
 st.write("")
