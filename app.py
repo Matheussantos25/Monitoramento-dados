@@ -598,30 +598,29 @@ with tab_estudo:
     topico_portugues = obter_pior_topico(df_estudos, "Língua Portuguesa")
     topico_matematica = obter_pior_topico(df_estudos, "Matemática e Estatística Aplicada")
 
-    html_bussola = f"""
-<div style="background-color: #0A0A0A; border-left: 4px solid #8B5CF6; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-    <span style="color: #009CA6; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Inteligente (Foco nos Pontos Fracos)</span><br>
-    
-    <div style="margin-top: 12px; padding-bottom: 8px; border-bottom: 1px solid #1F1F1F;">
-        <span style="color: #AAA; font-size: 13px;">ROTAÇÃO PRINCIPAL:</span><br>
-        <span style="color: #FFF; font-size: 18px; font-weight: 700;">🎯 {prox_disciplina}</span><br>
-        <span style="color: #10B981; font-size: 13px; font-weight: 600;">📖 Prioridade: {prox_topico_sugerido}</span>
-    </div>
-    
-    <div style="margin-top: 8px; display: flex; gap: 20px;">
-        <div style="flex: 1;">
-            <span style="color: #F43F5E; font-size: 12px; font-weight: bold;">⚠️ DIÁRIO: PORTUGUÊS</span><br>
-            <span style="color: #DDD; font-size: 13px;">📖 {topico_portugues}</span>
-        </div>
-        <div style="flex: 1;">
-            <span style="color: #F43F5E; font-size: 12px; font-weight: bold;">⚠️ DIÁRIO: MATEMÁTICA</span><br>
-            <span style="color: #DDD; font-size: 13px;">📖 {topico_matematica}</span>
-        </div>
-    </div>
-</div>
-"""
+    # --- CORREÇÃO: HTML concatenado sem quebras de linha para evitar formatação de código ---
+    html_bussola = (
+        '<div style="background-color: #0A0A0A; border-left: 4px solid #8B5CF6; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">'
+        '<span style="color: #009CA6; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Inteligente (Foco nos Pontos Fracos)</span><br>'
+        '<div style="margin-top: 12px; padding-bottom: 8px; border-bottom: 1px solid #1F1F1F;">'
+        '<span style="color: #AAA; font-size: 13px;">ROTAÇÃO PRINCIPAL:</span><br>'
+        f'<span style="color: #FFF; font-size: 18px; font-weight: 700;">🎯 {prox_disciplina}</span><br>'
+        f'<span style="color: #10B981; font-size: 13px; font-weight: 600;">📖 Prioridade: {prox_topico_sugerido}</span>'
+        '</div>'
+        '<div style="margin-top: 8px; display: flex; gap: 20px;">'
+        '<div style="flex: 1;">'
+        '<span style="color: #F43F5E; font-size: 12px; font-weight: bold;">⚠️ DIÁRIO: PORTUGUÊS</span><br>'
+        f'<span style="color: #DDD; font-size: 13px;">📖 {topico_portugues}</span>'
+        '</div>'
+        '<div style="flex: 1;">'
+        '<span style="color: #F43F5E; font-size: 12px; font-weight: bold;">⚠️ DIÁRIO: MATEMÁTICA</span><br>'
+        f'<span style="color: #DDD; font-size: 13px;">📖 {topico_matematica}</span>'
+        '</div>'
+        '</div>'
+        '</div>'
+    )
     st.markdown(html_bussola, unsafe_allow_html=True)
-
+    
     col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
     
     with col_pomodoro:
