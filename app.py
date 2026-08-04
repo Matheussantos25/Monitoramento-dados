@@ -507,17 +507,60 @@ with tab_peso:
             st.rerun()
 
 # ==========================================
+# FUNÇÃO INTELIGENTE DE RECOMENDAÇÃO
+# ==========================================
+def obter_pior_topico(df_hist, disciplina):
+    todos_topicos = [t for t in TOPICOS_EDITAL.get(disciplina, ["Geral"]) if "Simulado" not in t]
+    if not todos_topicos:
+        return "Geral"
+        
+    if df_hist.empty:
+        return todos_topicos[0]
+        
+    df_disc = df_hist[df_hist['exercicio'] == disciplina].copy()
+    if df_disc.empty:
+        return todos_topicos[0]
+        
+    # Extrai os dados
+    df_disc['q_certas'] = df_disc['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
+    df_disc['q_erradas'] = df_disc['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
+    df_disc['topicos_str'] = df_disc['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', ''))
+    
+    # Agrupa por tópicos (string exata) e calcula acertos
+    stats = df_disc.groupby('topicos_str')[['q_certas', 'q_erradas']].sum().reset_index()
+    stats['total'] = stats['q_certas'] + stats['q_erradas']
+    
+    # Identifica o que já foi estudado
+    topicos_estudados = set()
+    for t_str in stats['topicos_str']:
+        topicos_estudados.update([x.strip() for x in t_str.split(',')])
+        
+    # 1. Prioridade máxima: Tópicos NUNCA estudados
+    topicos_nao_estudados = [t for t in todos_topicos if t not in topicos_estudados]
+    if topicos_nao_estudados:
+        return topicos_nao_estudados[0]
+        
+    # 2. Se tudo já foi visto, recomenda o de PIOR aproveitamento
+    stats = stats[stats['total'] > 0]
+    if not stats.empty:
+        stats['acc'] = stats['q_certas'] / stats['total']
+        stats = stats.sort_values('acc')
+        pior_linha = stats.iloc[0]['topicos_str']
+        pior_topico_individual = pior_linha.split(',')[0].strip() if pior_linha else todos_topicos[0]
+        return pior_topico_individual
+        
+    return todos_topicos[0]
+
+# ==========================================
 # ABA 5: REGISTRO DE ESTUDOS E POMODORO
 # ==========================================
 with tab_estudo:
     st.markdown("<h3 style='margin-bottom: 20px; color: #009CA6;'>📚 Central de Foco: Operação FGV</h3>", unsafe_allow_html=True)
     
-    # --- MOTOR DE RECOMENDAÇÃO INTELIGENTE ---
+    # --- MOTOR DE RECOMENDAÇÃO INTELIGENTE BASEADO EM APROVEITAMENTO ---
     prox_disciplina = ROTA_ESTRATEGICA[0]
-    prox_topico_sugerido = "Escolha um tópico novo"
     
     if not df_estudos.empty:
-        # Pega a última disciplina estudada do ciclo rotativo validando datas
         df_ciclo = df_estudos[df_estudos['exercicio'].isin(ROTA_ESTRATEGICA)]
         if not df_ciclo.empty:
             ultima_disciplina = df_ciclo.sort_values(by=['data', 'horario'], ascending=[False, False]).iloc[0]['exercicio']
@@ -525,29 +568,31 @@ with tab_estudo:
             idx_prox = (idx_atual + 1) % len(ROTA_ESTRATEGICA)
             prox_disciplina = ROTA_ESTRATEGICA[idx_prox]
             
-            # Tentar sugerir o tópico seguinte da disciplina recomendada
-            topicos_possiveis = [t for t in TOPICOS_EDITAL.get(prox_disciplina, ["Geral"]) if "Simulado" not in t]
-            df_hist_prox = df_ciclo[df_ciclo['exercicio'] == prox_disciplina].copy()
-            if not df_hist_prox.empty and topicos_possiveis:
-                df_hist_prox['topico_edital'] = df_hist_prox['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', ''))
-                ultimo_topico = df_hist_prox.sort_values(by=['data', 'horario']).iloc[-1]['topico_edital']
-                # Se o último topico for uma lista string separada, pega o primeiro
-                ultimo_topico_str = ultimo_topico.split(',')[0] if ultimo_topico else ""
-                try:
-                    idx_topico = next(i for i, t in enumerate(topicos_possiveis) if t == ultimo_topico_str)
-                    prox_topico_sugerido = topicos_possiveis[(idx_topico + 1) % len(topicos_possiveis)]
-                except StopIteration:
-                    prox_topico_sugerido = topicos_possiveis[0]
-            elif topicos_possiveis:
-                prox_topico_sugerido = topicos_possiveis[0]
+    # Usa o algoritmo para pegar os piores tópicos (ou os nunca vistos)
+    prox_topico_sugerido = obter_pior_topico(df_estudos, prox_disciplina)
+    topico_portugues = obter_pior_topico(df_estudos, "Língua Portuguesa")
+    topico_matematica = obter_pior_topico(df_estudos, "Matemática e Estatística Aplicada")
 
     st.markdown(f"""
     <div style="background-color: #0A0A0A; border-left: 4px solid #8B5CF6; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-        <span style="color: #009CA6; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Estratégica (Recomendação)</span><br>
-        <span style="color: #F43F5E; font-size: 14px; font-weight: bold; margin-top: 5px; display: block;">⚠️ REGRA DE OURO: Matemática e Português TODOS OS DIAS.</span>
-        <span style="color: #AAA; font-size: 14px; margin-top: 5px; display: block;">Além da rotina diária, seu alvo atual de rotação é:</span>
-        <span style="color: #FFF; font-size: 20px; font-weight: 700; display: block; margin-top: 8px;">🎯 {prox_disciplina}</span>
-        <span style="color: #10B981; font-size: 14px; font-weight: 600; display: block; margin-top: 4px;">📖 Tópico Sugerido: {prox_topico_sugerido}</span>
+        <span style="color: #009CA6; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Inteligente (Foco nos Pontos Fracos)</span><br>
+        
+        <div style="margin-top: 12px; padding-bottom: 8px; border-bottom: 1px solid #1F1F1F;">
+            <span style="color: #AAA; font-size: 13px;">ROTAÇÃO PRINCIPAL:</span><br>
+            <span style="color: #FFF; font-size: 18px; font-weight: 700;">🎯 {prox_disciplina}</span><br>
+            <span style="color: #10B981; font-size: 13px; font-weight: 600;">📖 Prioridade: {prox_topico_sugerido}</span>
+        </div>
+        
+        <div style="margin-top: 8px; display: flex; gap: 20px;">
+            <div style="flex: 1;">
+                <span style="color: #F43F5E; font-size: 12px; font-weight: bold;">⚠️ DIÁRIO: PORTUGUÊS</span><br>
+                <span style="color: #DDD; font-size: 13px;">📖 {topico_portugues}</span>
+            </div>
+            <div style="flex: 1;">
+                <span style="color: #F43F5E; font-size: 12px; font-weight: bold;">⚠️ DIÁRIO: MATEMÁTICA</span><br>
+                <span style="color: #DDD; font-size: 13px;">📖 {topico_matematica}</span>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -780,7 +825,7 @@ with tab_estudo:
             topicos_selecionados = st.multiselect("📖 Tópico(s) do Edital", topicos_disponiveis)
             topicos_str = ", ".join(topicos_selecionados) if topicos_selecionados else "Geral"
             
-            # --- Variáveis Iniciais Padrão (Evita erros no Banco de Dados) ---
+            # --- Variáveis Iniciais Padrão ---
             tempo_estudo = 0
             tempo_video = 0
             certas = 0
@@ -959,6 +1004,40 @@ with tab_dash_estudo:
         
         st.write("---")
         
+        # ==========================================
+        # NOVO: SESSÃO DE PONTOS FRACOS (CRÍTICOS)
+        # ==========================================
+        st.markdown("#### 🚨 Radar de Pontos Críticos (Menor Aproveitamento)")
+        st.markdown("<span style='color: #AAA; font-size: 14px;'>Mostrando os tópicos que você mais errou (mínimo de 5 questões resolvidas).</span>", unsafe_allow_html=True)
+        
+        df_criticos = df_dash_est.copy()
+        df_criticos_agg = df_criticos.groupby(['exercicio', 'topico_edital'], as_index=False)[['q_certas', 'q_erradas']].sum()
+        df_criticos_agg['total_q'] = df_criticos_agg['q_certas'] + df_criticos_agg['q_erradas']
+        
+        # Filtra apenas tópicos com amostragem relevante (mín. 5 questões)
+        df_criticos_agg = df_criticos_agg[df_criticos_agg['total_q'] >= 5]
+        
+        if not df_criticos_agg.empty:
+            df_criticos_agg['% Acerto'] = (df_criticos_agg['q_certas'] / df_criticos_agg['total_q']) * 100
+            df_criticos_agg = df_criticos_agg.sort_values('% Acerto', ascending=True).head(5) # Pega os 5 piores
+            
+            df_criticos_agg['topico_curto'] = df_criticos_agg['topico_edital'].apply(lambda x: str(x)[:50] + '...' if len(str(x)) > 50 else str(x))
+            df_criticos_agg['Label'] = df_criticos_agg['exercicio'] + " - " + df_criticos_agg['topico_curto']
+            
+            fig_crit = px.bar(df_criticos_agg, x='% Acerto', y='Label', orientation='h', color='% Acerto', color_continuous_scale="Reds_r", text_auto='.1f')
+            fig_crit.update_traces(texttemplate='%{x:.1f}%', textposition='outside', textfont_color='white')
+            fig_crit.update_layout(
+                xaxis_title="Taxa de Acerto (%)", yaxis_title="", 
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
+                font=dict(color="#E0E0E0"), coloraxis_showscale=False, 
+                xaxis=dict(showgrid=False, range=[0, 110]), yaxis=dict(showgrid=False, autorange="reversed")
+            )
+            st.plotly_chart(fig_crit, use_container_width=True)
+        else:
+            st.success("✔️ Não há dados críticos suficientes (resolva mais questões para a IA mapear suas fraquezas).")
+
+        st.write("---")
+        
         c_v1, c_v2 = st.columns(2)
         with c_v1:
             st.markdown("#### 📅 Bateria de Questões por Dia")
@@ -971,7 +1050,6 @@ with tab_dash_estudo:
             st.plotly_chart(fig_q_dia, use_container_width=True)
 
         with c_v2:
-            # --- GRÁFICO DE VÍDEO AULA ---
             st.markdown("#### 🎥 Tempo de Vídeo por Disciplina (Horas)")
             df_video_disc = df_dash_est.groupby('exercicio', as_index=False)['tempo_video'].sum()
             df_video_disc = df_video_disc[df_video_disc['tempo_video'] > 0]
