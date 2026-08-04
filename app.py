@@ -184,6 +184,76 @@ ROTA_ESTRATEGICA = [
     "Língua Inglesa" 
 ]
 
+# ==========================================
+# FUNÇÃO INTELIGENTE DE RECOMENDAÇÃO (COM PESO POR TEMPO)
+# ==========================================
+def obter_pior_topico(df_hist, disciplina):
+    todos_topicos = [t for t in TOPICOS_EDITAL.get(disciplina, ["Geral"]) if "Simulado" not in t]
+    if not todos_topicos:
+        return "Geral"
+        
+    if df_hist.empty:
+        return todos_topicos[0]
+        
+    df_disc = df_hist[df_hist['exercicio'] == disciplina].copy()
+    if df_disc.empty:
+        return todos_topicos[0]
+        
+    # Extrai os dados
+    df_disc['q_certas'] = df_disc['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
+    df_disc['q_erradas'] = df_disc['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
+    df_disc['topicos_str'] = df_disc['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', ''))
+    
+    # --- ALGORITMO DE DECAIMENTO DE TEMPO (TIME DECAY) ---
+    # Meia-vida de 7 dias: O peso cai pela metade a cada semana que passa.
+    df_disc['data_sessao'] = pd.to_datetime(df_disc['data'])
+    hoje = pd.Timestamp.today().normalize()
+    df_disc['dias_atras'] = (hoje - df_disc['data_sessao']).dt.days
+    df_disc['dias_atras'] = df_disc['dias_atras'].apply(lambda x: max(0, x))
+    
+    df_disc['peso_tempo'] = 0.5 ** (df_disc['dias_atras'] / 7.0)
+    
+    df_disc['certas_pond'] = df_disc['q_certas'] * df_disc['peso_tempo']
+    df_disc['total_pond'] = (df_disc['q_certas'] + df_disc['q_erradas']) * df_disc['peso_tempo']
+
+    # Separar sessões que tiveram mais de um tópico marcado
+    registros_expandidos = []
+    for _, row in df_disc.iterrows():
+        topicos_lista = [t.strip() for t in row['topicos_str'].split(',')] if row['topicos_str'] else ["Geral"]
+        for t in topicos_lista:
+            registros_expandidos.append({
+                'topico': t,
+                'certas_pond': row['certas_pond'],
+                'total_pond': row['total_pond']
+            })
+            
+    if not registros_expandidos:
+        return todos_topicos[0]
+        
+    df_exp = pd.DataFrame(registros_expandidos)
+    
+    # Agrupa por tópicos e calcula acertos PONDERADOS
+    stats = df_exp.groupby('topico')[['certas_pond', 'total_pond']].sum().reset_index()
+    topicos_estudados = set(stats['topico'].tolist())
+        
+    # 1. Prioridade máxima: Tópicos NUNCA estudados
+    topicos_nao_estudados = [t for t in todos_topicos if t not in topicos_estudados]
+    if topicos_nao_estudados:
+        return topicos_nao_estudados[0]
+        
+    # 2. Se tudo já foi visto, recomenda o de PIOR aproveitamento PONDERADO
+    stats = stats[stats['total_pond'] > 0]
+    if not stats.empty:
+        stats['acc'] = stats['certas_pond'] / stats['total_pond']
+        stats = stats.sort_values('acc', ascending=True)
+        
+        for pior_topico in stats['topico']:
+            if pior_topico in todos_topicos:
+                return pior_topico
+                
+    return todos_topicos[0]
+
+
 # --- CONFIGURAÇÕES DA PÁGINA ---
 st.set_page_config(page_title="Monitoramento Físico & Mental", page_icon="⚡", layout="wide")
 
@@ -507,51 +577,6 @@ with tab_peso:
             st.rerun()
 
 # ==========================================
-# FUNÇÃO INTELIGENTE DE RECOMENDAÇÃO
-# ==========================================
-def obter_pior_topico(df_hist, disciplina):
-    todos_topicos = [t for t in TOPICOS_EDITAL.get(disciplina, ["Geral"]) if "Simulado" not in t]
-    if not todos_topicos:
-        return "Geral"
-        
-    if df_hist.empty:
-        return todos_topicos[0]
-        
-    df_disc = df_hist[df_hist['exercicio'] == disciplina].copy()
-    if df_disc.empty:
-        return todos_topicos[0]
-        
-    # Extrai os dados
-    df_disc['q_certas'] = df_disc['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
-    df_disc['q_erradas'] = df_disc['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
-    df_disc['topicos_str'] = df_disc['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', ''))
-    
-    # Agrupa por tópicos (string exata) e calcula acertos
-    stats = df_disc.groupby('topicos_str')[['q_certas', 'q_erradas']].sum().reset_index()
-    stats['total'] = stats['q_certas'] + stats['q_erradas']
-    
-    # Identifica o que já foi estudado
-    topicos_estudados = set()
-    for t_str in stats['topicos_str']:
-        topicos_estudados.update([x.strip() for x in t_str.split(',')])
-        
-    # 1. Prioridade máxima: Tópicos NUNCA estudados
-    topicos_nao_estudados = [t for t in todos_topicos if t not in topicos_estudados]
-    if topicos_nao_estudados:
-        return topicos_nao_estudados[0]
-        
-    # 2. Se tudo já foi visto, recomenda o de PIOR aproveitamento
-    stats = stats[stats['total'] > 0]
-    if not stats.empty:
-        stats['acc'] = stats['q_certas'] / stats['total']
-        stats = stats.sort_values('acc')
-        pior_linha = stats.iloc[0]['topicos_str']
-        pior_topico_individual = pior_linha.split(',')[0].strip() if pior_linha else todos_topicos[0]
-        return pior_topico_individual
-        
-    return todos_topicos[0]
-
-# ==========================================
 # ABA 5: REGISTRO DE ESTUDOS E POMODORO
 # ==========================================
 with tab_estudo:
@@ -568,33 +593,34 @@ with tab_estudo:
             idx_prox = (idx_atual + 1) % len(ROTA_ESTRATEGICA)
             prox_disciplina = ROTA_ESTRATEGICA[idx_prox]
             
-    # Usa o algoritmo para pegar os piores tópicos (ou os nunca vistos)
+    # Usa o algoritmo ponderado no tempo para pegar os piores tópicos (ou os nunca vistos)
     prox_topico_sugerido = obter_pior_topico(df_estudos, prox_disciplina)
     topico_portugues = obter_pior_topico(df_estudos, "Língua Portuguesa")
     topico_matematica = obter_pior_topico(df_estudos, "Matemática e Estatística Aplicada")
 
-    st.markdown(f"""
-    <div style="background-color: #0A0A0A; border-left: 4px solid #8B5CF6; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-        <span style="color: #009CA6; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Inteligente (Foco nos Pontos Fracos)</span><br>
-        
-        <div style="margin-top: 12px; padding-bottom: 8px; border-bottom: 1px solid #1F1F1F;">
-            <span style="color: #AAA; font-size: 13px;">ROTAÇÃO PRINCIPAL:</span><br>
-            <span style="color: #FFF; font-size: 18px; font-weight: 700;">🎯 {prox_disciplina}</span><br>
-            <span style="color: #10B981; font-size: 13px; font-weight: 600;">📖 Prioridade: {prox_topico_sugerido}</span>
+    html_bussola = f"""
+<div style="background-color: #0A0A0A; border-left: 4px solid #8B5CF6; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+    <span style="color: #009CA6; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Inteligente (Foco nos Pontos Fracos)</span><br>
+    
+    <div style="margin-top: 12px; padding-bottom: 8px; border-bottom: 1px solid #1F1F1F;">
+        <span style="color: #AAA; font-size: 13px;">ROTAÇÃO PRINCIPAL:</span><br>
+        <span style="color: #FFF; font-size: 18px; font-weight: 700;">🎯 {prox_disciplina}</span><br>
+        <span style="color: #10B981; font-size: 13px; font-weight: 600;">📖 Prioridade: {prox_topico_sugerido}</span>
+    </div>
+    
+    <div style="margin-top: 8px; display: flex; gap: 20px;">
+        <div style="flex: 1;">
+            <span style="color: #F43F5E; font-size: 12px; font-weight: bold;">⚠️ DIÁRIO: PORTUGUÊS</span><br>
+            <span style="color: #DDD; font-size: 13px;">📖 {topico_portugues}</span>
         </div>
-        
-        <div style="margin-top: 8px; display: flex; gap: 20px;">
-            <div style="flex: 1;">
-                <span style="color: #F43F5E; font-size: 12px; font-weight: bold;">⚠️ DIÁRIO: PORTUGUÊS</span><br>
-                <span style="color: #DDD; font-size: 13px;">📖 {topico_portugues}</span>
-            </div>
-            <div style="flex: 1;">
-                <span style="color: #F43F5E; font-size: 12px; font-weight: bold;">⚠️ DIÁRIO: MATEMÁTICA</span><br>
-                <span style="color: #DDD; font-size: 13px;">📖 {topico_matematica}</span>
-            </div>
+        <div style="flex: 1;">
+            <span style="color: #F43F5E; font-size: 12px; font-weight: bold;">⚠️ DIÁRIO: MATEMÁTICA</span><br>
+            <span style="color: #DDD; font-size: 13px;">📖 {topico_matematica}</span>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+</div>
+"""
+    st.markdown(html_bussola, unsafe_allow_html=True)
 
     col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
     
@@ -825,7 +851,7 @@ with tab_estudo:
             topicos_selecionados = st.multiselect("📖 Tópico(s) do Edital", topicos_disponiveis)
             topicos_str = ", ".join(topicos_selecionados) if topicos_selecionados else "Geral"
             
-            # --- Variáveis Iniciais Padrão ---
+            # --- Variáveis Iniciais Padrão (Evita erros no Banco de Dados) ---
             tempo_estudo = 0
             tempo_video = 0
             certas = 0
