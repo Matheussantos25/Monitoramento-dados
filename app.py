@@ -758,7 +758,7 @@ with tab_estudo:
                 html_cronometro = html_cronometro.replace("[VIDEO_TAG]", video_tag)
                 components.html(html_cronometro, height=180)
 
-    with col_registro:
+   with col_registro:
         st.markdown("#### 📝 Input de Produtividade")
 
         index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
@@ -767,25 +767,44 @@ with tab_estudo:
         # Tópicos disponiveis no Edital
         topicos_disponiveis = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(disciplina, ["Geral"])
 
+        # --- SELETOR DINÂMICO FORA DO FORMULÁRIO ---
+        tipo_sessao = st.radio(
+            "Tipo de Sessão", 
+            ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🧠 Misto (Vídeo + Questões)"], 
+            horizontal=True
+        )
+
         with st.form("registro_estudo", clear_on_submit=True):
             data_estudo = st.date_input("Data da Sessão", value=datetime.today())
             
-            # --- NOVO: SELEÇÃO MÚLTIPLA DE TÓPICOS ---
             topicos_selecionados = st.multiselect("📖 Tópico(s) do Edital", topicos_disponiveis)
             topicos_str = ", ".join(topicos_selecionados) if topicos_selecionados else "Geral"
             
-            c_est1, c_est2 = st.columns(2)
-            with c_est1:
-                tempo_estudo = st.number_input("Tempo Líquido (min)", min_value=0, step=15)
-                # --- NOVO: TEMPO DE VÍDEO AULA ---
-                tempo_video = st.number_input("Tempo Vídeo Aula (min)", min_value=0, step=15)
-            with c_est2:
-                certas = st.number_input("✅ Questões Corretas", min_value=0, step=1)
-                erradas = st.number_input("❌ Questões Erradas", min_value=0, step=1)
+            # --- Variáveis Iniciais Padrão (Evita erros no Banco de Dados) ---
+            tempo_estudo = 0
+            tempo_video = 0
+            certas = 0
+            erradas = 0
+            fonte_questoes = "Não Aplicável"
+            
+            st.markdown("---")
+            
+            # --- RENDERIZAÇÃO CONDICIONAL DOS BLOCOS ---
+            if tipo_sessao in ["🎥 Apenas Vídeo Aula", "🧠 Misto (Vídeo + Questões)"]:
+                st.markdown("##### 🎥 Consumo de Conteúdo")
+                tempo_video = st.number_input("Tempo de Vídeo Aula (min)", min_value=0, step=15)
                 
-            # --- NOVO: FONTE DAS QUESTÕES ---
-            fonte_questoes = st.selectbox("Fonte das Questões", FONTES_QUESTOES)
+            if tipo_sessao in ["📝 Apenas Questões", "🧠 Misto (Vídeo + Questões)"]:
+                st.markdown("##### 📝 Bateria de Questões")
+                c_est1, c_est2 = st.columns(2)
+                with c_est1:
+                    tempo_estudo = st.number_input("Tempo Líquido Resolução (min)", min_value=0, step=15)
+                    fonte_questoes = st.selectbox("Fonte das Questões", FONTES_QUESTOES)
+                with c_est2:
+                    certas = st.number_input("✅ Questões Corretas", min_value=0, step=1)
+                    erradas = st.number_input("❌ Questões Erradas", min_value=0, step=1)
 
+            st.write("")
             if st.form_submit_button("💾 Computar Sessão", use_container_width=True):
                 total_q = certas + erradas
                 mochila_estudo_json = {
