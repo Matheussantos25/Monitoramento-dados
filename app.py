@@ -62,6 +62,15 @@ DISCIPLINAS_ESTUDO = [
 ]
 DISCIPLINAS_ESTUDO.sort()
 
+DECKS_ANKI = [
+    "Atualidades",
+    "Conhecimentos Específicos",
+    "Inglês",
+    "Legislação",
+    "Língua Portuguesa",
+    "Raciocínio Lógico"
+]
+
 FONTES_QUESTOES = [
     "FGV",
     "Gerado por IA",
@@ -70,6 +79,7 @@ FONTES_QUESTOES = [
     "VUNESP",
     "FCC",
     "QConcursos / TEC",
+    "Anki",
     "Outra"
 ]
 
@@ -620,7 +630,7 @@ with tab_estudo:
         '</div>'
     )
     st.markdown(html_bussola, unsafe_allow_html=True)
-    
+
     col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
     
     with col_pomodoro:
@@ -831,40 +841,46 @@ with tab_estudo:
     with col_registro:
         st.markdown("#### 📝 Input de Produtividade")
 
-        index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
-        disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO, index=index_recomendado, key="disciplina_estudo_select")
-        
-        # Tópicos disponiveis no Edital
-        topicos_disponiveis = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(disciplina, ["Geral"])
-
         # --- SELETOR DINÂMICO FORA DO FORMULÁRIO ---
         tipo_sessao = st.radio(
             "Tipo de Sessão", 
-            ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🧠 Misto (Vídeo + Questões)"], 
+            ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"], 
             horizontal=True
         )
+
+        if tipo_sessao == "🃏 Revisão (Anki)":
+            disciplina = st.selectbox("Deck do Anki", DECKS_ANKI)
+            topicos_disponiveis = []
+        else:
+            index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
+            disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO, index=index_recomendado, key="disciplina_estudo_select")
+            topicos_disponiveis = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(disciplina, ["Geral"])
 
         with st.form("registro_estudo", clear_on_submit=True):
             data_estudo = st.date_input("Data da Sessão", value=datetime.today())
             
-            topicos_selecionados = st.multiselect("📖 Tópico(s) do Edital", topicos_disponiveis)
-            topicos_str = ", ".join(topicos_selecionados) if topicos_selecionados else "Geral"
+            if tipo_sessao != "🃏 Revisão (Anki)":
+                topicos_selecionados = st.multiselect("📖 Tópico(s) do Edital", topicos_disponiveis)
+                topicos_str = ", ".join(topicos_selecionados) if topicos_selecionados else "Geral"
+            else:
+                topicos_str = "Revisão Espaçada"
             
             # --- Variáveis Iniciais Padrão (Evita erros no Banco de Dados) ---
             tempo_estudo = 0
             tempo_video = 0
             certas = 0
             erradas = 0
+            cartoes_anki = 0
             fonte_questoes = "Não Aplicável"
             
             st.markdown("---")
             
             # --- RENDERIZAÇÃO CONDICIONAL DOS BLOCOS ---
-            if tipo_sessao in ["🎥 Apenas Vídeo Aula", "🧠 Misto (Vídeo + Questões)"]:
+            if tipo_sessao == "🎥 Apenas Vídeo Aula":
                 st.markdown("##### 🎥 Consumo de Conteúdo")
                 tempo_video = st.number_input("Tempo de Vídeo Aula (min)", min_value=0, step=15)
                 
-            if tipo_sessao in ["📝 Apenas Questões", "🧠 Misto (Vídeo + Questões)"]:
+            elif tipo_sessao == "📝 Apenas Questões":
                 st.markdown("##### 📝 Bateria de Questões")
                 c_est1, c_est2 = st.columns(2)
                 with c_est1:
@@ -873,10 +889,23 @@ with tab_estudo:
                 with c_est2:
                     certas = st.number_input("✅ Questões Corretas", min_value=0, step=1)
                     erradas = st.number_input("❌ Questões Erradas", min_value=0, step=1)
+                    
+            elif tipo_sessao == "🃏 Revisão (Anki)":
+                st.markdown("##### 🃏 Sessão de Flashcards")
+                c_est1, c_est2 = st.columns(2)
+                with c_est1:
+                    tempo_estudo = st.number_input("Tempo Líquido (min)", min_value=0, step=10)
+                with c_est2:
+                    cartoes_anki = st.number_input("🔄 Cartões Revisados", min_value=0, step=10)
+                fonte_questoes = "Anki"
 
             st.write("")
             if st.form_submit_button("💾 Computar Sessão", use_container_width=True):
-                total_q = certas + erradas
+                if tipo_sessao == "🃏 Revisão (Anki)":
+                    total_q = cartoes_anki
+                else:
+                    total_q = certas + erradas
+                    
                 mochila_estudo_json = {
                     "topico_edital": topicos_str,
                     "q_certas": certas,
@@ -1303,27 +1332,47 @@ with tab_gerenciar:
             
             # --- CAMPOS DINÂMICOS BASEADOS NO TIPO DE REGISTRO ---
             if is_estudo:
-                idx_ex = DISCIPLINAS_ESTUDO.index(row_data['exercicio']) if row_data['exercicio'] in DISCIPLINAS_ESTUDO else 0
-                new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=idx_ex)
+                is_anki = extras.get('fonte_questoes') == 'Anki' or row_data['exercicio'] in DECKS_ANKI
                 
-                topicos_disp = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(new_ex, ["Geral"])
-                old_topicos_str = extras.get('topico_edital', 'Geral')
-                old_topicos_list = [t.strip() for t in old_topicos_str.split(',')] if old_topicos_str else []
-                valid_old_topicos = [t for t in old_topicos_list if t in topicos_disp]
-                new_topicos = st.multiselect("Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
-                
-                c3, c4, c5 = st.columns(3)
-                with c3:
-                    dur_val = row_data.get('duracao_min', 0)
-                    new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
-                    new_vid = st.number_input("Tempo Vídeo (min)", min_value=0, value=int(extras.get('tempo_video', 0)))
-                with c4:
-                    new_certas = st.number_input("Acertos", min_value=0, value=int(extras.get('q_certas', 0)))
-                    new_erradas = st.number_input("Erros", min_value=0, value=int(extras.get('q_erradas', 0)))
-                with c5:
-                    old_fonte = extras.get('fonte_questoes', 'Não Informada')
-                    idx_fonte = FONTES_QUESTOES.index(old_fonte) if old_fonte in FONTES_QUESTOES else 0
-                    new_fonte = st.selectbox("Fonte das Questões", FONTES_QUESTOES, index=idx_fonte)
+                if is_anki:
+                    idx_ex = DECKS_ANKI.index(row_data['exercicio']) if row_data['exercicio'] in DECKS_ANKI else 0
+                    new_ex = st.selectbox("Deck do Anki", DECKS_ANKI, index=idx_ex)
+                    
+                    c3, c4 = st.columns(2)
+                    with c3:
+                        dur_val = row_data.get('duracao_min', 0)
+                        new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
+                    with c4:
+                        rep_val = row_data.get('repeticoes', 0)
+                        new_cartoes = st.number_input("Cartões Revisados", min_value=0, value=int(rep_val if pd.notnull(rep_val) else 0))
+                    
+                    new_topicos = []
+                    new_certas = 0
+                    new_erradas = 0
+                    new_vid = 0
+                    new_fonte = "Anki"
+                else:
+                    idx_ex = DISCIPLINAS_ESTUDO.index(row_data['exercicio']) if row_data['exercicio'] in DISCIPLINAS_ESTUDO else 0
+                    new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=idx_ex)
+                    
+                    topicos_disp = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(new_ex, ["Geral"])
+                    old_topicos_str = extras.get('topico_edital', 'Geral')
+                    old_topicos_list = [t.strip() for t in old_topicos_str.split(',')] if old_topicos_str else []
+                    valid_old_topicos = [t for t in old_topicos_list if t in topicos_disp]
+                    new_topicos = st.multiselect("Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
+                    
+                    c3, c4, c5 = st.columns(3)
+                    with c3:
+                        dur_val = row_data.get('duracao_min', 0)
+                        new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
+                        new_vid = st.number_input("Tempo Vídeo (min)", min_value=0, value=int(extras.get('tempo_video', 0)))
+                    with c4:
+                        new_certas = st.number_input("Acertos", min_value=0, value=int(extras.get('q_certas', 0)))
+                        new_erradas = st.number_input("Erros", min_value=0, value=int(extras.get('q_erradas', 0)))
+                    with c5:
+                        old_fonte = extras.get('fonte_questoes', 'Não Informada')
+                        idx_fonte = FONTES_QUESTOES.index(old_fonte) if old_fonte in FONTES_QUESTOES else 0
+                        new_fonte = st.selectbox("Fonte das Questões", FONTES_QUESTOES, index=idx_fonte)
                     
             elif is_treino:
                 idx_ex = TODOS_EXERCICIOS.index(row_data['exercicio']) if row_data['exercicio'] in TODOS_EXERCICIOS else 0
@@ -1372,8 +1421,13 @@ with tab_gerenciar:
             if is_estudo:
                 update_data["exercicio"] = new_ex
                 update_data["duracao_min"] = new_dur
-                update_data["repeticoes"] = new_certas + new_erradas
-                extras["topico_edital"] = ", ".join(new_topicos) if new_topicos else "Geral"
+                
+                if is_anki:
+                    update_data["repeticoes"] = new_cartoes
+                else:
+                    update_data["repeticoes"] = new_certas + new_erradas
+                    
+                extras["topico_edital"] = ", ".join(new_topicos) if new_topicos else ("Revisão Espaçada" if is_anki else "Geral")
                 extras["q_certas"] = new_certas
                 extras["q_erradas"] = new_erradas
                 extras["tempo_video"] = new_vid
