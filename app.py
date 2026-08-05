@@ -290,7 +290,7 @@ st.markdown("""
 
     /* === CARTÕES CUSTOMIZADOS DARK CLEAN === */
     .card-container { display: flex; gap: 15px; justify-content: space-between; margin-bottom: 25px; flex-wrap: wrap; }
-    .neon-card { flex: 1; min-width: 180px; padding: 20px; border-radius: 10px; color: #E0E0E0; background: #0A0A0A; border-left: 4px solid #333; position: relative; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    .neon-card { flex: 1; min-width: 150px; padding: 20px; border-radius: 10px; color: #E0E0E0; background: #0A0A0A; border-left: 4px solid #333; position: relative; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
     .neon-card .card-title { font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;}
     .neon-card .card-value { font-size: 32px; font-weight: 700; color: #FFF; }
     
@@ -305,6 +305,9 @@ st.markdown("""
     
     .card-crimson { border-color: #F43F5E; }
     .card-crimson .card-value { text-shadow: 0 0 10px rgba(244, 63, 94, 0.4); }
+
+    .card-orange { border-color: #F59E0B; }
+    .card-orange .card-value { text-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
     
     span[data-baseweb="tag"] { background-color: #009CA6 !important; color: #050505 !important; font-weight: bold; }
     
@@ -961,8 +964,11 @@ with tab_dash_estudo:
     
     if not df_estudos.empty:
         df_estudos['data_real'] = pd.to_datetime(df_estudos['data'])
+        df_estudos['fonte_questoes'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'fonte_questoes', 'Não Informada'))
         hoje_data = pd.Timestamp.today().normalize()
-        df_hoje_est = df_estudos[df_estudos['data_real'] == hoje_data]
+        
+        # Filtra registros de hoje QUE NÃO SÃO DO ANKI
+        df_hoje_est = df_estudos[(df_estudos['data_real'] == hoje_data) & (df_estudos['fonte_questoes'] != 'Anki')]
         if not df_hoje_est.empty:
             questoes_hoje = int(df_hoje_est['repeticoes'].sum())
             
@@ -1014,10 +1020,7 @@ with tab_dash_estudo:
         df_estudos['q_certas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
         df_estudos['q_erradas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
         df_estudos['topico_edital'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', safe_get(x, 'topico', 'Geral')))
-        
-        # --- EXTRACAO DE NOVOS CAMPOS ---
         df_estudos['tempo_video'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'tempo_video', 0))
-        df_estudos['fonte_questoes'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'fonte_questoes', 'Não Informada'))
         
         # --- FILTRO POR FONTE ---
         fontes_unicas = df_estudos['fonte_questoes'].unique().tolist()
@@ -1025,16 +1028,21 @@ with tab_dash_estudo:
         df_dash_est = df_estudos.copy()
         if fonte_filtro != "Todas as Fontes":
             df_dash_est = df_dash_est[df_dash_est['fonte_questoes'] == fonte_filtro]
+            
+        # Segregando dados Anki vs Questões Reais para os cálculos de taxa e volume
+        df_questoes_reais = df_dash_est[df_dash_est['fonte_questoes'] != 'Anki']
+        df_anki = df_dash_est[df_dash_est['fonte_questoes'] == 'Anki']
         
-        total_certas = df_dash_est['q_certas'].sum()
-        total_erradas = df_dash_est['q_erradas'].sum()
-        total_questoes = int(df_dash_est['repeticoes'].sum()) 
+        total_certas = df_questoes_reais['q_certas'].sum()
+        total_erradas = df_questoes_reais['q_erradas'].sum()
+        total_questoes = int(df_questoes_reais['repeticoes'].sum()) 
         taxa_acerto = (total_certas / (total_certas + total_erradas) * 100) if (total_certas + total_erradas) > 0 else 0
-        tempo_total_min = int(df_dash_est['duracao_min'].sum())
-        media_min_questao = (tempo_total_min / total_questoes) if total_questoes > 0 else 0
-        tempo_video_total_min = int(df_dash_est['tempo_video'].sum())
         
-        # 2. MÉTRICAS EXISTENTES
+        tempo_total_min = int(df_dash_est['duracao_min'].sum())
+        tempo_video_total_min = int(df_dash_est['tempo_video'].sum())
+        tempo_anki_total_min = int(df_anki['duracao_min'].sum())
+        
+        # 2. MÉTRICAS EXISTENTES + CARD DO ANKI
         st.markdown(f"""
         <div class="card-container">
             <div class="neon-card card-cyan">
@@ -1046,12 +1054,16 @@ with tab_dash_estudo:
                 <div class="card-value">{taxa_acerto:.1f}%</div>
             </div>
             <div class="neon-card card-emerald">
-                <div class="card-title">📝 BATERIA DE QUESTÕES</div>
+                <div class="card-title">📝 QUESTÕES (BATERIA)</div>
                 <div class="card-value">{total_questoes}</div>
             </div>
             <div class="neon-card card-crimson">
-                <div class="card-title">🎥 HORAS EM VÍDEO AULA</div>
+                <div class="card-title">🎥 HORAS VÍDEO AULA</div>
                 <div class="card-value">{(tempo_video_total_min / 60):.1f}h</div>
+            </div>
+            <div class="neon-card card-orange">
+                <div class="card-title">🃏 HORAS REVISÃO ANKI</div>
+                <div class="card-value">{(tempo_anki_total_min / 60):.1f}h</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1059,12 +1071,12 @@ with tab_dash_estudo:
         st.write("---")
         
         # ==========================================
-        # NOVO: SESSÃO DE PONTOS FRACOS (CRÍTICOS)
+        # SESSÃO DE PONTOS FRACOS (CRÍTICOS) - APENAS QUESTÕES REAIS
         # ==========================================
         st.markdown("#### 🚨 Radar de Pontos Críticos (Menor Aproveitamento)")
         st.markdown("<span style='color: #AAA; font-size: 14px;'>Mostrando os tópicos que você mais errou (mínimo de 5 questões resolvidas).</span>", unsafe_allow_html=True)
         
-        df_criticos = df_dash_est.copy()
+        df_criticos = df_questoes_reais.copy()
         df_criticos_agg = df_criticos.groupby(['exercicio', 'topico_edital'], as_index=False)[['q_certas', 'q_erradas']].sum()
         df_criticos_agg['total_q'] = df_criticos_agg['q_certas'] + df_criticos_agg['q_erradas']
         
@@ -1095,7 +1107,7 @@ with tab_dash_estudo:
         c_v1, c_v2 = st.columns(2)
         with c_v1:
             st.markdown("#### 📅 Bateria de Questões por Dia")
-            df_q_dia = df_dash_est.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
+            df_q_dia = df_questoes_reais.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
             df_q_dia['data_format'] = pd.to_datetime(df_q_dia['data']).dt.strftime('%d/%m')
             
             fig_q_dia = px.bar(df_q_dia, x='data_format', y='repeticoes', text_auto=True)
@@ -1161,7 +1173,8 @@ with tab_dash_estudo:
         with c_dash_e2:
             with st.container(border=True):
                 st.markdown("#### 📊 Taxa de Acerto por Disciplina")
-                df_acertos = df_dash_est.groupby('exercicio', as_index=False)[['q_certas', 'q_erradas']].sum()
+                # Usa df_questoes_reais para não bugar a taxa de acerto com o Anki
+                df_acertos = df_questoes_reais.groupby('exercicio', as_index=False)[['q_certas', 'q_erradas']].sum()
                 df_acertos['total'] = df_acertos['q_certas'] + df_acertos['q_erradas']
                 df_acertos = df_acertos[df_acertos['total'] > 0] 
                 
@@ -1214,6 +1227,7 @@ with tab_dash_estudo:
             with c_top2:
                 with st.container(border=True):
                     st.markdown("##### 🎯 Taxa de Acerto (%)")
+                    # Para acerto, filtra os que tem > 0 questões resolvidas (Ignora Anki)
                     df_top_acertos = df_topicos_agg[df_topicos_agg['total_q'] > 0].sort_values('% Acerto', ascending=True).tail(10)
                     if not df_top_acertos.empty:
                         fig_q = px.bar(df_top_acertos, y='topico_curto', x='% Acerto', orientation='h', color='% Acerto', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'total_q': True, 'exercicio': True})
