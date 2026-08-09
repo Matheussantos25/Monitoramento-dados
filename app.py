@@ -215,7 +215,6 @@ def obter_pior_topico(df_hist, disciplina):
     df_disc['topicos_str'] = df_disc['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', ''))
     
     # --- ALGORITMO DE DECAIMENTO DE TEMPO (TIME DECAY) ---
-    # Meia-vida de 7 dias: O peso cai pela metade a cada semana que passa.
     df_disc['data_sessao'] = pd.to_datetime(df_disc['data'])
     hoje = pd.Timestamp.today().normalize()
     df_disc['dias_atras'] = (hoje - df_disc['data_sessao']).dt.days
@@ -385,7 +384,32 @@ with tab_registro:
         st.markdown("---")
         
         exercicio_input = st.selectbox("Exercício", TODOS_EXERCICIOS)
-        st.write("")
+        
+        # --- ALGORITMO INTELIGENTE DE PROGRESSÃO FÍSICA ---
+        if not df_treinos.empty:
+            df_hist_ex = df_treinos[df_treinos['exercicio'] == exercicio_input].sort_values(by=['data', 'horario'])
+            if not df_hist_ex.empty:
+                ult = df_hist_ex.iloc[-1]
+                reps_u = int(ult['repeticoes'])
+                carga_u = float(ult['carga_kg'])
+                desc_u = int(ult['descanso_seg'])
+                iso_u = int(safe_get(ult['dados_extras'], 'isometria_segundos', 0))
+
+                sugestao = ""
+                if iso_u > 0:
+                    sugestao = f"Tente segurar {iso_u + 2}s a {iso_u + 5}s (Progressão Isométrica)."
+                elif reps_u > 0:
+                    sugestao = f"Tente {reps_u + 1} a {reps_u + 2} reps, ou aumente a carga para {carga_u + 1}kg."
+                else:
+                    sugestao = "Mantenha o ritmo e otimize o movimento."
+                
+                html_overload = (
+                    '<div style="background-color: #121212; border-left: 3px solid #009CA6; padding: 10px; border-radius: 5px; margin-top: 5px; margin-bottom: 20px;">'
+                    f'<span style="color: #AAA; font-size: 12px;">ÚLTIMO TREINO: {reps_u} reps | {iso_u}s isometria | {carga_u}kg | {desc_u}s descanso</span><br>'
+                    f'<span style="color: #009CA6; font-size: 14px; font-weight: bold;">⚡ Sugestão de Overload: {sugestao} Reduza o descanso para {max(0, desc_u - 15)}s se estiver fácil.</span>'
+                    '</div>'
+                )
+                st.markdown(html_overload, unsafe_allow_html=True)
         
         st.markdown("#### 📊 Métricas do Exercício")
         c1, c2, c3 = st.columns(3)
@@ -430,6 +454,58 @@ with tab_registro:
 # ABA 2: DASHBOARD FÍSICO
 # ==========================================
 with tab_dash_treino:
+    
+    # --- INÍCIO GATILHO URGÊNCIA META TREINO ---
+    meta_fisica_diaria = 200 # Meta flexível de Volume Dinâmico
+    reps_treino_hoje = 0
+    
+    if not df_treinos.empty:
+        df_treinos['data_real'] = pd.to_datetime(df_treinos['data'])
+        hoje_data = pd.Timestamp.today().normalize()
+        df_hoje_tr = df_treinos[df_treinos['data_real'] == hoje_data]
+        if not df_hoje_tr.empty:
+            reps_treino_hoje = int(df_hoje_tr['repeticoes'].sum())
+            
+    faltam_reps = max(0, meta_fisica_diaria - reps_treino_hoje)
+    
+    cor_alerta_f = "#F43F5E" if faltam_reps > 0 else "#10B981"
+    msg_alerta_f = f"💪 FALTAM {faltam_reps} REPETIÇÕES HOJE!" if faltam_reps > 0 else "🏆 META FÍSICA BATIDA!"
+    bg_color_f = "rgba(244, 63, 94, 0.1)" if faltam_reps > 0 else "rgba(16, 185, 129, 0.1)"
+    
+    st.markdown(f"""
+    <div style="background: {bg_color_f}; border: 2px solid {cor_alerta_f}; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 0 20px {cor_alerta_f}40; margin-bottom: 30px;">
+        <h2 style="color: {cor_alerta_f}; margin: 0; font-size: 38px; font-weight: 900; letter-spacing: 1px;">{msg_alerta_f}</h2>
+        <p style="color: #E0E0E0; font-size: 18px; margin-top: 10px; font-weight: bold;">Meta de Volume: {meta_fisica_diaria} Reps | Realizadas Hoje: {reps_treino_hoje}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    fig_gauge_f = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = reps_treino_hoje,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        title = {'text': "Progresso de Repetições", 'font': {'color': '#E0E0E0', 'size': 20}},
+        gauge = {
+            'axis': {'range': [None, meta_fisica_diaria], 'tickwidth': 1, 'tickcolor': "#E0E0E0"},
+            'bar': {'color': cor_alerta_f},
+            'bgcolor': "rgba(0,0,0,0)",
+            'borderwidth': 2,
+            'bordercolor': "#1F1F1F",
+            'steps': [
+                {'range': [0, meta_fisica_diaria*0.5], 'color': '#333'},
+                {'range': [meta_fisica_diaria*0.5, meta_fisica_diaria*0.9], 'color': '#555'}
+            ]
+        }
+    ))
+    
+    fig_gauge_f.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", 
+        font=dict(color="#E0E0E0"), 
+        height=320, 
+        margin=dict(l=30, r=30, t=70, b=40)
+    )
+    st.plotly_chart(fig_gauge_f, use_container_width=True)
+    # --- FIM GATILHO META TREINO ---
+
     if not df_treinos.empty:
         df_treinos['isometria_segundos'] = df_treinos['dados_extras'].apply(lambda x: safe_get(x, 'isometria_segundos', 0))
         
@@ -458,25 +534,6 @@ with tab_dash_treino:
         c_ctrl1, c_ctrl2 = st.columns(2)
         with c_ctrl1:
             ex_selecionados = st.multiselect("Quais exercícios visualizar?", options=TODOS_EXERCICIOS, default=[])
-            
-            # --- ALGORITMO PROGRESSIVE OVERLOAD ---
-            if len(ex_selecionados) == 1:
-                ex_alvo = ex_selecionados[0]
-                df_overload = df_treinos[df_treinos['exercicio'] == ex_alvo].sort_values(by=['data', 'horario'])
-                if not df_overload.empty:
-                    ult = df_overload.iloc[-1]
-                    reps_u = int(ult['repeticoes'])
-                    carga_u = ult['carga_kg']
-                    descanso_u = int(ult['descanso_seg'])
-                    
-                    st.markdown(f"""
-                    <div style="background-color: #0A0A0A; border-left: 4px solid #F43F5E; padding: 15px; border-radius: 8px; margin-top: 10px;">
-                        <span style="color: #F43F5E; font-size: 13px; font-weight: 600; text-transform: uppercase;">📈 Algoritmo de Progressive Overload</span><br>
-                        <span style="color: #E0E0E0; font-size: 14px;">Último registro de <b>{ex_alvo}</b>: {reps_u} reps | {carga_u} kg | {descanso_u}s descanso.</span><br>
-                        <span style="color: #FFF; font-weight: bold; margin-top: 5px; display: inline-block;">🎯 Sugestão: Tente fazer {reps_u + 1} a {reps_u + 2} repetições, ou diminua o descanso para {max(0, descanso_u - 15)}s.</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-        
         with c_ctrl2:
             st.write("") 
             mostrar_peso_corporal = st.checkbox("Incluir gráfico de Evolução do Peso Corporal", value=True)
@@ -611,7 +668,6 @@ with tab_estudo:
     topico_portugues = obter_pior_topico(df_estudos, "Língua Portuguesa")
     topico_matematica = obter_pior_topico(df_estudos, "Matemática e Estatística Aplicada")
 
-    # --- CORREÇÃO: HTML concatenado sem quebras de linha para evitar formatação de código ---
     html_bussola = (
         '<div style="background-color: #0A0A0A; border-left: 4px solid #8B5CF6; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">'
         '<span style="color: #009CA6; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Inteligente (Foco nos Pontos Fracos)</span><br>'
@@ -934,6 +990,14 @@ with tab_estudo:
 # ==========================================
 with tab_dash_estudo:
     
+    html_motivacional = (
+        '<div style="text-align: center; margin-bottom: 25px;">'
+        '<p style="color: #009CA6; font-style: italic; font-size: 16px;">"Se você não gosta do seu destino, não o aceite. Em vez disso, tenha a coragem para transformá-lo naquilo que você quer que ele seja." <br>'
+        '<span style="font-weight: bold; color: #FFF;">— Naruto Uzumaki</span></p>'
+        '</div>'
+    )
+    st.markdown(html_motivacional, unsafe_allow_html=True)
+    
     # --- EDITAL COMPLETO EM CAIXA EXPANSÍVEL ---
     with st.expander("📖 Clique para visualizar o Edital Completo"):
         st.markdown("""
@@ -958,8 +1022,8 @@ with tab_dash_estudo:
         **LEGISLAÇÃO ACERCA DE SEGURANÇA DA INFORMAÇÃO E PROTEÇÃO DE DADOS:** 1 Lei nº 12.527/2011 (Lei de Acesso à Informação): capítulos I, II, III, IV e V; Dec. nº 7.724 e nº 7845. 2 Lei nº 12.737/2012 (Lei de Delitos Informáticos): art. 2º. 3 Lei nº 12.965/2014 (Marco Civil da Internet): capítulos II, Seção I, e III, Seções I e II. 4 Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais – LGPD): capítulos I, II, III, IV, VII, VIII
         """)
 
-    # --- INÍCIO GATILHO URGÊNCIA META 120 QUESTÕES ---
-    meta_diaria = 120
+    # --- INÍCIO GATILHO URGÊNCIA META 150 QUESTÕES ---
+    meta_diaria = 150
     questoes_hoje = 0
     
     if not df_estudos.empty:
