@@ -216,7 +216,8 @@ def obter_pior_topico(df_hist, disciplina):
     
     # --- ALGORITMO DE DECAIMENTO DE TEMPO (TIME DECAY) ---
     df_disc['data_sessao'] = pd.to_datetime(df_disc['data'])
-    hoje = pd.Timestamp.today().normalize()
+    # Correção UTC-3
+    hoje = (pd.Timestamp.utcnow() - pd.Timedelta(hours=3)).normalize().tz_localize(None)
     df_disc['dias_atras'] = (hoje - df_disc['data_sessao']).dt.days
     df_disc['dias_atras'] = df_disc['dias_atras'].apply(lambda x: max(0, x))
     
@@ -335,7 +336,8 @@ filtro_tempo = st.sidebar.selectbox("Período:", ["Todo o Histórico", "Hoje", "
 
 if not df_raw.empty:
     df_raw['data'] = pd.to_datetime(df_raw['data'])
-    hoje = pd.Timestamp.today().normalize()
+    # Correção UTC-3
+    hoje = (pd.Timestamp.utcnow() - pd.Timedelta(hours=3)).normalize().tz_localize(None)
     
     if filtro_tempo == "Hoje":
         df_raw = df_raw[df_raw['data'] == hoje]
@@ -374,9 +376,11 @@ with tab_registro:
         st.markdown("<h3 style='margin-bottom: 20px; color: #009CA6;'>🏋️ Inserir Dados Físicos</h3>", unsafe_allow_html=True)
         
         c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
-        with c_top1: data_treino = st.date_input("Data do Treino", value=datetime.today())
+        # Correção UTC-3
+        with c_top1: data_treino = st.date_input("Data do Treino", value=(datetime.utcnow() - timedelta(hours=3)).date())
             
-        agora = datetime.now()
+        # Correção UTC-3
+        agora = datetime.utcnow() - timedelta(hours=3)
         with c_top2: hora = st.selectbox("Hora", [f"{i:02d}" for i in range(24)], index=agora.hour)
         with c_top3: minuto = st.selectbox("Min.", [f"{i:02d}" for i in range(60)], index=agora.minute)
             
@@ -461,7 +465,8 @@ with tab_dash_treino:
     
     if not df_treinos.empty:
         df_treinos['data_real'] = pd.to_datetime(df_treinos['data'])
-        hoje_data = pd.Timestamp.today().normalize()
+        # Correção UTC-3
+        hoje_data = (pd.Timestamp.utcnow() - pd.Timedelta(hours=3)).normalize().tz_localize(None)
         df_hoje_tr = df_treinos[df_treinos['data_real'] == hoje_data]
         if not df_hoje_tr.empty:
             reps_treino_hoje = int(df_hoje_tr['repeticoes'].sum())
@@ -595,7 +600,8 @@ with tab_dash_treino:
 with tab_dieta:
     with st.form("registro_dieta", clear_on_submit=True):
         st.markdown("<h3 style='margin-bottom: 20px; color: #10B981;'>🍏 Diário Alimentar</h3>", unsafe_allow_html=True)
-        data_dieta = st.date_input("Data da Refeição", value=datetime.today(), key="data_dieta")
+        # Correção UTC-3
+        data_dieta = st.date_input("Data da Refeição", value=(datetime.utcnow() - timedelta(hours=3)).date(), key="data_dieta")
         
         c_alim1, c_alim2 = st.columns(2)
         with c_alim1:
@@ -630,8 +636,9 @@ with tab_peso:
     with st.form("registro_peso", clear_on_submit=True):
         st.markdown("<h3 style='margin-bottom: 20px; color: #8B5CF6;'>⚖️ Biometria Diária</h3>", unsafe_allow_html=True)
         
+        # Correção UTC-3
         c_p1, c_p2 = st.columns(2)
-        with c_p1: data_peso = st.date_input("Data da Pesagem", value=datetime.today(), key="data_peso")
+        with c_p1: data_peso = st.date_input("Data da Pesagem", value=(datetime.utcnow() - timedelta(hours=3)).date(), key="data_peso")
         with c_p2: peso_corporal_input = st.number_input("Seu Peso (kg)", min_value=0.0, step=0.1)
 
         if st.form_submit_button("💾 Atualizar Biometria", use_container_width=True):
@@ -916,7 +923,8 @@ with tab_estudo:
             topicos_disponiveis = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(disciplina, ["Geral"])
 
         with st.form("registro_estudo", clear_on_submit=True):
-            data_estudo = st.date_input("Data da Sessão", value=datetime.today())
+            # Correção UTC-3
+            data_estudo = st.date_input("Data da Sessão", value=(datetime.utcnow() - timedelta(hours=3)).date())
             
             if tipo_sessao != "🃏 Revisão (Anki)":
                 topicos_selecionados = st.multiselect("📖 Tópico(s) do Edital", topicos_disponiveis)
@@ -973,8 +981,10 @@ with tab_estudo:
                     "fonte_questoes": fonte_questoes
                 }
                 
+                # Correção UTC-3 na hora
+                horario_br = (datetime.utcnow() - timedelta(hours=3)).strftime("%H:%M:%S")
                 dados_estudo = {
-                    "data": str(data_estudo), "horario": datetime.now().strftime("%H:%M:%S"), 
+                    "data": str(data_estudo), "horario": str(horario_br), 
                     "grupo_muscular": "Estudos", "exercicio": disciplina, 
                     "series": 0, "repeticoes": int(total_q), 
                     "carga_kg": 0.0, "descanso_seg": 0, "duracao_min": int(tempo_estudo),
@@ -1029,7 +1039,8 @@ with tab_dash_estudo:
     if not df_estudos.empty:
         df_estudos['data_real'] = pd.to_datetime(df_estudos['data'])
         df_estudos['fonte_questoes'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'fonte_questoes', 'Não Informada'))
-        hoje_data = pd.Timestamp.today().normalize()
+        # Correção UTC-3
+        hoje_data = (pd.Timestamp.utcnow() - pd.Timedelta(hours=3)).normalize().tz_localize(None)
         
         # Filtra registros de hoje QUE NÃO SÃO DO ANKI
         df_hoje_est = df_estudos[(df_estudos['data_real'] == hoje_data) & (df_estudos['fonte_questoes'] != 'Anki')]
@@ -1195,7 +1206,8 @@ with tab_dash_estudo:
         st.write("---")
 
         st.markdown("#### 🗓️ Cronograma Estratégico (Próximos 30 Dias)")
-        hoje_cron = datetime.today()
+        # Correção UTC-3
+        hoje_cron = (datetime.utcnow() - timedelta(hours=3)).replace(hour=0, minute=0, second=0, microsecond=0)
         dias_cron = [hoje_cron + timedelta(days=i) for i in range(30)]
         dias_semana_map = {0:"Seg", 1:"Ter", 2:"Qua", 3:"Qui", 4:"Sex", 5:"Sáb", 6:"Dom"}
         
@@ -1403,7 +1415,8 @@ with tab_gerenciar:
                 try:
                     time_obj = pd.to_datetime(row_data['horario']).time()
                 except:
-                    time_obj = datetime.now().time()
+                    # Correção UTC-3
+                    time_obj = (datetime.utcnow() - timedelta(hours=3)).time()
                 new_time = st.time_input("Horário", value=time_obj)
             
             st.write("")
