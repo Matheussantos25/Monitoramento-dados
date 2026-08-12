@@ -374,7 +374,7 @@ tab_registro, tab_dash_treino, tab_dieta, tab_peso, tab_estudo, tab_dash_estudo,
 with tab_registro:
     modo_insercao = st.radio(
         "Selecione o formato do treino:", 
-        ["🏋️ Exercício Isolado (Convencional)", "🔥 Circuito AMRAP 20' (5 Barras / 10 Flexões / 25 Agachamentos)"], 
+        ["🏋️ Exercício Isolado (Convencional)", "🔥 Circuito AMRAP 20' (5 Barras / 10 Flexões / 15 Agachamentos)"], 
         horizontal=True
     )
     
