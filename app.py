@@ -463,7 +463,7 @@ with tab_registro:
         # --- NOVO BLOCO AMRAP ---
         with st.form("registro_amrap", clear_on_submit=True):
             st.markdown("<h3 style='margin-bottom: 5px; color: #F43F5E;'>🔥 Circuito AMRAP (20 Minutos)</h3>", unsafe_allow_html=True)
-            st.markdown("<p style='color: #AAA; margin-bottom: 20px;'>1 Round = 5 Barras Fixas + 10 Flexões + 25 Agachamentos</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #AAA; margin-bottom: 20px;'>1 Round = 5 Barras Fixas + 10 Flexões + 15 Agachamentos</p>", unsafe_allow_html=True)
             
             c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
             with c_top1: data_treino = st.date_input("Data do Treino", value=(datetime.utcnow() - timedelta(hours=3)).date(), key="d_amrap")
@@ -482,7 +482,7 @@ with tab_registro:
                 humor = st.selectbox("Estado Mental no Treino", ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"], key="humor_amrap")
             
             # Preview visual das reps totais para ajudar no tracking mental
-            st.info(f"📊 **Total Projetado:** Serão gravados **{rounds * 5} Barras**, **{rounds * 10} Flexões** e **{rounds * 25} Agachamentos** no histórico.")
+            st.info(f"📊 **Total Projetado:** Serão gravados **{rounds * 5} Barras**, **{rounds * 10} Flexões** e **{rounds * 15} Agachamentos** no histórico.")
             
             if st.form_submit_button("🚀 Gravar AMRAP", use_container_width=True):
                 if rounds > 0:
@@ -502,7 +502,7 @@ with tab_registro:
                     
                     # 3. Registro do Agachamento
                     dados_agachamento = dados_barra.copy()
-                    dados_agachamento.update({"grupo_muscular": "Pernas", "exercicio": "Agachamento", "repeticoes": int(rounds * 25), "duracao_min": 0})
+                    dados_agachamento.update({"grupo_muscular": "Pernas", "exercicio": "Agachamento", "repeticoes": int(rounds * 15), "duracao_min": 0})
                     
                     # Insere os 3 em lote no banco
                     supabase.table("treinos").insert([dados_barra, dados_flexao, dados_agachamento]).execute()
