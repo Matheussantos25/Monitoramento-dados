@@ -372,88 +372,145 @@ tab_registro, tab_dash_treino, tab_dieta, tab_peso, tab_estudo, tab_dash_estudo,
 # ABA 1: REGISTRO DE TREINO 
 # ==========================================
 with tab_registro:
-    with st.form("registro_treino", clear_on_submit=True):
-        st.markdown("<h3 style='margin-bottom: 20px; color: #009CA6;'>🏋️ Inserir Dados Físicos</h3>", unsafe_allow_html=True)
-        
-        c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
-        # Correção UTC-3
-        with c_top1: data_treino = st.date_input("Data do Treino", value=(datetime.utcnow() - timedelta(hours=3)).date())
+    modo_insercao = st.radio(
+        "Selecione o formato do treino:", 
+        ["🏋️ Exercício Isolado (Convencional)", "🔥 Circuito AMRAP 20' (5 Barras / 10 Flexões / 25 Agachamentos)"], 
+        horizontal=True
+    )
+    
+    if modo_insercao == "🏋️ Exercício Isolado (Convencional)":
+        with st.form("registro_treino", clear_on_submit=True):
+            st.markdown("<h3 style='margin-bottom: 20px; color: #009CA6;'>🏋️ Inserir Dados Físicos</h3>", unsafe_allow_html=True)
             
-        # Correção UTC-3
-        agora = datetime.utcnow() - timedelta(hours=3)
-        with c_top2: hora = st.selectbox("Hora", [f"{i:02d}" for i in range(24)], index=agora.hour)
-        with c_top3: minuto = st.selectbox("Min.", [f"{i:02d}" for i in range(60)], index=agora.minute)
-            
-        horario = f"{hora}:{minuto}:00"
-        st.markdown("---")
-        
-        exercicio_input = st.selectbox("Exercício", TODOS_EXERCICIOS)
-        
-        # --- ALGORITMO INTELIGENTE DE PROGRESSÃO FÍSICA ---
-        if not df_treinos.empty:
-            df_hist_ex = df_treinos[df_treinos['exercicio'] == exercicio_input].sort_values(by=['data', 'horario'])
-            if not df_hist_ex.empty:
-                ult = df_hist_ex.iloc[-1]
-                reps_u = int(ult['repeticoes'])
-                carga_u = float(ult['carga_kg'])
-                desc_u = int(ult['descanso_seg'])
-                iso_u = int(safe_get(ult['dados_extras'], 'isometria_segundos', 0))
-
-                sugestao = ""
-                if iso_u > 0:
-                    sugestao = f"Tente segurar {iso_u + 2}s a {iso_u + 5}s (Progressão Isométrica)."
-                elif reps_u > 0:
-                    sugestao = f"Tente {reps_u + 1} a {reps_u + 2} reps, ou aumente a carga para {carga_u + 1}kg."
-                else:
-                    sugestao = "Mantenha o ritmo e otimize o movimento."
+            c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
+            with c_top1: data_treino = st.date_input("Data do Treino", value=(datetime.utcnow() - timedelta(hours=3)).date())
                 
-                html_overload = (
-                    '<div style="background-color: #121212; border-left: 3px solid #009CA6; padding: 10px; border-radius: 5px; margin-top: 5px; margin-bottom: 20px;">'
-                    f'<span style="color: #AAA; font-size: 12px;">ÚLTIMO TREINO: {reps_u} reps | {iso_u}s isometria | {carga_u}kg | {desc_u}s descanso</span><br>'
-                    f'<span style="color: #009CA6; font-size: 14px; font-weight: bold;">⚡ Sugestão de Overload: {sugestao} Reduza o descanso para {max(0, desc_u - 15)}s se estiver fácil.</span>'
-                    '</div>'
-                )
-                st.markdown(html_overload, unsafe_allow_html=True)
-        
-        st.markdown("#### 📊 Métricas do Exercício")
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            series = st.number_input("Séries / Tentativas", min_value=0, value=1, step=1)
-            reps = st.number_input("Repetições (Total)", min_value=0, step=1)
-            carga = st.number_input("Carga (kg)", min_value=0.0)
-        with c2:
-            isometria_segundos = st.number_input("Isometria: Tempo Sustentado (seg)", min_value=0, step=1)
-            intervalo = st.number_input("Intervalo de Descanso (seg)", min_value=0, step=15)
-        with c3:
-            duracao = st.number_input("Cardio: Duração (min)", min_value=0)
-            distancia = st.number_input("Cardio: Distância (km)", min_value=0.0)
+            agora = datetime.utcnow() - timedelta(hours=3)
+            with c_top2: hora = st.selectbox("Hora", [f"{i:02d}" for i in range(24)], index=agora.hour)
+            with c_top3: minuto = st.selectbox("Min.", [f"{i:02d}" for i in range(60)], index=agora.minute)
+                
+            horario = f"{hora}:{minuto}:00"
+            st.markdown("---")
             
-        isometria_tentativas = series  
-        
-        st.markdown("---")
-        humor = st.selectbox("Estado Mental no Treino", ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"])
-        
-        if st.form_submit_button("🚀 Gravar Treino", use_container_width=True):
-            grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if exercicio_input in l), "Outro")
+            exercicio_input = st.selectbox("Exercício", TODOS_EXERCICIOS)
             
-            mochila_json = {
-                "humor": humor,
-                "isometria_tentativas": isometria_tentativas,
-                "isometria_segundos": isometria_segundos
-            }
-            
-            dados = {
-                "data": str(data_treino), "horario": str(horario), "grupo_muscular": grupo,
-                "exercicio": exercicio_input, "series": int(series), "repeticoes": int(reps),
-                "carga_kg": float(carga), "descanso_seg": int(intervalo), "duracao_min": int(duracao),
-                "distancia_km": float(distancia), "alimentacao_saudavel": "", "alimentacao_besteirol": "",
-                "peso_corporal": 0.0, 
-                "dados_extras": mochila_json 
-            }
-            supabase.table("treinos").insert(dados).execute()
-            st.success("Dados físicos processados e salvos!")
-            st.rerun()
+            # --- ALGORITMO INTELIGENTE DE PROGRESSÃO FÍSICA ---
+            if not df_treinos.empty:
+                df_hist_ex = df_treinos[df_treinos['exercicio'] == exercicio_input].sort_values(by=['data', 'horario'])
+                if not df_hist_ex.empty:
+                    ult = df_hist_ex.iloc[-1]
+                    reps_u = int(ult['repeticoes'])
+                    carga_u = float(ult['carga_kg'])
+                    desc_u = int(ult['descanso_seg'])
+                    iso_u = int(safe_get(ult['dados_extras'], 'isometria_segundos', 0))
 
+                    sugestao = ""
+                    if iso_u > 0:
+                        sugestao = f"Tente segurar {iso_u + 2}s a {iso_u + 5}s (Progressão Isométrica)."
+                    elif reps_u > 0:
+                        sugestao = f"Tente {reps_u + 1} a {reps_u + 2} reps, ou aumente a carga para {carga_u + 1}kg."
+                    else:
+                        sugestao = "Mantenha o ritmo e otimize o movimento."
+                    
+                    html_overload = (
+                        '<div style="background-color: #121212; border-left: 3px solid #009CA6; padding: 10px; border-radius: 5px; margin-top: 5px; margin-bottom: 20px;">'
+                        f'<span style="color: #AAA; font-size: 12px;">ÚLTIMO TREINO: {reps_u} reps | {iso_u}s isometria | {carga_u}kg | {desc_u}s descanso</span><br>'
+                        f'<span style="color: #009CA6; font-size: 14px; font-weight: bold;">⚡ Sugestão de Overload: {sugestao} Reduza o descanso para {max(0, desc_u - 15)}s se estiver fácil.</span>'
+                        '</div>'
+                    )
+                    st.markdown(html_overload, unsafe_allow_html=True)
+            
+            st.markdown("#### 📊 Métricas do Exercício")
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                series = st.number_input("Séries / Tentativas", min_value=0, value=1, step=1)
+                reps = st.number_input("Repetições (Total)", min_value=0, step=1)
+                carga = st.number_input("Carga (kg)", min_value=0.0)
+            with c2:
+                isometria_segundos = st.number_input("Isometria: Tempo Sustentado (seg)", min_value=0, step=1)
+                intervalo = st.number_input("Intervalo de Descanso (seg)", min_value=0, step=15)
+            with c3:
+                duracao = st.number_input("Cardio: Duração (min)", min_value=0)
+                distancia = st.number_input("Cardio: Distância (km)", min_value=0.0)
+                
+            isometria_tentativas = series  
+            
+            st.markdown("---")
+            humor = st.selectbox("Estado Mental no Treino", ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"])
+            
+            if st.form_submit_button("🚀 Gravar Treino", use_container_width=True):
+                grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if exercicio_input in l), "Outro")
+                
+                mochila_json = {
+                    "humor": humor,
+                    "isometria_tentativas": isometria_tentativas,
+                    "isometria_segundos": isometria_segundos
+                }
+                
+                dados = {
+                    "data": str(data_treino), "horario": str(horario), "grupo_muscular": grupo,
+                    "exercicio": exercicio_input, "series": int(series), "repeticoes": int(reps),
+                    "carga_kg": float(carga), "descanso_seg": int(intervalo), "duracao_min": int(duracao),
+                    "distancia_km": float(distancia), "alimentacao_saudavel": "", "alimentacao_besteirol": "",
+                    "peso_corporal": 0.0, 
+                    "dados_extras": mochila_json 
+                }
+                supabase.table("treinos").insert(dados).execute()
+                st.success("Dados físicos processados e salvos!")
+                st.rerun()
+
+    else:
+        # --- NOVO BLOCO AMRAP ---
+        with st.form("registro_amrap", clear_on_submit=True):
+            st.markdown("<h3 style='margin-bottom: 5px; color: #F43F5E;'>🔥 Circuito AMRAP (20 Minutos)</h3>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #AAA; margin-bottom: 20px;'>1 Round = 5 Barras Fixas + 10 Flexões + 25 Agachamentos</p>", unsafe_allow_html=True)
+            
+            c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
+            with c_top1: data_treino = st.date_input("Data do Treino", value=(datetime.utcnow() - timedelta(hours=3)).date(), key="d_amrap")
+                
+            agora = datetime.utcnow() - timedelta(hours=3)
+            with c_top2: hora = st.selectbox("Hora", [f"{i:02d}" for i in range(24)], index=agora.hour, key="h_amrap")
+            with c_top3: minuto = st.selectbox("Min.", [f"{i:02d}" for i in range(60)], index=agora.minute, key="m_amrap")
+                
+            horario = f"{hora}:{minuto}:00"
+            st.markdown("---")
+            
+            c_round1, c_round2 = st.columns(2)
+            with c_round1:
+                rounds = st.number_input("Número TOTAL de Rounds Completos", min_value=0, step=1, value=5)
+            with c_round2:
+                humor = st.selectbox("Estado Mental no Treino", ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"], key="humor_amrap")
+            
+            # Preview visual das reps totais para ajudar no tracking mental
+            st.info(f"📊 **Total Projetado:** Serão gravados **{rounds * 5} Barras**, **{rounds * 10} Flexões** e **{rounds * 25} Agachamentos** no histórico.")
+            
+            if st.form_submit_button("🚀 Gravar AMRAP", use_container_width=True):
+                if rounds > 0:
+                    mochila_json = {"humor": humor, "isometria_tentativas": 0, "isometria_segundos": 0}
+                    
+                    # 1. Registro da Barra
+                    dados_barra = {
+                        "data": str(data_treino), "horario": str(horario), "grupo_muscular": "Costas",
+                        "exercicio": "Barra Fixa (Pronada)", "series": int(rounds), "repeticoes": int(rounds * 5),
+                        "carga_kg": 0.0, "descanso_seg": 0, "duracao_min": 20, "distancia_km": 0.0,
+                        "alimentacao_saudavel": "", "alimentacao_besteirol": "", "peso_corporal": 0.0, "dados_extras": mochila_json 
+                    }
+                    
+                    # 2. Registro da Flexão (Copia a base da barra e muda nome/reps, zera duracao pra nao triplicar)
+                    dados_flexao = dados_barra.copy()
+                    dados_flexao.update({"grupo_muscular": "Peitoral", "exercicio": "Flexão", "repeticoes": int(rounds * 10), "duracao_min": 0})
+                    
+                    # 3. Registro do Agachamento
+                    dados_agachamento = dados_barra.copy()
+                    dados_agachamento.update({"grupo_muscular": "Pernas", "exercicio": "Agachamento", "repeticoes": int(rounds * 25), "duracao_min": 0})
+                    
+                    # Insere os 3 em lote no banco
+                    supabase.table("treinos").insert([dados_barra, dados_flexao, dados_agachamento]).execute()
+                    
+                    st.success("🔥 WOD AMRAP destruído! Os 3 exercícios foram registrados no sistema com sucesso.")
+                    st.rerun()
+                else:
+                    st.error("Insira pelo menos 1 round para registrar o treino.")
 # ==========================================
 # ABA 2: DASHBOARD FÍSICO
 # ==========================================
