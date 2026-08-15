@@ -65,6 +65,7 @@ DISCIPLINAS_ESTUDO.sort()
 DECKS_ANKI = [
     "Atualidades",
     "Conhecimentos Específicos",
+    "Erros Simulados com IA",
     "Inglês",
     "Legislação",
     "Língua Portuguesa",
@@ -460,11 +461,113 @@ with tab_registro:
                 st.rerun()
 
     else:
-        # --- NOVO BLOCO AMRAP ---
+        # --- BLOCO AMRAP ---
+        st.markdown("<h3 style='margin-bottom: 5px; color: #F43F5E;'>🔥 Circuito AMRAP (20 Minutos)</h3>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #AAA; margin-bottom: 20px;'>1 Round = 5 Barras Fixas + 10 Flexões + 15 Agachamentos</p>", unsafe_allow_html=True)
+
+        # --- NOVO: TEMPORIZADOR EMBUTIDO DE 20 MINUTOS ---
+        # Fica disponível assim que o modo AMRAP é selecionado, para não depender de
+        # nenhum app/relógio externo durante o circuito.
+        with st.container(border=True):
+            st.markdown("##### ⏱️ Cronômetro do Circuito (20:00)")
+            html_timer_amrap = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { background-color: transparent; color: #E0E0E0; font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
+                    .time { font-size: 68px; color: #F43F5E; text-shadow: 0 0 15px rgba(244,63,94,0.5); font-weight: bold; margin: 10px 0 15px 0; transition: color 0.3s; }
+                    .time.done { color: #10B981; text-shadow: 0 0 20px rgba(16,185,129,0.6); animation: pulseAmrap 1s infinite; }
+                    @keyframes pulseAmrap { 0% { opacity: 1; } 50% { opacity: 0.35; } 100% { opacity: 1; } }
+                    .btn-group { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+                    .btn { padding: 10px 20px; background-color: #0A0A0A; color: #F43F5E; border: 2px solid #F43F5E; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+                    .btn:hover { background-color: #F43F5E; color: #000; box-shadow: 0 0 10px rgba(244,63,94,0.5); }
+                    .status { color: #AAA; font-size: 13px; margin-top: 12px; min-height: 18px; }
+                </style>
+            </head>
+            <body>
+                <div class="time" id="display_amrap">20:00</div>
+                <div class="btn-group">
+                    <button class="btn" onclick="startAmrap()">▶️ Iniciar</button>
+                    <button class="btn" onclick="pauseAmrap()">⏸️ Pausar</button>
+                    <button class="btn" onclick="resetAmrap()">🔄 Reiniciar</button>
+                </div>
+                <div class="status" id="status_amrap"></div>
+
+                <script>
+                    var TOTAL_AMRAP = 20 * 60;
+                    var secsLeftAmrap = TOTAL_AMRAP;
+                    var runningAmrap = false;
+                    var timerAmrapHandle;
+                    var displayAmrap = document.getElementById('display_amrap');
+                    var statusAmrap = document.getElementById('status_amrap');
+
+                    function formatTimeAmrap(s) {
+                        var m = Math.floor(s / 60);
+                        var rs = s % 60;
+                        return (m < 10 ? '0' : '') + m + ':' + (rs < 10 ? '0' : '') + rs;
+                    }
+
+                    function beepAmrap() {
+                        try {
+                            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                            for (var i = 0; i < 3; i++) {
+                                (function(i){
+                                    var o = ctx.createOscillator();
+                                    var g = ctx.createGain();
+                                    o.connect(g); g.connect(ctx.destination);
+                                    o.type = 'sine';
+                                    o.frequency.value = 880;
+                                    g.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.4);
+                                    o.start(ctx.currentTime + i * 0.4);
+                                    o.stop(ctx.currentTime + i * 0.4 + 0.3);
+                                })(i);
+                            }
+                        } catch(e) {}
+                    }
+
+                    function startAmrap() {
+                        if (runningAmrap || secsLeftAmrap <= 0) return;
+                        runningAmrap = true;
+                        statusAmrap.innerText = "Cronômetro rodando... bora!";
+                        timerAmrapHandle = setInterval(function() {
+                            secsLeftAmrap--;
+                            if (secsLeftAmrap <= 0) {
+                                secsLeftAmrap = 0;
+                                displayAmrap.innerText = "FIM!";
+                                displayAmrap.classList.add('done');
+                                statusAmrap.innerText = "⏰ 20 minutos encerrados. Anote seus rounds!";
+                                clearInterval(timerAmrapHandle);
+                                runningAmrap = false;
+                                beepAmrap();
+                            } else {
+                                displayAmrap.innerText = formatTimeAmrap(secsLeftAmrap);
+                            }
+                        }, 1000);
+                    }
+
+                    function pauseAmrap() {
+                        runningAmrap = false;
+                        clearInterval(timerAmrapHandle);
+                        if (secsLeftAmrap > 0) { statusAmrap.innerText = "Pausado."; }
+                    }
+
+                    function resetAmrap() {
+                        pauseAmrap();
+                        secsLeftAmrap = TOTAL_AMRAP;
+                        displayAmrap.classList.remove('done');
+                        displayAmrap.innerText = formatTimeAmrap(secsLeftAmrap);
+                        statusAmrap.innerText = "";
+                    }
+                </script>
+            </body>
+            </html>
+            """
+            components.html(html_timer_amrap, height=230)
+
+        st.write("")
+
         with st.form("registro_amrap", clear_on_submit=True):
-            st.markdown("<h3 style='margin-bottom: 5px; color: #F43F5E;'>🔥 Circuito AMRAP (20 Minutos)</h3>", unsafe_allow_html=True)
-            st.markdown("<p style='color: #AAA; margin-bottom: 20px;'>1 Round = 5 Barras Fixas + 10 Flexões + 15 Agachamentos</p>", unsafe_allow_html=True)
-            
             c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
             with c_top1: data_treino = st.date_input("Data do Treino", value=(datetime.utcnow() - timedelta(hours=3)).date(), key="d_amrap")
                 
@@ -761,24 +864,56 @@ with tab_estudo:
         with st.container(border=True):
             st.markdown("#### ⏱️ Modos de Foco")
             
-            # --- MOTOR DE RECOMPENSA EM BASE64 ---
+            # --- MOTOR DE RECOMPENSA EM BASE64 (CORRIGIDO) ---
+            # ANTES: o vídeo era sorteado a CADA rerun do Streamlit. Como o Streamlit
+            # reexecuta o script inteiro a qualquer interação na página (inclusive em
+            # outras abas), o HTML injetado no components.html mudava sempre, forçando
+            # o iframe a recarregar e ZERANDO o cronômetro em andamento. Isso era a
+            # causa do cronômetro "parar de funcionar sozinho".
+            # AGORA: o vídeo escolhido fica fixo em session_state e só muda quando você
+            # pedir (botão "Sortear outro"), então o HTML do timer fica estável entre
+            # reruns e o iframe não é recriado.
             pasta_videos = "edits_motivacionais"
-            video_base64 = ""
             try:
-                videos = [v for v in os.listdir(pasta_videos) if v.endswith(".mp4")]
-                if videos:
-                    video_escolhido = random.choice(videos)
-                    caminho_video = os.path.join(pasta_videos, video_escolhido)
-                    with open(caminho_video, 'rb') as v:
-                        video_base64 = base64.b64encode(v.read()).decode('utf-8')
+                videos_disponiveis = sorted([v for v in os.listdir(pasta_videos) if v.endswith(".mp4")])
             except FileNotFoundError:
-                pass
+                videos_disponiveis = []
+
+            if "video_recompensa_atual" not in st.session_state or st.session_state.video_recompensa_atual not in videos_disponiveis:
+                st.session_state.video_recompensa_atual = random.choice(videos_disponiveis) if videos_disponiveis else None
+
+            video_base64 = ""
+            if st.session_state.video_recompensa_atual:
+                caminho_video = os.path.join(pasta_videos, st.session_state.video_recompensa_atual)
+                with open(caminho_video, 'rb') as v:
+                    video_base64 = base64.b64encode(v.read()).decode('utf-8')
 
             video_tag = ""
             if video_base64:
                 video_tag = "<video class='cinema-video' id='vid-player' controls autoplay><source src='data:video/mp4;base64," + video_base64 + "' type='video/mp4'></video>"
             else:
                 video_tag = "<p style='color:#E0E0E0;'>Nenhum vídeo encontrado, mas o ciclo terminou!</p>"
+
+            c_rw1, c_rw2 = st.columns([2, 1])
+            with c_rw1:
+                if st.session_state.video_recompensa_atual:
+                    st.caption(f"🎬 Recompensa deste ciclo: **{st.session_state.video_recompensa_atual}**")
+            with c_rw2:
+                if videos_disponiveis and st.button("🔀 Sortear outro", use_container_width=True, key="btn_sortear_video"):
+                    st.session_state.video_recompensa_atual = random.choice(videos_disponiveis)
+                    st.rerun()
+
+            # --- NOVO: ESCOLHER E ASSISTIR QUALQUER EDIT NA HORA ---
+            # Antes só dava pra ver um vídeo completando o ciclo (Iniciar > Pausar >
+            # Finalizar & Edit). Agora dá pra escolher e assistir qualquer um direto,
+            # sem tocar no cronômetro.
+            with st.expander("🎬 Ver um Edit agora (sem rodar o cronômetro)"):
+                if videos_disponiveis:
+                    video_manual = st.selectbox("Escolha o vídeo:", videos_disponiveis, key="select_video_manual")
+                    if st.button("▶️ Assistir Agora", use_container_width=True, key="btn_assistir_manual"):
+                        st.video(os.path.join(pasta_videos, video_manual))
+                else:
+                    st.info("Nenhum vídeo .mp4 encontrado na pasta 'edits_motivacionais'.")
 
             tipo_timer = st.radio("Selecione o Protocolo:", ["🍅 Pomodoro (Estudo Longo)", "⏱️ Cronômetro (Questões)"], horizontal=False)
             st.write("---")
