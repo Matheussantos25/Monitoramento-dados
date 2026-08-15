@@ -511,6 +511,7 @@ with tab_registro:
                     st.rerun()
                 else:
                     st.error("Insira pelo menos 1 round para registrar o treino.")
+
 # ==========================================
 # ABA 2: DASHBOARD FÍSICO
 # ==========================================
@@ -1462,6 +1463,30 @@ with tab_gerenciar:
         elif not isinstance(extras, dict):
             extras = {}
             
+        # --- INÍCIO DA ATUALIZAÇÃO: SELETOR DE MODO DE EDIÇÃO ---
+        if is_estudo:
+            is_anki_default = extras.get('fonte_questoes') == 'Anki' or row_data['exercicio'] in DECKS_ANKI
+            has_video = int(extras.get('tempo_video', 0)) > 0
+            has_questoes = int(extras.get('q_certas', 0)) > 0 or int(extras.get('q_erradas', 0)) > 0
+
+            if is_anki_default:
+                tipo_padrao = "🃏 Revisão (Anki)"
+            elif has_video and not has_questoes:
+                tipo_padrao = "🎥 Apenas Vídeo Aula"
+            else:
+                tipo_padrao = "📝 Apenas Questões"
+
+            st.write("---")
+            # Este radio fica FORA do st.form para forçar a re-renderização da tela ao trocar
+            tipo_sessao_edit = st.radio(
+                "Mudar Tipo de Sessão (Corrija se registrou errado):",
+                ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"],
+                index=["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"].index(tipo_padrao),
+                horizontal=True,
+                key=f"radio_tipo_edit_{id_real}"
+            )
+        # --------------------------------------------------------
+
         with st.form(f"form_edit_{id_real}"):
             st.markdown(f"#### ✏️ Editar Dados do Registro (ID: {id_real})")
             
@@ -1480,9 +1505,8 @@ with tab_gerenciar:
             
             # --- CAMPOS DINÂMICOS BASEADOS NO TIPO DE REGISTRO ---
             if is_estudo:
-                is_anki = extras.get('fonte_questoes') == 'Anki' or row_data['exercicio'] in DECKS_ANKI
-                
-                if is_anki:
+                # O formulário agora obedece ao radio button que criamos acima
+                if tipo_sessao_edit == "🃏 Revisão (Anki)":
                     idx_ex = DECKS_ANKI.index(row_data['exercicio']) if row_data['exercicio'] in DECKS_ANKI else 0
                     new_ex = st.selectbox("Deck do Anki", DECKS_ANKI, index=idx_ex)
                     
@@ -1499,7 +1523,26 @@ with tab_gerenciar:
                     new_erradas = 0
                     new_vid = 0
                     new_fonte = "Anki"
-                else:
+
+                elif tipo_sessao_edit == "🎥 Apenas Vídeo Aula":
+                    idx_ex = DISCIPLINAS_ESTUDO.index(row_data['exercicio']) if row_data['exercicio'] in DISCIPLINAS_ESTUDO else 0
+                    new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=idx_ex)
+                    
+                    topicos_disp = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(new_ex, ["Geral"])
+                    old_topicos_str = extras.get('topico_edital', 'Geral')
+                    old_topicos_list = [t.strip() for t in old_topicos_str.split(',')] if old_topicos_str else []
+                    valid_old_topicos = [t for t in old_topicos_list if t in topicos_disp]
+                    new_topicos = st.multiselect("Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
+                    
+                    new_vid = st.number_input("Tempo Vídeo (min)", min_value=0, value=int(extras.get('tempo_video', 0)))
+                    
+                    new_dur = 0
+                    new_certas = 0
+                    new_erradas = 0
+                    new_cartoes = 0
+                    new_fonte = "Não Aplicável"
+
+                elif tipo_sessao_edit == "📝 Apenas Questões":
                     idx_ex = DISCIPLINAS_ESTUDO.index(row_data['exercicio']) if row_data['exercicio'] in DISCIPLINAS_ESTUDO else 0
                     new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=idx_ex)
                     
@@ -1513,7 +1556,6 @@ with tab_gerenciar:
                     with c3:
                         dur_val = row_data.get('duracao_min', 0)
                         new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
-                        new_vid = st.number_input("Tempo Vídeo (min)", min_value=0, value=int(extras.get('tempo_video', 0)))
                     with c4:
                         new_certas = st.number_input("Acertos", min_value=0, value=int(extras.get('q_certas', 0)))
                         new_erradas = st.number_input("Erros", min_value=0, value=int(extras.get('q_erradas', 0)))
@@ -1521,7 +1563,10 @@ with tab_gerenciar:
                         old_fonte = extras.get('fonte_questoes', 'Não Informada')
                         idx_fonte = FONTES_QUESTOES.index(old_fonte) if old_fonte in FONTES_QUESTOES else 0
                         new_fonte = st.selectbox("Fonte das Questões", FONTES_QUESTOES, index=idx_fonte)
-                    
+
+                    new_vid = 0
+                    new_cartoes = 0
+                
             elif is_treino:
                 idx_ex = TODOS_EXERCICIOS.index(row_data['exercicio']) if row_data['exercicio'] in TODOS_EXERCICIOS else 0
                 new_ex = st.selectbox("Exercício", TODOS_EXERCICIOS, index=idx_ex)
@@ -1570,12 +1615,13 @@ with tab_gerenciar:
                 update_data["exercicio"] = new_ex
                 update_data["duracao_min"] = new_dur
                 
-                if is_anki:
+                # Adapta as repetições dependendo do modo selecionado no radio
+                if tipo_sessao_edit == "🃏 Revisão (Anki)":
                     update_data["repeticoes"] = new_cartoes
                 else:
                     update_data["repeticoes"] = new_certas + new_erradas
                     
-                extras["topico_edital"] = ", ".join(new_topicos) if new_topicos else ("Revisão Espaçada" if is_anki else "Geral")
+                extras["topico_edital"] = ", ".join(new_topicos) if new_topicos else ("Revisão Espaçada" if tipo_sessao_edit == "🃏 Revisão (Anki)" else "Geral")
                 extras["q_certas"] = new_certas
                 extras["q_erradas"] = new_erradas
                 extras["tempo_video"] = new_vid
