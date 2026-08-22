@@ -1000,7 +1000,16 @@ with tab_dash_estudo:
             df_q_dia['data_format'] = pd.to_datetime(df_q_dia['data']).dt.strftime('%d/%m')
             fig_q_dia = px.bar(df_q_dia, x='data_format', y='repeticoes', text_auto=True)
             fig_q_dia.update_traces(marker_color='#8B5CF6', textfont_color='white')
-            fig_q_dia.update_layout(xaxis_title="", yaxis_title="Total de Questões", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor="#1F1F1F"), margin=dict(l=0, r=0, t=30, b=10))
+            fig_q_dia.update_layout(
+                xaxis_title="",
+                yaxis_title="Total de Questões",
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#E0E0E0"),
+                xaxis=dict(showgrid=False, tickangle=-90),
+                yaxis=dict(showgrid=False, showticklabels=False, ticks="", zeroline=False),
+                margin=dict(l=0, r=0, t=30, b=10)
+            )
             st.plotly_chart(fig_q_dia, use_container_width=True)
 
         with c_v2:
