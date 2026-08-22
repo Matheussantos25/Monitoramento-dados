@@ -80,6 +80,7 @@ FONTES_QUESTOES = [
     "VUNESP",
     "FCC",
     "QConcursos / TEC",
+    "V OU F",
     "Anki",
     "Outra"
 ]
