@@ -998,22 +998,43 @@ with tab_dash_estudo:
             st.markdown("#### 📅 Bateria de Questões por Dia")
             df_q_dia = df_questoes_reais.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
             df_q_dia['data_format'] = pd.to_datetime(df_q_dia['data'])
-            fig_q_dia = px.bar(df_q_dia, x='data_format', y='repeticoes', text_auto=True)
+
+            df_q_dia_exibido = df_q_dia.copy()
+            intervalo_exibido = None
+            if not df_q_dia.empty:
+                primeira_data = df_q_dia['data_format'].min().date()
+                ultima_data = df_q_dia['data_format'].max().date()
+                data_inicial_padrao = max(primeira_data, ultima_data - timedelta(days=9))
+
+                if primeira_data < ultima_data:
+                    periodo_selecionado = st.slider(
+                        "Arraste para selecionar o período",
+                        min_value=primeira_data,
+                        max_value=ultima_data,
+                        value=(data_inicial_padrao, ultima_data),
+                        format="DD/MM/YYYY",
+                        key="periodo_grafico_questoes"
+                    )
+                else:
+                    periodo_selecionado = (primeira_data, ultima_data)
+
+                inicio_selecionado = pd.Timestamp(periodo_selecionado[0])
+                fim_selecionado = pd.Timestamp(periodo_selecionado[1])
+                df_q_dia_exibido = df_q_dia[
+                    df_q_dia['data_format'].between(inicio_selecionado, fim_selecionado)
+                ]
+                intervalo_exibido = [
+                    inicio_selecionado - pd.Timedelta(hours=12),
+                    fim_selecionado + pd.Timedelta(hours=12)
+                ]
+
+            fig_q_dia = px.bar(df_q_dia_exibido, x='data_format', y='repeticoes', text_auto=True)
             fig_q_dia.update_traces(
                 marker_color='#8B5CF6',
                 textfont_color='white',
                 width=18 * 60 * 60 * 1000,
                 hovertemplate="Data: %{x|%d/%m/%Y}<br>Questões: %{y}<extra></extra>"
             )
-
-            intervalo_inicial = None
-            if not df_q_dia.empty:
-                data_final = df_q_dia['data_format'].max()
-                data_inicial = max(df_q_dia['data_format'].min(), data_final - pd.Timedelta(days=9))
-                intervalo_inicial = [
-                    data_inicial - pd.Timedelta(hours=12),
-                    data_final + pd.Timedelta(hours=12)
-                ]
 
             fig_q_dia.update_layout(
                 xaxis_title="",
@@ -1028,8 +1049,7 @@ with tab_dash_estudo:
                     tickangle=0,
                     tickformat="%d/%m",
                     dtick=24 * 60 * 60 * 1000,
-                    range=intervalo_inicial,
-                    rangeslider=dict(visible=True, thickness=0.08)
+                    range=intervalo_exibido
                 ),
                 yaxis=dict(showgrid=False, showticklabels=False, ticks="", zeroline=False),
                 margin=dict(l=0, r=0, t=30, b=25)
