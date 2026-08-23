@@ -986,15 +986,14 @@ with tab_dash_estudo:
             df_poucas_q_agg['Label'] = df_poucas_q_agg['exercicio'] + " - " + df_poucas_q_agg['topico_curto']
 
             fig_menos = px.bar(df_poucas_q_agg, x='total_questoes', y='Label', orientation='h', color='total_questoes', color_continuous_scale="Blues", text_auto=True)
-            fig_menos.update_traces(textposition='outside', textfont_color='white')
+            fig_menos.update_traces(textposition='outside', textfont_color='white', width=0.45)
             fig_menos.update_layout(xaxis_title="Total de Questões Resolvidas", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False, autorange="reversed"))
             st.plotly_chart(fig_menos, use_container_width=True)
         else:
             st.info("✔️ Não há dados suficientes para gerar este gráfico.")
 
         st.write("---")
-        c_v1, c_v2 = st.columns(2)
-        with c_v1:
+        with st.container():
             st.markdown("#### 📅 Bateria de Questões por Dia")
             df_q_dia = df_questoes_reais.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
             df_q_dia['data_format'] = pd.to_datetime(df_q_dia['data'])
@@ -1056,17 +1055,6 @@ with tab_dash_estudo:
             )
             st.plotly_chart(fig_q_dia, use_container_width=True)
 
-        with c_v2:
-            st.markdown("#### 🎥 Tempo de Vídeo por Disciplina (Horas)")
-            df_video_disc = df_dash_est.groupby('exercicio', as_index=False)['tempo_video'].sum()
-            df_video_disc = df_video_disc[df_video_disc['tempo_video'] > 0]
-            df_video_disc['horas_video'] = df_video_disc['tempo_video'] / 60
-            if not df_video_disc.empty:
-                fig_v = px.bar(df_video_disc, x='horas_video', y='exercicio', orientation='h', text_auto='.1f', color='horas_video', color_continuous_scale="Reds")
-                fig_v.update_layout(xaxis_title="Horas em Vídeo", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
-                st.plotly_chart(fig_v, use_container_width=True)
-            else: st.info("Nenhuma hora de vídeo aula registrada para os filtros atuais.")
-
         st.write("---")
         st.markdown("#### 🗓️ Cronograma Estratégico (Próximos 30 Dias)")
         hoje_cron = (datetime.utcnow() - timedelta(hours=3)).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -1086,29 +1074,18 @@ with tab_dash_estudo:
         st.write("*Lembre-se: Matemática e Português devem ser incluídos diariamente, independente da Disciplina de Rodízio do dia.*")
 
         st.write("---")
-        c_dash_e1, c_dash_e2 = st.columns(2)
-        with c_dash_e1:
-            with st.container(border=True):
-                st.markdown("#### ⏳ Alocação de Tempo por Disciplina")
-                df_disc = df_dash_est.groupby('exercicio', as_index=False)['duracao_min'].sum()
-                df_disc['horas'] = df_disc['duracao_min'] / 60
-                fig_d = px.pie(df_disc, values='horas', names='exercicio', hole=0.5, color_discrete_sequence=px.colors.sequential.Teal)
-                fig_d.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), margin=dict(l=0, r=0, t=10, b=10))
-                st.plotly_chart(fig_d, use_container_width=True)
-
-        with c_dash_e2:
-            with st.container(border=True):
-                st.markdown("#### 📊 Taxa de Acerto por Disciplina")
-                df_acertos = df_questoes_reais.groupby('exercicio', as_index=False)[['q_certas', 'q_erradas']].sum()
-                df_acertos['total'] = df_acertos['q_certas'] + df_acertos['q_erradas']
-                df_acertos = df_acertos[df_acertos['total'] > 0] 
-                if not df_acertos.empty:
-                    df_acertos['% Acerto'] = (df_acertos['q_certas'] / df_acertos['total']) * 100
-                    fig_a = px.bar(df_acertos, x='exercicio', y='% Acerto', color='% Acerto', color_continuous_scale="Teal")
-                    fig_a.update_traces(texttemplate='%{y:.1f}%', textposition='auto')
-                    fig_a.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, yaxis=dict(showgrid=False), xaxis=dict(showgrid=False))
-                    st.plotly_chart(fig_a, use_container_width=True)
-                else: st.info("Registre 'Questões Corretas/Erradas' para gerar este gráfico.")
+        with st.container(border=True):
+            st.markdown("#### 📊 Taxa de Acerto por Disciplina")
+            df_acertos = df_questoes_reais.groupby('exercicio', as_index=False)[['q_certas', 'q_erradas']].sum()
+            df_acertos['total'] = df_acertos['q_certas'] + df_acertos['q_erradas']
+            df_acertos = df_acertos[df_acertos['total'] > 0]
+            if not df_acertos.empty:
+                df_acertos['% Acerto'] = (df_acertos['q_certas'] / df_acertos['total']) * 100
+                fig_a = px.bar(df_acertos, x='exercicio', y='% Acerto', color='% Acerto', color_continuous_scale="Teal")
+                fig_a.update_traces(texttemplate='%{y:.1f}%', textposition='auto')
+                fig_a.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, yaxis=dict(showgrid=False), xaxis=dict(showgrid=False))
+                st.plotly_chart(fig_a, use_container_width=True)
+            else: st.info("Registre 'Questões Corretas/Erradas' para gerar este gráfico.")
 
         st.markdown("---")
         st.markdown("#### 📖 Análise Granular por Tópico do Edital")
