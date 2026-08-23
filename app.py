@@ -364,7 +364,7 @@ st.markdown("""
 
     .neon-card .card-title {
         color: var(--text-muted) !important;
-        font-size: 12px;
+        font-size: 15px;
         font-weight: 650;
         letter-spacing: 1.1px;
         margin-bottom: 10px;
@@ -374,7 +374,7 @@ st.markdown("""
     }
 
     .neon-card .card-value {
-        font-size: 32px;
+        font-size: 38px;
         font-weight: 720;
         color: var(--text-primary) !important;
         letter-spacing: -0.03em;
