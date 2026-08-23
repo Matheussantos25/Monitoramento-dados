@@ -366,7 +366,6 @@ st.markdown("""
         color: var(--text-muted) !important;
         font-size: 12px;
         font-weight: 650;
-        text-transform: uppercase;
         letter-spacing: 1.1px;
         margin-bottom: 10px;
         display: flex;
@@ -619,9 +618,9 @@ with tab_dash_treino:
         
         st.markdown(f"""
         <div class="card-container">
-            <div class="neon-card card-cyan"><div class="card-title">🏆 DIAS TREINADOS</div><div class="card-value">{total_dias}</div></div>
-            <div class="neon-card card-emerald"><div class="card-title">🔥 REPETIÇÕES (TOTAL)</div><div class="card-value">{total_reps}</div></div>
-            <div class="neon-card card-violet"><div class="card-title">💪 CARGA MÁXIMA</div><div class="card-value">{carga_max:.1f} kg</div></div>
+            <div class="neon-card card-cyan"><div class="card-title">Dias treinados</div><div class="card-value">{total_dias}</div></div>
+            <div class="neon-card card-emerald"><div class="card-title">Repetições (total)</div><div class="card-value">{total_reps}</div></div>
+            <div class="neon-card card-violet"><div class="card-title">Carga máxima</div><div class="card-value">{carga_max:.1f} kg</div></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1029,16 +1028,14 @@ with tab_dash_estudo:
         taxa_acerto = (total_certas / (total_certas + total_erradas) * 100) if (total_certas + total_erradas) > 0 else 0
         
         tempo_total_min = int(df_dash_est['duracao_min'].sum())
-        tempo_video_total_min = int(df_dash_est['tempo_video'].sum())
         tempo_anki_total_min = int(df_anki['duracao_min'].sum())
         
         st.markdown(f"""
         <div class="card-container">
-            <div class="neon-card card-cyan"><div class="card-title">⏳ HORAS LÍQUIDAS</div><div class="card-value">{(tempo_total_min / 60):.1f}h</div></div>
-            <div class="neon-card card-violet"><div class="card-title">🎯 TAXA DE ACERTO GLOBAL</div><div class="card-value">{taxa_acerto:.1f}%</div></div>
-            <div class="neon-card card-emerald"><div class="card-title">📝 QUESTÕES (BATERIA)</div><div class="card-value">{total_questoes}</div></div>
-            <div class="neon-card card-crimson"><div class="card-title">🎥 HORAS VÍDEO AULA</div><div class="card-value">{(tempo_video_total_min / 60):.1f}h</div></div>
-            <div class="neon-card card-orange"><div class="card-title">🃏 HORAS REVISÃO ANKI</div><div class="card-value">{(tempo_anki_total_min / 60):.1f}h</div></div>
+            <div class="neon-card card-cyan"><div class="card-title">Horas líquidas</div><div class="card-value">{(tempo_total_min / 60):.1f}h</div></div>
+            <div class="neon-card card-violet"><div class="card-title">Taxa de acerto global</div><div class="card-value">{taxa_acerto:.1f}%</div></div>
+            <div class="neon-card card-emerald"><div class="card-title">Questões</div><div class="card-value">{total_questoes}</div></div>
+            <div class="neon-card card-orange"><div class="card-title">Horas revisão anki</div><div class="card-value">{(tempo_anki_total_min / 60):.1f}h</div></div>
         </div>
         """, unsafe_allow_html=True)
         
