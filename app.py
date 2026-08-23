@@ -261,48 +261,138 @@ st.set_page_config(page_title="Monitoramento Físico & Mental", page_icon="⚡",
 # --- INJEÇÃO DE CSS PREMIUM (DARK CLEAN) ---
 st.markdown("""
 <style>
-    .stApp { background-color: #050505 !important; }
-    h1, h2, h3, h4, p, label, span, .stMarkdown { color: #E0E0E0 !important; }
-    
-    .stTextInput input, .stTextArea textarea, .stNumberInput input, .stDateInput input, .stTimeInput input, [data-baseweb="select"] > div {
-        background-color: #121212 !important;
-        color: #009CA6 !important;
-        border: 1px solid #1F1F1F !important;
-        border-radius: 6px !important;
+    :root {
+        --surface-base: #080A0C;
+        --surface-panel: #0F1316;
+        --surface-raised: #151A1E;
+        --border-subtle: #253038;
+        --text-primary: #E7ECEF;
+        --text-muted: #9CA8AE;
+        --accent: #22B8C2;
+        --accent-strong: #45CBD3;
+        --radius: 10px;
     }
-    .stTextInput input:focus, .stNumberInput input:focus { border-color: #009CA6 !important; }
+
+    .stApp {
+        background-color: var(--surface-base) !important;
+        color: var(--text-primary) !important;
+        font-family: system-ui, "Segoe UI", sans-serif;
+    }
+
+    h1, h2, h3, h4, p, label, span, .stMarkdown {
+        color: var(--text-primary) !important;
+    }
+
+    [data-testid="stSidebar"] {
+        background-color: var(--surface-panel) !important;
+        border-right: 1px solid var(--border-subtle);
+    }
+
+    .stTextInput input, .stTextArea textarea, .stNumberInput input, .stDateInput input, .stTimeInput input, [data-baseweb="select"] > div {
+        background-color: var(--surface-raised) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-radius: var(--radius) !important;
+    }
+
+    .stTextInput input:focus, .stTextArea textarea:focus, .stNumberInput input:focus, .stDateInput input:focus, .stTimeInput input:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 2px rgba(34, 184, 194, 0.18) !important;
+        outline: none !important;
+    }
 
     [data-testid="stForm"], div[data-testid="stVerticalBlock"] > div[style*="border"] {
-        background-color: #0D0D0D !important;
-        border: 1px solid #1A1A1A !important;
-        border-radius: 10px !important;
+        background-color: var(--surface-panel) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-radius: var(--radius) !important;
         padding: 24px !important;
     }
 
-    /* === CARTÕES CUSTOMIZADOS DARK CLEAN === */
-    .card-container { display: flex; gap: 15px; justify-content: space-between; margin-bottom: 25px; flex-wrap: wrap; }
-    .neon-card { flex: 1; min-width: 150px; padding: 20px; border-radius: 10px; color: #E0E0E0; background: #0A0A0A; border-left: 4px solid #333; position: relative; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-    .neon-card .card-title { font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;}
-    .neon-card .card-value { font-size: 32px; font-weight: 700; color: #FFF; }
-    
-    .card-cyan { border-color: #009CA6; }
-    .card-cyan .card-value { text-shadow: 0 0 10px rgba(0, 156, 166, 0.4); }
-    
-    .card-emerald { border-color: #10B981; }
-    .card-emerald .card-value { text-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
-    
-    .card-violet { border-color: #8B5CF6; }
-    .card-violet .card-value { text-shadow: 0 0 10px rgba(139, 92, 246, 0.4); }
-    
-    .card-crimson { border-color: #F43F5E; }
-    .card-crimson .card-value { text-shadow: 0 0 10px rgba(244, 63, 94, 0.4); }
+    div[data-baseweb="tab-list"] {
+        gap: 6px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
 
-    .card-orange { border-color: #F59E0B; }
-    .card-orange .card-value { text-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+    button[data-baseweb="tab"] {
+        border-radius: var(--radius) var(--radius) 0 0;
+        padding-inline: 16px;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: var(--surface-raised) !important;
+        color: var(--accent-strong) !important;
+    }
+
+    .stButton > button, .stFormSubmitButton > button {
+        border-radius: var(--radius) !important;
+        border-color: var(--accent) !important;
+        transition: border-color 120ms ease, background-color 120ms ease, transform 80ms ease;
+    }
+
+    .stButton > button:hover, .stFormSubmitButton > button:hover {
+        background-color: var(--accent) !important;
+        color: var(--surface-base) !important;
+        border-color: var(--accent) !important;
+    }
+
+    .stButton > button:active, .stFormSubmitButton > button:active {
+        transform: translateY(1px);
+    }
+
+    /* Cartões de métricas: uma linguagem visual, sem brilho decorativo. */
+    .card-container {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        margin-bottom: 25px;
+        flex-wrap: wrap;
+    }
+
+    .neon-card {
+        flex: 1;
+        min-width: 150px;
+        padding: 20px;
+        border-radius: var(--radius);
+        color: var(--text-primary);
+        background: var(--surface-panel);
+        border: 1px solid var(--border-subtle);
+        border-top: 3px solid var(--accent);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(1, 8, 12, 0.24);
+    }
+
+    .neon-card .card-title {
+        color: var(--text-muted) !important;
+        font-size: 12px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: 1.1px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .neon-card .card-value {
+        font-size: 32px;
+        font-weight: 720;
+        color: var(--text-primary) !important;
+        letter-spacing: -0.03em;
+    }
     
-    span[data-baseweb="tag"] { background-color: #009CA6 !important; color: #050505 !important; font-weight: bold; }
+    .card-cyan, .card-emerald, .card-violet, .card-crimson, .card-orange {
+        border-top-color: var(--accent);
+    }
+
+    span[data-baseweb="tag"] {
+        background-color: var(--accent) !important;
+        color: var(--surface-base) !important;
+        font-weight: 700;
+        border-radius: var(--radius) !important;
+    }
     
-    hr { border-color: #1F1F1F !important; }
+    hr { border-color: var(--border-subtle) !important; }
 </style>
 """, unsafe_allow_html=True)
 
