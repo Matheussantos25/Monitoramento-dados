@@ -1076,8 +1076,9 @@ with tab_dash_estudo:
             df_poucas_q_agg['Label'] = df_poucas_q_agg['exercicio'] + " - " + df_poucas_q_agg['topico_curto']
 
             fig_menos = px.bar(df_poucas_q_agg, x='total_questoes', y='Label', orientation='h', color='total_questoes', color_continuous_scale="Blues", text_auto=True)
-            fig_menos.update_traces(textposition='outside', textfont_color='white', width=0.45)
-            fig_menos.update_layout(xaxis_title="Total de Questões Resolvidas", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False, autorange="reversed"))
+            limite_visual_menos = max(float(df_poucas_q_agg['total_questoes'].max()) * 2.5, 1)
+            fig_menos.update_traces(textposition='outside', textfont_color='white')
+            fig_menos.update_layout(xaxis_title="Total de Questões Resolvidas", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False, range=[0, limite_visual_menos]), yaxis=dict(showgrid=False, autorange="reversed"))
             st.plotly_chart(fig_menos, use_container_width=True)
         else:
             st.info("✔️ Não há dados suficientes para gerar este gráfico.")
