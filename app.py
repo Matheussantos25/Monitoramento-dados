@@ -654,12 +654,26 @@ with tab_dash_treino:
             st.markdown("#### 📊 Volume de Repetições Diárias")
             df_reps = df_filtrado[df_filtrado['repeticoes'] > 0].copy()
             if not df_reps.empty:
-                dias_map = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
-                df_reps['dia_formatado'] = df_reps['data'].dt.weekday.map(dias_map) + df_reps['data'].dt.strftime(' (%d/%m)')
-                df_reps_dia = df_reps.groupby(['data', 'dia_formatado'], as_index=False)['repeticoes'].sum().sort_values('data')
-                fig_reps = px.bar(df_reps_dia, x='dia_formatado', y='repeticoes', text_auto=True)
-                fig_reps.update_traces(marker_color='#009CA6', textfont_color='white')
-                fig_reps.update_layout(xaxis_title="", yaxis_title="Total Reps", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), margin=dict(l=0, r=0, t=20, b=0), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#1F1F1F"))
+                df_reps_dia = df_reps.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
+                limite_reps = float(df_reps_dia['repeticoes'].max()) * 1.15
+                fig_reps = px.bar(df_reps_dia, x='data', y='repeticoes', text_auto=True)
+                fig_reps.update_traces(
+                    marker_color='#009CA6',
+                    textfont_color='white',
+                    textposition='outside',
+                    cliponaxis=False,
+                    width=18 * 60 * 60 * 1000
+                )
+                fig_reps.update_layout(
+                    xaxis_title="",
+                    yaxis_title="Total Reps",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#E0E0E0"),
+                    margin=dict(l=0, r=0, t=35, b=0),
+                    xaxis=dict(showgrid=False, tickformat="%d/%m", tickangle=0),
+                    yaxis=dict(showgrid=False, zeroline=False, range=[0, limite_reps])
+                )
                 st.plotly_chart(fig_reps, use_container_width=True)
             else: st.info("Sem dados de repetições para os exercícios selecionados.")
 
