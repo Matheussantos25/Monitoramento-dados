@@ -8,6 +8,7 @@ import json
 import os
 import random
 import base64
+from pathlib import Path
 import streamlit.components.v1 as components
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
@@ -19,6 +20,26 @@ def safe_get(val, key, default=None):
         except: return default
     if isinstance(val, dict): return val.get(key, default)
     return default
+
+def carregar_prompts_estudo():
+    pasta_prompts = Path(__file__).resolve().parent / "prompts"
+    prompts = {}
+    if not pasta_prompts.exists():
+        return prompts
+
+    arquivos = sorted(list(pasta_prompts.glob("*.md")) + list(pasta_prompts.glob("*.txt")))
+    for arquivo in arquivos:
+        conteudo = arquivo.read_text(encoding="utf-8").strip()
+        if not conteudo:
+            continue
+
+        primeira_linha = next((linha for linha in conteudo.splitlines() if linha.strip()), arquivo.stem)
+        titulo = primeira_linha.lstrip("# ").strip()
+        if "—" in titulo and titulo.upper().startswith("PROMPT"):
+            titulo = titulo.split("—", 1)[1].strip()
+        prompts[titulo] = conteudo
+
+    return prompts
 
 # --- DICIONÁRIOS PRESETADOS ---
 EXERCICIOS_PRESETADOS = {
@@ -440,8 +461,8 @@ if filtro_tempo != "Todo o Histórico":
 st.write("")
 
 # Abas sem o Modo Flow
-tab_registro, tab_dash_treino, tab_dieta, tab_peso, tab_estudo, tab_dash_estudo, tab_cruzamento, tab_gerenciar = st.tabs([
-    "📝 Treino", "📊 Dash Físico", "🥗 Dieta", "⚖️ Peso", "📚 Estudar", "📈 Dash Estudos", "🧬 Cruzamentos", "⚙️ Config"
+tab_registro, tab_dash_treino, tab_dieta, tab_peso, tab_estudo, tab_prompts, tab_dash_estudo, tab_cruzamento, tab_gerenciar = st.tabs([
+    "📝 Treino", "📊 Dash Físico", "🥗 Dieta", "⚖️ Peso", "📚 Estudar", "📋 Prompts", "📈 Dash Estudos", "🧬 Cruzamentos", "⚙️ Config"
 ])
 
 # ==========================================
@@ -959,7 +980,30 @@ with tab_estudo:
                 st.rerun()      
 
 # ==========================================
-# ABA 6: DASHBOARD DE ESTUDOS
+# ABA 6: BIBLIOTECA DE PROMPTS
+# ==========================================
+with tab_prompts:
+    st.markdown("### 📋 Prompts de estudo")
+    prompts_estudo = carregar_prompts_estudo()
+
+    if prompts_estudo:
+        prompt_selecionado = st.selectbox(
+            "Selecione o prompt",
+            options=list(prompts_estudo.keys()),
+            key="seletor_prompt_estudo"
+        )
+        st.caption("Clique no ícone de copiar no canto superior direito do bloco abaixo.")
+        st.code(
+            prompts_estudo[prompt_selecionado],
+            language=None,
+            wrap_lines=True,
+            height=650
+        )
+    else:
+        st.info("Nenhum prompt foi cadastrado na pasta prompts.")
+
+# ==========================================
+# ABA 7: DASHBOARD DE ESTUDOS
 # ==========================================
 with tab_dash_estudo:
     html_motivacional = (
@@ -1230,7 +1274,7 @@ with tab_dash_estudo:
     else: st.info("Não há dados de estudo no período selecionado.")
 
 # ==========================================
-# ABA 7: CRUZAMENTO DE DADOS 
+# ABA 8: CRUZAMENTO DE DADOS
 # ==========================================
 with tab_cruzamento:
     st.markdown("### 🧬 Data Lab: Cruzamento de Variáveis")
@@ -1265,7 +1309,7 @@ with tab_cruzamento:
     else: st.info("Os algoritmos precisam de dados simultâneos (Dias com registros de Treino E Estudo) para calcular correlações complexas.")
 
 # ==========================================
-# ABA 8: GERENCIAR
+# ABA 9: GERENCIAR
 # ==========================================
 with tab_gerenciar:
     if not df_raw.empty:
