@@ -24,6 +24,11 @@ def safe_get(val, key, default=None):
 def carregar_prompts_estudo():
     pasta_prompts = Path(__file__).resolve().parent / "prompts"
     prompts = {}
+    titulos_personalizados = {
+        "cards_anki_questoes_erradas.md": "Cards Anki das questões erradas",
+        "gabarito.md": "Gabarito do simulado FGV com insights",
+        "prompt_simulado_VF_FGV_Dataprev.md": "Gerar simulado FGV (Certo ou Errado)",
+    }
     if not pasta_prompts.exists():
         return prompts
 
@@ -33,10 +38,12 @@ def carregar_prompts_estudo():
         if not conteudo:
             continue
 
-        primeira_linha = next((linha for linha in conteudo.splitlines() if linha.strip()), arquivo.stem)
-        titulo = primeira_linha.lstrip("# ").strip()
-        if "—" in titulo and titulo.upper().startswith("PROMPT"):
-            titulo = titulo.split("—", 1)[1].strip()
+        titulo = titulos_personalizados.get(arquivo.name)
+        if not titulo:
+            primeira_linha = next((linha for linha in conteudo.splitlines() if linha.strip()), arquivo.stem)
+            titulo = primeira_linha.lstrip("# ").strip()
+            if "—" in titulo and titulo.upper().startswith("PROMPT"):
+                titulo = titulo.split("—", 1)[1].strip()
         prompts[titulo] = conteudo
 
     return prompts
@@ -992,13 +999,14 @@ with tab_prompts:
             options=list(prompts_estudo.keys()),
             key="seletor_prompt_estudo"
         )
-        st.caption("Clique no ícone de copiar no canto superior direito do bloco abaixo.")
-        st.code(
-            prompts_estudo[prompt_selecionado],
-            language=None,
-            wrap_lines=True,
-            height=650
-        )
+        with st.expander("Visualizar e copiar prompt", expanded=False):
+            st.caption("Clique no ícone de copiar no canto superior direito do bloco abaixo.")
+            st.code(
+                prompts_estudo[prompt_selecionado],
+                language=None,
+                wrap_lines=True,
+                height=360
+            )
     else:
         st.info("Nenhum prompt foi cadastrado na pasta prompts.")
 
