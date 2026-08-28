@@ -28,6 +28,7 @@ def carregar_prompts_estudo():
         "cards_anki_questoes_erradas.md": "Cards Anki das questões erradas",
         "gabarito.md": "Gabarito do simulado FGV com insights",
         "prompt_simulado_VF_FGV_Dataprev.md": "Gerar simulado FGV (Certo ou Errado)",
+        "simulado_fgv_padrao_banca.md": "Simular prova FGV com padrões da banca",
     }
     if not pasta_prompts.exists():
         return prompts
