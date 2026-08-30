@@ -504,8 +504,8 @@ st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1
 st.write("")
 
 # Abas sem o Modo Flow
-tab_registro, tab_dash_treino, tab_dieta, tab_peso, tab_estudo, tab_prompts, tab_dash_estudo, tab_cruzamento, tab_gerenciar = st.tabs([
-    "📝 Treino", "📊 Dash Físico", "🥗 Dieta", "⚖️ Peso", "📚 Estudar", "📋 Prompts", "📈 Dash Estudos", "🧬 Cruzamentos", "⚙️ Config"
+tab_registro, tab_dash_treino, tab_dieta, tab_peso, tab_estudo, tab_dash_estudo, tab_prompts, tab_gerenciar = st.tabs([
+    "📝 Treino", "📊 Dash Físico", "🥗 Dieta", "⚖️ Peso", "📚 Estudar", "📈 Dash Estudos", "📋 Prompts", "⚙️ Config"
 ])
 
 # ==========================================
@@ -1333,45 +1333,7 @@ with tab_dash_estudo:
     else: st.info("Não há dados de estudo no período selecionado.")
 
 # ==========================================
-# ABA 8: CRUZAMENTO DE DADOS
-# ==========================================
-with tab_cruzamento:
-    st.markdown("### 🧬 Data Lab: Cruzamento de Variáveis")
-    st.write("Identifique padrões ocultos entre sua rotina física e seu rendimento cognitivo.")
-    if not df_raw.empty and not df_estudos.empty and not df_treinos.empty:
-        df_estudos_cruz = df_estudos.copy()
-        df_estudos_cruz['q_certas'] = df_estudos_cruz['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
-        df_estudos_cruz['q_erradas'] = df_estudos_cruz['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
-        df_t_dia = df_treinos.groupby('data', as_index=False).agg(total_reps=('repeticoes', 'sum'), treinou=('exercicio', 'count'))
-        df_e_dia = df_estudos_cruz.groupby('data', as_index=False).agg(minutos_estudados=('duracao_min', 'sum'), total_certas=('q_certas', 'sum'), total_erradas=('q_erradas', 'sum'))
-        df_merged = pd.merge(df_t_dia, df_e_dia, on='data', how='outer').fillna(0)
-        df_merged['data_format'] = df_merged['data'].dt.strftime('%d/%m')
-        
-        c_cross1, c_cross2 = st.columns(2)
-        with c_cross1:
-            with st.container(border=True):
-                st.markdown("#### ⚡ Treino vs. Tempo de Estudo")
-                df_merged['Status Físico'] = df_merged['treinou'].apply(lambda x: 'Dias com Treino' if x > 0 else 'Dias de Descanso')
-                avg_study = df_merged.groupby('Status Físico', as_index=False)['minutos_estudados'].mean()
-                avg_study['horas'] = avg_study['minutos_estudados'] / 60
-                fig_c1 = px.bar(avg_study, x='Status Físico', y='horas', text_auto='.1f', color='Status Físico', color_discrete_map={'Dias com Treino': '#009CA6', 'Dias de Descanso': '#333333'})
-                fig_c1.update_layout(xaxis_title="", yaxis_title="Média de Horas Estudadas", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), showlegend=False)
-                st.plotly_chart(fig_c1, use_container_width=True)
-                
-        with c_cross2:
-            with st.container(border=True):
-                st.markdown("#### 🎯 Fadiga x Precisão Cognitiva")
-                st.markdown("<span style='font-size: 0.9em; color: #888;'>Relação entre Volume de Treino (Reps) e Taxa de Acerto no mesmo dia.</span>", unsafe_allow_html=True)
-                df_acc = df_merged[df_merged['minutos_estudados'] > 0].copy()
-                df_acc['% Acerto'] = (df_acc['total_certas'] / (df_acc['total_certas'] + df_acc['total_erradas'])) * 100
-                df_acc = df_acc.fillna(0)
-                fig_c2 = px.scatter(df_acc, x='total_reps', y='% Acerto', hover_name='data_format', size='minutos_estudados', color='% Acerto', color_continuous_scale='Teal')
-                fig_c2.update_layout(xaxis_title="Volume de Treino (Reps Totais)", yaxis_title="Taxa de Acerto nos Estudos (%)", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"))
-                st.plotly_chart(fig_c2, use_container_width=True)
-    else: st.info("Os algoritmos precisam de dados simultâneos (Dias com registros de Treino E Estudo) para calcular correlações complexas.")
-
-# ==========================================
-# ABA 9: GERENCIAR
+# ABA 8: GERENCIAR
 # ==========================================
 with tab_gerenciar:
     if not df_raw.empty:
