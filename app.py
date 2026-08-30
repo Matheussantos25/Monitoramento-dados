@@ -285,7 +285,12 @@ def obter_pior_topico(df_hist, disciplina):
 
 
 # --- CONFIGURAÇÕES DA PÁGINA ---
-st.set_page_config(page_title="Monitoramento Físico & Mental", page_icon="⚡", layout="wide")
+st.set_page_config(
+    page_title="Monitoramento Físico & Mental",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
 # --- INJEÇÃO DE CSS PREMIUM (DARK CLEAN) ---
 st.markdown("""
@@ -312,9 +317,30 @@ st.markdown("""
         color: var(--text-primary) !important;
     }
 
-    [data-testid="stSidebar"] {
-        background-color: var(--surface-panel) !important;
-        border-right: 1px solid var(--border-subtle);
+    /* Aplicação em tela cheia, sem sidebar nem barra superior do Streamlit. */
+    [data-testid="stSidebar"],
+    [data-testid="collapsedControl"],
+    header[data-testid="stHeader"],
+    [data-testid="stToolbar"],
+    [data-testid="stAppToolbar"],
+    #MainMenu,
+    footer {
+        display: none !important;
+    }
+
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] > .main,
+    [data-testid="stMain"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+
+    .block-container,
+    [data-testid="stMainBlockContainer"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 1rem 1.5rem 2rem !important;
     }
 
     .stTextInput input, .stTextArea textarea, .stNumberInput input, .stDateInput input, .stTimeInput input, [data-baseweb="select"] > div {
@@ -435,23 +461,34 @@ def fetch_data():
     response = supabase.table("treinos").select("*").execute()
     return pd.DataFrame(response.data)
 
+PERIODOS_DASHBOARD = ["Todo o Histórico", "Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Este Ano"]
+
+
+def filtrar_por_periodo(df, periodo):
+    """Aplica um período somente à cópia usada por cada dashboard."""
+    if df.empty:
+        return df.copy()
+
+    df_filtrado = df.copy()
+    df_filtrado['data'] = pd.to_datetime(df_filtrado['data'])
+    hoje = (pd.Timestamp.utcnow() - pd.Timedelta(hours=3)).normalize().tz_localize(None)
+
+    if periodo == "Hoje":
+        df_filtrado = df_filtrado[df_filtrado['data'] == hoje]
+    elif periodo == "Últimos 7 Dias":
+        df_filtrado = df_filtrado[df_filtrado['data'] >= (hoje - pd.Timedelta(days=7))]
+    elif periodo == "Últimos 30 Dias":
+        df_filtrado = df_filtrado[df_filtrado['data'] >= (hoje - pd.Timedelta(days=30))]
+    elif periodo == "Este Ano":
+        df_filtrado = df_filtrado[df_filtrado['data'].dt.year == hoje.year]
+
+    return df_filtrado
+
+
 df_raw = fetch_data()
-
-# --- FILTROS NA SIDEBAR ---
-st.sidebar.markdown("## 🔍 Filtros Gerais")
-st.sidebar.write("---")
-
-filtro_tempo = st.sidebar.selectbox("Período:", ["Todo o Histórico", "Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Este Ano"])
 
 if not df_raw.empty:
     df_raw['data'] = pd.to_datetime(df_raw['data'])
-    # Correção UTC-3
-    hoje = (pd.Timestamp.utcnow() - pd.Timedelta(hours=3)).normalize().tz_localize(None)
-    
-    if filtro_tempo == "Hoje": df_raw = df_raw[df_raw['data'] == hoje]
-    elif filtro_tempo == "Últimos 7 Dias": df_raw = df_raw[df_raw['data'] >= (hoje - pd.Timedelta(days=7))]
-    elif filtro_tempo == "Últimos 30 Dias": df_raw = df_raw[df_raw['data'] >= (hoje - pd.Timedelta(days=30))]
-    elif filtro_tempo == "Este Ano": df_raw = df_raw[df_raw['data'].dt.year == hoje.year]
 
 if not df_raw.empty:
     df_treinos = df_raw[~df_raw['grupo_muscular'].isin(['Nutrição', 'Métricas', 'Estudos'])].copy()
@@ -464,8 +501,6 @@ else:
 
 # --- INTERFACE MAIN ---
 st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1px; color: #FFF;'>Sistema Solem</h1>", unsafe_allow_html=True)
-if filtro_tempo != "Todo o Histórico":
-    st.markdown(f"<p style='text-align: center; color: #009CA6; margin-top: -15px;'>[ Período Ativo: {filtro_tempo} ]</p>", unsafe_allow_html=True)
 st.write("")
 
 # Abas sem o Modo Flow
@@ -611,12 +646,20 @@ with tab_registro:
 # ABA 2: DASHBOARD FÍSICO
 # ==========================================
 with tab_dash_treino:
+    filtro_tempo_fisico = st.selectbox(
+        "Período:",
+        PERIODOS_DASHBOARD,
+        key="filtro_tempo_dash_fisico"
+    )
+    df_treinos_dash = filtrar_por_periodo(df_treinos, filtro_tempo_fisico)
+    df_raw_dash_fisico = filtrar_por_periodo(df_raw, filtro_tempo_fisico)
+
     meta_fisica_diaria = 200 
     reps_treino_hoje = 0
-    if not df_treinos.empty:
-        df_treinos['data_real'] = pd.to_datetime(df_treinos['data'])
+    if not df_treinos_dash.empty:
+        df_treinos_dash['data_real'] = pd.to_datetime(df_treinos_dash['data'])
         hoje_data = (pd.Timestamp.utcnow() - pd.Timedelta(hours=3)).normalize().tz_localize(None)
-        df_hoje_tr = df_treinos[df_treinos['data_real'] == hoje_data]
+        df_hoje_tr = df_treinos_dash[df_treinos_dash['data_real'] == hoje_data]
         if not df_hoje_tr.empty: reps_treino_hoje = int(df_hoje_tr['repeticoes'].sum())
             
     faltam_reps = max(0, meta_fisica_diaria - reps_treino_hoje)
@@ -639,11 +682,11 @@ with tab_dash_treino:
     fig_gauge_f.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), height=320, margin=dict(l=30, r=30, t=70, b=40))
     st.plotly_chart(fig_gauge_f, use_container_width=True)
 
-    if not df_treinos.empty:
-        df_treinos['isometria_segundos'] = df_treinos['dados_extras'].apply(lambda x: safe_get(x, 'isometria_segundos', 0))
-        total_dias = len(df_treinos['data'].unique())
-        total_reps = int(df_treinos['repeticoes'].sum())
-        carga_max = df_treinos['carga_kg'].max()
+    if not df_treinos_dash.empty:
+        df_treinos_dash['isometria_segundos'] = df_treinos_dash['dados_extras'].apply(lambda x: safe_get(x, 'isometria_segundos', 0))
+        total_dias = len(df_treinos_dash['data'].unique())
+        total_reps = int(df_treinos_dash['repeticoes'].sum())
+        carga_max = df_treinos_dash['carga_kg'].max()
         
         st.markdown(f"""
         <div class="card-container">
@@ -659,7 +702,7 @@ with tab_dash_treino:
         with c_ctrl2: st.write(""); mostrar_peso_corporal = st.checkbox("Incluir gráfico de Evolução do Peso Corporal", value=True)
             
         st.write("---")
-        df_filtrado = df_treinos.copy()
+        df_filtrado = df_treinos_dash.copy()
         if ex_selecionados: df_filtrado = df_filtrado[df_filtrado['exercicio'].isin(ex_selecionados)]
 
         col_graf1, col_graf2 = st.columns(2) if mostrar_peso_corporal else (None, st.container())
@@ -668,8 +711,8 @@ with tab_dash_treino:
             with col_graf1:
                 with st.container(border=True):
                     st.markdown("#### ⚖️ Evolução do Peso Corporal (kg)")
-                    if 'peso_corporal' in df_raw.columns:
-                        df_peso = df_raw[df_raw['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
+                    if 'peso_corporal' in df_raw_dash_fisico.columns:
+                        df_peso = df_raw_dash_fisico[df_raw_dash_fisico['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
                         if not df_peso.empty:
                             df_peso['data_format'] = df_peso['data'].dt.strftime('%d/%m')
                             fig_peso = px.line(df_peso, x='data_format', y='peso_corporal', markers=True, text='peso_corporal')
@@ -1015,6 +1058,13 @@ with tab_prompts:
 # ABA 7: DASHBOARD DE ESTUDOS
 # ==========================================
 with tab_dash_estudo:
+    filtro_tempo_estudos = st.selectbox(
+        "Período:",
+        PERIODOS_DASHBOARD,
+        key="filtro_tempo_dash_estudos"
+    )
+    df_estudos_dash = filtrar_por_periodo(df_estudos, filtro_tempo_estudos)
+
     html_motivacional = (
         '<div style="text-align: center; margin-bottom: 25px;">'
         '<p style="color: #009CA6; font-style: italic; font-size: 16px;">"Se você não gosta do seu destino, não o aceite. Em vez disso, tenha a coragem para transformá-lo naquilo que você quer que ele seja." <br>'
@@ -1047,11 +1097,11 @@ with tab_dash_estudo:
 
     meta_diaria = 150
     questoes_hoje = 0
-    if not df_estudos.empty:
-        df_estudos['data_real'] = pd.to_datetime(df_estudos['data'])
-        df_estudos['fonte_questoes'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'fonte_questoes', 'Não Informada'))
+    if not df_estudos_dash.empty:
+        df_estudos_dash['data_real'] = pd.to_datetime(df_estudos_dash['data'])
+        df_estudos_dash['fonte_questoes'] = df_estudos_dash['dados_extras'].apply(lambda x: safe_get(x, 'fonte_questoes', 'Não Informada'))
         hoje_data = (pd.Timestamp.utcnow() - pd.Timedelta(hours=3)).normalize().tz_localize(None)
-        df_hoje_est = df_estudos[(df_estudos['data_real'] == hoje_data) & (df_estudos['fonte_questoes'] != 'Anki')]
+        df_hoje_est = df_estudos_dash[(df_estudos_dash['data_real'] == hoje_data) & (df_estudos_dash['fonte_questoes'] != 'Anki')]
         if not df_hoje_est.empty: questoes_hoje = int(df_hoje_est['repeticoes'].sum())
             
     faltam_questoes = max(0, meta_diaria - questoes_hoje)
@@ -1075,15 +1125,15 @@ with tab_dash_estudo:
     st.plotly_chart(fig_gauge, use_container_width=True)
 
     st.markdown("### 📈 Analytics Acadêmico")
-    if not df_estudos.empty:
-        df_estudos['q_certas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
-        df_estudos['q_erradas'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
-        df_estudos['topico_edital'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', safe_get(x, 'topico', 'Geral')))
-        df_estudos['tempo_video'] = df_estudos['dados_extras'].apply(lambda x: safe_get(x, 'tempo_video', 0))
+    if not df_estudos_dash.empty:
+        df_estudos_dash['q_certas'] = df_estudos_dash['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
+        df_estudos_dash['q_erradas'] = df_estudos_dash['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
+        df_estudos_dash['topico_edital'] = df_estudos_dash['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', safe_get(x, 'topico', 'Geral')))
+        df_estudos_dash['tempo_video'] = df_estudos_dash['dados_extras'].apply(lambda x: safe_get(x, 'tempo_video', 0))
         
-        fontes_unicas = df_estudos['fonte_questoes'].unique().tolist()
+        fontes_unicas = df_estudos_dash['fonte_questoes'].unique().tolist()
         fonte_filtro = st.selectbox("Filtrar Dashboard pela Fonte das Questões:", ["Todas as Fontes"] + fontes_unicas)
-        df_dash_est = df_estudos.copy()
+        df_dash_est = df_estudos_dash.copy()
         if fonte_filtro != "Todas as Fontes": df_dash_est = df_dash_est[df_dash_est['fonte_questoes'] == fonte_filtro]
             
         df_questoes_reais = df_dash_est[df_dash_est['fonte_questoes'] != 'Anki']
@@ -1289,8 +1339,11 @@ with tab_cruzamento:
     st.markdown("### 🧬 Data Lab: Cruzamento de Variáveis")
     st.write("Identifique padrões ocultos entre sua rotina física e seu rendimento cognitivo.")
     if not df_raw.empty and not df_estudos.empty and not df_treinos.empty:
+        df_estudos_cruz = df_estudos.copy()
+        df_estudos_cruz['q_certas'] = df_estudos_cruz['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
+        df_estudos_cruz['q_erradas'] = df_estudos_cruz['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
         df_t_dia = df_treinos.groupby('data', as_index=False).agg(total_reps=('repeticoes', 'sum'), treinou=('exercicio', 'count'))
-        df_e_dia = df_estudos.groupby('data', as_index=False).agg(minutos_estudados=('duracao_min', 'sum'), total_certas=('q_certas', 'sum'), total_erradas=('q_erradas', 'sum'))
+        df_e_dia = df_estudos_cruz.groupby('data', as_index=False).agg(minutos_estudados=('duracao_min', 'sum'), total_certas=('q_certas', 'sum'), total_erradas=('q_erradas', 'sum'))
         df_merged = pd.merge(df_t_dia, df_e_dia, on='data', how='outer').fillna(0)
         df_merged['data_format'] = df_merged['data'].dt.strftime('%d/%m')
         
