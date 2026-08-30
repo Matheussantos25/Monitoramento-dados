@@ -8,6 +8,7 @@ import json
 import os
 import random
 import base64
+import hashlib
 from pathlib import Path
 import streamlit.components.v1 as components
 
@@ -27,6 +28,7 @@ def carregar_prompts_estudo():
     titulos_personalizados = {
         "cards_anki_questoes_erradas.md": "Cards Anki das questões erradas",
         "gabarito.md": "Gabarito do simulado FGV com insights",
+        "gabarito_simulado_fgv_importacao.md": "Gabarito FGV com tempo por questão e importação",
         "prompt_simulado_VF_FGV_Dataprev.md": "Gerar simulado FGV (Certo ou Errado)",
         "simulado_fgv_padrao_banca.md": "Simular prova FGV com padrões da banca",
     }
@@ -485,6 +487,306 @@ def filtrar_por_periodo(df, periodo):
     return df_filtrado
 
 
+def extrair_json_importacao_simulado(texto):
+    """Extrai o JSON mesmo quando ele vier acompanhado do relatório do ChatGPT."""
+    if not isinstance(texto, str) or not texto.strip():
+        raise ValueError("Cole o bloco de importação gerado pelo ChatGPT.")
+
+    marcador_inicio = "SOLEM_IMPORT_START"
+    marcador_fim = "SOLEM_IMPORT_END"
+    trecho = texto.strip()
+
+    if marcador_inicio in trecho and marcador_fim in trecho:
+        trecho = trecho.split(marcador_inicio, 1)[1].split(marcador_fim, 1)[0]
+
+    inicio_json = trecho.find("{")
+    fim_json = trecho.rfind("}")
+    if inicio_json < 0 or fim_json <= inicio_json:
+        raise ValueError("Não encontrei um objeto JSON válido entre os marcadores SOLEM_IMPORT_START e SOLEM_IMPORT_END.")
+
+    try:
+        payload = json.loads(trecho[inicio_json:fim_json + 1])
+    except json.JSONDecodeError as erro:
+        raise ValueError(f"O JSON possui um erro na linha {erro.lineno}, coluna {erro.colno}: {erro.msg}.") from erro
+
+    if not isinstance(payload, dict):
+        raise ValueError("O conteúdo de importação precisa ser um objeto JSON.")
+    return payload
+
+
+def converter_tempo_para_segundos(valor):
+    """Aceita segundos numéricos ou textos mm:ss/hh:mm:ss."""
+    if isinstance(valor, bool) or valor is None:
+        raise ValueError("tempo ausente")
+    if isinstance(valor, (int, float)):
+        segundos = int(round(float(valor)))
+    elif isinstance(valor, str):
+        partes = valor.strip().split(":")
+        if len(partes) not in (2, 3) or not all(parte.strip().isdigit() for parte in partes):
+            raise ValueError("use segundos inteiros ou mm:ss")
+        numeros = [int(parte) for parte in partes]
+        if len(numeros) == 2:
+            minutos, segundos_restantes = numeros
+            if segundos_restantes > 59:
+                raise ValueError("os segundos devem ficar entre 00 e 59")
+            segundos = minutos * 60 + segundos_restantes
+        else:
+            horas, minutos, segundos_restantes = numeros
+            if minutos > 59 or segundos_restantes > 59:
+                raise ValueError("use hh:mm:ss com minutos e segundos entre 00 e 59")
+            segundos = horas * 3600 + minutos * 60 + segundos_restantes
+    else:
+        raise ValueError("formato de tempo inválido")
+
+    if segundos < 0 or segundos > 24 * 60 * 60:
+        raise ValueError("o tempo precisa ficar entre 0 e 24 horas")
+    return segundos
+
+
+def formatar_segundos(segundos):
+    segundos = max(0, int(segundos))
+    horas, resto = divmod(segundos, 3600)
+    minutos, segundos_restantes = divmod(resto, 60)
+    if horas:
+        return f"{horas:02d}:{minutos:02d}:{segundos_restantes:02d}"
+    return f"{minutos:02d}:{segundos_restantes:02d}"
+
+
+def preparar_importacao_simulado(payload):
+    """Valida o payload e o converte em registros compatíveis com a tabela treinos."""
+    erros = []
+    avisos = []
+
+    if payload.get("schema") != "solem_simulado_v1":
+        erros.append("O campo schema precisa ser exatamente 'solem_simulado_v1'.")
+
+    simulado_id = str(payload.get("simulado_id", "")).strip()
+    if not simulado_id:
+        erros.append("Informe um simulado_id único.")
+    elif len(simulado_id) > 100:
+        erros.append("O simulado_id deve ter no máximo 100 caracteres.")
+
+    data_simulado = None
+    valor_data = str(payload.get("data", "")).strip()
+    for formato_data in ("%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            data_simulado = datetime.strptime(valor_data, formato_data).date().isoformat()
+            break
+        except ValueError:
+            continue
+    if data_simulado is None:
+        erros.append("A data do simulado é inválida. Use AAAA-MM-DD.")
+
+    questoes_recebidas = payload.get("questoes")
+    if not isinstance(questoes_recebidas, list) or not questoes_recebidas:
+        erros.append("O campo questoes precisa conter uma lista não vazia.")
+        questoes_recebidas = []
+    elif len(questoes_recebidas) > 500:
+        erros.append("A importação aceita no máximo 500 questões por simulado.")
+
+    questoes_normalizadas = []
+    numeros_encontrados = set()
+    topicos_nao_padronizados = set()
+    tempos_ausentes = 0
+
+    for indice, questao in enumerate(questoes_recebidas, start=1):
+        prefixo = f"Questão da posição {indice}"
+        if not isinstance(questao, dict):
+            erros.append(f"{prefixo}: o item precisa ser um objeto.")
+            continue
+
+        try:
+            numero = int(questao.get("numero"))
+            if numero <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            erros.append(f"{prefixo}: número inválido.")
+            continue
+
+        if numero in numeros_encontrados:
+            erros.append(f"Questão {numero}: número repetido.")
+            continue
+        numeros_encontrados.add(numero)
+
+        disciplina = str(questao.get("disciplina", "")).strip()
+        if disciplina not in DISCIPLINAS_ESTUDO:
+            erros.append(f"Questão {numero}: disciplina '{disciplina or 'vazia'}' não reconhecida.")
+
+        topico = str(questao.get("topico_edital", "")).strip()
+        if not topico or topico.lower() in {"geral", "simulado / visão geral", "simulado/visão geral", "diversos"}:
+            erros.append(f"Questão {numero}: informe um tópico específico do edital.")
+        elif len(topico) > 500:
+            erros.append(f"Questão {numero}: o tópico ultrapassa 500 caracteres.")
+        elif disciplina in TOPICOS_EDITAL and topico not in TOPICOS_EDITAL.get(disciplina, []):
+            topicos_nao_padronizados.add(f"{disciplina}: {topico}")
+
+        resultado = str(questao.get("resultado", "")).strip().lower()
+        mapa_resultados = {
+            "correta": "correta", "correto": "correta", "certo": "correta", "acerto": "correta",
+            "errada": "errada", "errado": "errada", "erro": "errada"
+        }
+        resultado = mapa_resultados.get(resultado)
+        if not resultado:
+            erros.append(f"Questão {numero}: resultado deve ser 'correta' ou 'errada'.")
+
+        try:
+            tempo_segundos = converter_tempo_para_segundos(questao.get("tempo_segundos"))
+        except ValueError as erro_tempo:
+            erros.append(f"Questão {numero}: tempo inválido ({erro_tempo}).")
+            tempo_segundos = 0
+
+        tempo_informado = questao.get("tempo_informado", True) is not False
+        if not tempo_informado:
+            tempos_ausentes += 1
+
+        confianca = questao.get("confianca")
+        if confianca not in (None, ""):
+            try:
+                confianca = int(confianca)
+                if confianca not in (1, 2, 3):
+                    raise ValueError
+            except (TypeError, ValueError):
+                erros.append(f"Questão {numero}: confiança deve ser 1, 2 ou 3.")
+                confianca = None
+        else:
+            confianca = None
+
+        questoes_normalizadas.append({
+            "numero": numero,
+            "disciplina": disciplina,
+            "topico_edital": topico,
+            "resultado": resultado,
+            "tempo_segundos": tempo_segundos,
+            "tempo_informado": tempo_informado,
+            "confianca": confianca,
+            "resposta_usuario": str(questao.get("resposta_usuario", "")).strip().upper(),
+            "gabarito": str(questao.get("gabarito", "")).strip().upper(),
+            "marcacao": str(questao.get("marcacao", "")).strip()
+        })
+
+    if erros:
+        return {"erros": erros, "avisos": avisos, "registros": [], "preview": pd.DataFrame()}
+
+    if len(questoes_normalizadas) != 70:
+        avisos.append(f"O arquivo contém {len(questoes_normalizadas)} questões, não 70. A importação parcial continua permitida.")
+    if tempos_ausentes:
+        avisos.append(f"{tempos_ausentes} questão(ões) estão sem tempo medido e serão registradas com zero segundo.")
+    if topicos_nao_padronizados:
+        avisos.append(
+            f"{len(topicos_nao_padronizados)} tópico(s) não coincidem literalmente com a lista atual do edital. "
+            "Confira-os na prévia; eles serão preservados como o ChatGPT informou."
+        )
+
+    grupos = {}
+    for questao in questoes_normalizadas:
+        chave = (questao["disciplina"], questao["topico_edital"])
+        if chave not in grupos:
+            grupos[chave] = {
+                "disciplina": questao["disciplina"],
+                "topico_edital": questao["topico_edital"],
+                "q_certas": 0,
+                "q_erradas": 0,
+                "tempo_segundos": 0,
+                "tempo_exato": True,
+                "questoes": []
+            }
+        grupo = grupos[chave]
+        grupo["q_certas"] += int(questao["resultado"] == "correta")
+        grupo["q_erradas"] += int(questao["resultado"] == "errada")
+        grupo["tempo_segundos"] += questao["tempo_segundos"]
+        grupo["tempo_exato"] = grupo["tempo_exato"] and questao["tempo_informado"]
+        grupo["questoes"].append({
+            "numero": questao["numero"],
+            "resultado": questao["resultado"],
+            "tempo_segundos": questao["tempo_segundos"],
+            "tempo_informado": questao["tempo_informado"],
+            "confianca": questao["confianca"],
+            "resposta_usuario": questao["resposta_usuario"],
+            "gabarito": questao["gabarito"],
+            "marcacao": questao["marcacao"]
+        })
+
+    grupos_lista = list(grupos.values())
+    minutos_totais = int(round(sum(grupo["tempo_segundos"] for grupo in grupos_lista) / 60))
+    for grupo in grupos_lista:
+        grupo["duracao_min"] = grupo["tempo_segundos"] // 60
+        grupo["resto_segundos"] = grupo["tempo_segundos"] % 60
+
+    minutos_a_distribuir = minutos_totais - sum(grupo["duracao_min"] for grupo in grupos_lista)
+    for grupo in sorted(grupos_lista, key=lambda item: item["resto_segundos"], reverse=True)[:minutos_a_distribuir]:
+        grupo["duracao_min"] += 1
+
+    importacao_id = f"solem:{simulado_id}"
+    horario_base = (datetime.utcnow() - timedelta(hours=3)).strftime("%H:%M:%S")
+    registros = []
+    preview = []
+
+    for grupo in grupos_lista:
+        total_questoes = grupo["q_certas"] + grupo["q_erradas"]
+        numeros = sorted(item["numero"] for item in grupo["questoes"])
+        extras = {
+            "topico_edital": grupo["topico_edital"],
+            "q_certas": grupo["q_certas"],
+            "q_erradas": grupo["q_erradas"],
+            "tempo_video": 0,
+            "fonte_questoes": "IA (Estilo FGV)",
+            "origem_importacao": "simulado_json",
+            "simulado_id": simulado_id,
+            "importacao_id": importacao_id,
+            "tempo_segundos_exato": grupo["tempo_segundos"],
+            "tempo_estimado": not grupo["tempo_exato"],
+            "questoes_numeros": numeros,
+            "detalhes_questoes": grupo["questoes"]
+        }
+        registros.append({
+            "data": data_simulado,
+            "horario": horario_base,
+            "grupo_muscular": "Estudos",
+            "exercicio": grupo["disciplina"],
+            "series": 0,
+            "repeticoes": total_questoes,
+            "carga_kg": 0.0,
+            "descanso_seg": 0,
+            "duracao_min": int(grupo["duracao_min"]),
+            "distancia_km": 0.0,
+            "alimentacao_saudavel": "",
+            "alimentacao_besteirol": "",
+            "peso_corporal": 0.0,
+            "dados_extras": extras
+        })
+        preview.append({
+            "Disciplina": grupo["disciplina"],
+            "Tópico do edital": grupo["topico_edital"],
+            "Questões": ", ".join(str(numero) for numero in numeros),
+            "Corretas": grupo["q_certas"],
+            "Erradas": grupo["q_erradas"],
+            "Tempo exato": formatar_segundos(grupo["tempo_segundos"]),
+            "Medição": "Exata" if grupo["tempo_exato"] else "Incompleta"
+        })
+
+    return {
+        "erros": [],
+        "avisos": avisos,
+        "registros": registros,
+        "preview": pd.DataFrame(preview),
+        "simulado_id": simulado_id,
+        "importacao_id": importacao_id,
+        "total_questoes": len(questoes_normalizadas),
+        "total_certas": sum(item["resultado"] == "correta" for item in questoes_normalizadas),
+        "total_erradas": sum(item["resultado"] == "errada" for item in questoes_normalizadas),
+        "tempo_total_segundos": sum(item["tempo_segundos"] for item in questoes_normalizadas)
+    }
+
+
+def simulado_ja_importado(df, importacao_id):
+    if df.empty or "dados_extras" not in df.columns:
+        return False
+    return any(
+        safe_get(extras, "importacao_id", "") == importacao_id
+        for extras in df["dados_extras"]
+    )
+
+
 df_raw = fetch_data()
 
 if not df_raw.empty:
@@ -807,6 +1109,86 @@ with tab_peso:
 # ==========================================
 with tab_estudo:
     st.markdown("<h3 style='margin-bottom: 20px; color: #009CA6;'>📚 Central de Foco: Operação FGV</h3>", unsafe_allow_html=True)
+
+    mensagem_importacao = st.session_state.pop("mensagem_importacao_simulado", None)
+    if mensagem_importacao:
+        st.success(mensagem_importacao)
+
+    with st.expander("Importar resultado de simulado da IA", expanded=False):
+        st.caption(
+            "Cole a resposta completa do ChatGPT ou somente o trecho entre "
+            "SOLEM_IMPORT_START e SOLEM_IMPORT_END. Nada será gravado antes da confirmação."
+        )
+        texto_importacao = st.text_area(
+            "Resultado estruturado do simulado",
+            height=240,
+            placeholder="SOLEM_IMPORT_START\n{ ... }\nSOLEM_IMPORT_END",
+            key="texto_importacao_simulado"
+        )
+        hash_texto = hashlib.sha256(texto_importacao.strip().encode("utf-8")).hexdigest() if texto_importacao.strip() else ""
+
+        if st.button("Validar importação", use_container_width=True, key="validar_importacao_simulado"):
+            try:
+                payload_importacao = extrair_json_importacao_simulado(texto_importacao)
+                importacao_preparada = preparar_importacao_simulado(payload_importacao)
+                importacao_preparada["hash_texto"] = hash_texto
+                st.session_state["importacao_simulado_preparada"] = importacao_preparada
+            except ValueError as erro_importacao:
+                st.session_state.pop("importacao_simulado_preparada", None)
+                st.error(str(erro_importacao))
+
+        importacao_preparada = st.session_state.get("importacao_simulado_preparada")
+        if importacao_preparada and importacao_preparada.get("hash_texto") != hash_texto:
+            st.info("O conteúdo foi alterado. Clique novamente em Validar importação.")
+        elif importacao_preparada:
+            if importacao_preparada["erros"]:
+                st.error("A importação precisa ser corrigida antes de continuar:")
+                for erro in importacao_preparada["erros"]:
+                    st.markdown(f"- {erro}")
+            else:
+                for aviso in importacao_preparada["avisos"]:
+                    st.warning(aviso)
+
+                c_imp1, c_imp2, c_imp3, c_imp4 = st.columns(4)
+                c_imp1.metric("Questões", importacao_preparada["total_questoes"])
+                c_imp2.metric("Corretas", importacao_preparada["total_certas"])
+                c_imp3.metric("Erradas", importacao_preparada["total_erradas"])
+                c_imp4.metric("Tempo total", formatar_segundos(importacao_preparada["tempo_total_segundos"]))
+
+                st.dataframe(
+                    importacao_preparada["preview"],
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                duplicado = simulado_ja_importado(df_raw, importacao_preparada["importacao_id"])
+                if duplicado:
+                    st.error(
+                        f"O simulado '{importacao_preparada['simulado_id']}' já foi importado. "
+                        "Use outro identificador ou remova os registros anteriores na aba Config."
+                    )
+                else:
+                    confirmar_importacao = st.checkbox(
+                        "Conferi a prévia e desejo gravar todos os registros",
+                        key="confirmar_importacao_simulado"
+                    )
+                    if st.button(
+                        "Importar simulado",
+                        use_container_width=True,
+                        disabled=not confirmar_importacao,
+                        key="executar_importacao_simulado"
+                    ):
+                        try:
+                            supabase.table("treinos").insert(importacao_preparada["registros"]).execute()
+                            st.session_state.pop("importacao_simulado_preparada", None)
+                            st.session_state["mensagem_importacao_simulado"] = (
+                                f"Simulado '{importacao_preparada['simulado_id']}' importado com "
+                                f"{importacao_preparada['total_questoes']} questões."
+                            )
+                            st.rerun()
+                        except Exception as erro_banco:
+                            st.error(f"Não foi possível gravar o simulado: {erro_banco}")
+
     prox_disciplina = ROTA_ESTRATEGICA[0]
     if not df_estudos.empty:
         df_ciclo = df_estudos[df_estudos['exercicio'].isin(ROTA_ESTRATEGICA)]
@@ -1130,6 +1512,14 @@ with tab_dash_estudo:
         df_estudos_dash['q_erradas'] = df_estudos_dash['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
         df_estudos_dash['topico_edital'] = df_estudos_dash['dados_extras'].apply(lambda x: safe_get(x, 'topico_edital', safe_get(x, 'topico', 'Geral')))
         df_estudos_dash['tempo_video'] = df_estudos_dash['dados_extras'].apply(lambda x: safe_get(x, 'tempo_video', 0))
+        df_estudos_dash['tempo_analise_min'] = df_estudos_dash.apply(
+            lambda row: (
+                float(safe_get(row['dados_extras'], 'tempo_segundos_exato')) / 60
+                if safe_get(row['dados_extras'], 'tempo_segundos_exato') is not None
+                else float(row['duracao_min'])
+            ),
+            axis=1
+        )
         
         fontes_unicas = df_estudos_dash['fonte_questoes'].unique().tolist()
         fonte_filtro = st.selectbox("Filtrar Dashboard pela Fonte das Questões:", ["Todas as Fontes"] + fontes_unicas)
@@ -1144,8 +1534,8 @@ with tab_dash_estudo:
         total_questoes = int(df_questoes_reais['repeticoes'].sum()) 
         taxa_acerto = (total_certas / (total_certas + total_erradas) * 100) if (total_certas + total_erradas) > 0 else 0
         
-        tempo_total_min = int(df_dash_est['duracao_min'].sum())
-        tempo_anki_total_min = int(df_anki['duracao_min'].sum())
+        tempo_total_min = float(df_dash_est['tempo_analise_min'].sum())
+        tempo_anki_total_min = float(df_anki['tempo_analise_min'].sum())
         
         st.markdown(f"""
         <div class="card-container">
@@ -1300,7 +1690,7 @@ with tab_dash_estudo:
         if disciplina_selecionada != "Visão Geral (Todas)": df_tops = df_tops[df_tops['exercicio'] == disciplina_selecionada]
             
         if not df_tops.empty:
-            df_topicos_agg = df_tops.groupby(['exercicio', 'topico_edital'], as_index=False).agg(duracao_min=('duracao_min', 'sum'), certas=('q_certas', 'sum'), erradas=('q_erradas', 'sum'))
+            df_topicos_agg = df_tops.groupby(['exercicio', 'topico_edital'], as_index=False).agg(duracao_min=('tempo_analise_min', 'sum'), certas=('q_certas', 'sum'), erradas=('q_erradas', 'sum'))
             df_topicos_agg['horas'] = df_topicos_agg['duracao_min'] / 60
             df_topicos_agg['total_q'] = df_topicos_agg['certas'] + df_topicos_agg['erradas']
             df_topicos_agg['% Acerto'] = (df_topicos_agg['certas'] / df_topicos_agg['total_q']) * 100
