@@ -28,6 +28,7 @@ def carregar_prompts_estudo():
     titulos_personalizados = {
         "cards_anki_questoes_erradas.md": "Cards Anki das questões erradas",
         "gabarito.md": "Gabarito do simulado FGV com insights",
+        "gabarito_simulado_certo_errado.md": "Gabarito simulado (certo ou errado)",
         "gabarito_simulado_fgv_importacao.md": "Gabarito FGV com tempo por questão e importação",
         "prompt_simulado_VF_FGV_Dataprev.md": "Gerar simulado FGV (Certo ou Errado)",
         "simulado_fgv_padrao_banca.md": "Simular prova FGV com padrões da banca",
@@ -107,6 +108,7 @@ FONTES_QUESTOES = [
     "FGV",
     "Gerado por IA",
     "IA (Estilo FGV)",
+    "IA (FGV adaptado C/E)",
     "CEBRASPE",
     "VUNESP",
     "FCC",
@@ -557,8 +559,11 @@ def preparar_importacao_simulado(payload):
     erros = []
     avisos = []
 
-    if payload.get("schema") != "solem_simulado_v1":
-        erros.append("O campo schema precisa ser exatamente 'solem_simulado_v1'.")
+    schema = payload.get("schema")
+    schemas_aceitos = {"solem_simulado_v1", "solem_simulado_ce_v1"}
+    if schema not in schemas_aceitos:
+        erros.append("O campo schema precisa ser 'solem_simulado_v1' ou 'solem_simulado_ce_v1'.")
+    fonte_importacao = "IA (FGV adaptado C/E)" if schema == "solem_simulado_ce_v1" else "IA (Estilo FGV)"
 
     simulado_id = str(payload.get("simulado_id", "")).strip()
     if not simulado_id:
@@ -623,11 +628,12 @@ def preparar_importacao_simulado(payload):
         resultado = str(questao.get("resultado", "")).strip().lower()
         mapa_resultados = {
             "correta": "correta", "correto": "correta", "certo": "correta", "acerto": "correta",
-            "errada": "errada", "errado": "errada", "erro": "errada"
+            "errada": "errada", "errado": "errada", "erro": "errada",
+            "anulada": "anulada", "anulado": "anulada"
         }
         resultado = mapa_resultados.get(resultado)
         if not resultado:
-            erros.append(f"Questão {numero}: resultado deve ser 'correta' ou 'errada'.")
+            erros.append(f"Questão {numero}: resultado deve ser 'correta', 'errada' ou 'anulada'.")
 
         try:
             tempo_segundos = converter_tempo_para_segundos(questao.get("tempo_segundos"))
@@ -661,7 +667,8 @@ def preparar_importacao_simulado(payload):
             "confianca": confianca,
             "resposta_usuario": str(questao.get("resposta_usuario", "")).strip().upper(),
             "gabarito": str(questao.get("gabarito", "")).strip().upper(),
-            "marcacao": str(questao.get("marcacao", "")).strip()
+            "marcacao": str(questao.get("marcacao", "")).strip(),
+            "tipo_erro": questao.get("tipo_erro")
         })
 
     if erros:
@@ -686,6 +693,7 @@ def preparar_importacao_simulado(payload):
                 "topico_edital": questao["topico_edital"],
                 "q_certas": 0,
                 "q_erradas": 0,
+                "q_anuladas": 0,
                 "tempo_segundos": 0,
                 "tempo_exato": True,
                 "questoes": []
@@ -693,6 +701,7 @@ def preparar_importacao_simulado(payload):
         grupo = grupos[chave]
         grupo["q_certas"] += int(questao["resultado"] == "correta")
         grupo["q_erradas"] += int(questao["resultado"] == "errada")
+        grupo["q_anuladas"] += int(questao["resultado"] == "anulada")
         grupo["tempo_segundos"] += questao["tempo_segundos"]
         grupo["tempo_exato"] = grupo["tempo_exato"] and questao["tempo_informado"]
         grupo["questoes"].append({
@@ -703,7 +712,8 @@ def preparar_importacao_simulado(payload):
             "confianca": questao["confianca"],
             "resposta_usuario": questao["resposta_usuario"],
             "gabarito": questao["gabarito"],
-            "marcacao": questao["marcacao"]
+            "marcacao": questao["marcacao"],
+            "tipo_erro": questao["tipo_erro"]
         })
 
     grupos_lista = list(grupos.values())
@@ -716,7 +726,7 @@ def preparar_importacao_simulado(payload):
     for grupo in sorted(grupos_lista, key=lambda item: item["resto_segundos"], reverse=True)[:minutos_a_distribuir]:
         grupo["duracao_min"] += 1
 
-    importacao_id = f"solem:{simulado_id}"
+    importacao_id = f"solem:{simulado_id.casefold()}"
     horario_base = (datetime.utcnow() - timedelta(hours=3)).strftime("%H:%M:%S")
     registros = []
     preview = []
@@ -728,8 +738,9 @@ def preparar_importacao_simulado(payload):
             "topico_edital": grupo["topico_edital"],
             "q_certas": grupo["q_certas"],
             "q_erradas": grupo["q_erradas"],
+            "q_anuladas": grupo["q_anuladas"],
             "tempo_video": 0,
-            "fonte_questoes": "IA (Estilo FGV)",
+            "fonte_questoes": fonte_importacao,
             "origem_importacao": "simulado_json",
             "simulado_id": simulado_id,
             "importacao_id": importacao_id,
@@ -760,6 +771,7 @@ def preparar_importacao_simulado(payload):
             "Questões": ", ".join(str(numero) for numero in numeros),
             "Corretas": grupo["q_certas"],
             "Erradas": grupo["q_erradas"],
+            "Anuladas": grupo["q_anuladas"],
             "Tempo exato": formatar_segundos(grupo["tempo_segundos"]),
             "Medição": "Exata" if grupo["tempo_exato"] else "Incompleta"
         })
@@ -774,6 +786,7 @@ def preparar_importacao_simulado(payload):
         "total_questoes": len(questoes_normalizadas),
         "total_certas": sum(item["resultado"] == "correta" for item in questoes_normalizadas),
         "total_erradas": sum(item["resultado"] == "errada" for item in questoes_normalizadas),
+        "total_anuladas": sum(item["resultado"] == "anulada" for item in questoes_normalizadas),
         "tempo_total_segundos": sum(item["tempo_segundos"] for item in questoes_normalizadas)
     }
 
@@ -1149,11 +1162,12 @@ with tab_estudo:
                 for aviso in importacao_preparada["avisos"]:
                     st.warning(aviso)
 
-                c_imp1, c_imp2, c_imp3, c_imp4 = st.columns(4)
+                c_imp1, c_imp2, c_imp3, c_imp4, c_imp5 = st.columns(5)
                 c_imp1.metric("Questões", importacao_preparada["total_questoes"])
                 c_imp2.metric("Corretas", importacao_preparada["total_certas"])
                 c_imp3.metric("Erradas", importacao_preparada["total_erradas"])
-                c_imp4.metric("Tempo total", formatar_segundos(importacao_preparada["tempo_total_segundos"]))
+                c_imp4.metric("Anuladas", importacao_preparada["total_anuladas"])
+                c_imp5.metric("Tempo total", formatar_segundos(importacao_preparada["tempo_total_segundos"]))
 
                 st.dataframe(
                     importacao_preparada["preview"],
