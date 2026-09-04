@@ -11,6 +11,7 @@ import base64
 import hashlib
 from pathlib import Path
 import streamlit.components.v1 as components
+from solem_ui import apply_theme, shell, overview, section_intro, goal_panel
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
 def safe_get(val, key, default=None):
@@ -290,176 +291,30 @@ def obter_pior_topico(df_hist, disciplina):
 
 # --- CONFIGURAÇÕES DA PÁGINA ---
 st.set_page_config(
-    page_title="Monitoramento Físico & Mental",
-    page_icon="⚡",
+    page_title="Solem · Corpo & Mente",
+    page_icon="✳",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# --- INJEÇÃO DE CSS PREMIUM (DARK CLEAN) ---
-st.markdown("""
-<style>
-    :root {
-        --surface-base: #080A0C;
-        --surface-panel: #0F1316;
-        --surface-raised: #151A1E;
-        --border-subtle: #253038;
-        --text-primary: #E7ECEF;
-        --text-muted: #9CA8AE;
-        --accent: #22B8C2;
-        --accent-strong: #45CBD3;
-        --radius: 10px;
-    }
-
-    .stApp {
-        background-color: var(--surface-base) !important;
-        color: var(--text-primary) !important;
-        font-family: system-ui, "Segoe UI", sans-serif;
-    }
-
-    h1, h2, h3, h4, p, label, span, .stMarkdown {
-        color: var(--text-primary) !important;
-    }
-
-    /* Aplicação em tela cheia, sem sidebar nem barra superior do Streamlit. */
-    [data-testid="stSidebar"],
-    [data-testid="collapsedControl"],
-    header[data-testid="stHeader"],
-    [data-testid="stToolbar"],
-    [data-testid="stAppToolbar"],
-    #MainMenu,
-    footer {
-        display: none !important;
-    }
-
-    [data-testid="stAppViewContainer"],
-    [data-testid="stAppViewContainer"] > .main,
-    [data-testid="stMain"] {
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-    }
-
-    .block-container,
-    [data-testid="stMainBlockContainer"] {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 1rem 1.5rem 2rem !important;
-    }
-
-    .stTextInput input, .stTextArea textarea, .stNumberInput input, .stDateInput input, .stTimeInput input, [data-baseweb="select"] > div {
-        background-color: var(--surface-raised) !important;
-        color: var(--text-primary) !important;
-        border: 1px solid var(--border-subtle) !important;
-        border-radius: var(--radius) !important;
-    }
-
-    .stTextInput input:focus, .stTextArea textarea:focus, .stNumberInput input:focus, .stDateInput input:focus, .stTimeInput input:focus {
-        border-color: var(--accent) !important;
-        box-shadow: 0 0 0 2px rgba(34, 184, 194, 0.18) !important;
-        outline: none !important;
-    }
-
-    [data-testid="stForm"], div[data-testid="stVerticalBlock"] > div[style*="border"] {
-        background-color: var(--surface-panel) !important;
-        border: 1px solid var(--border-subtle) !important;
-        border-radius: var(--radius) !important;
-        padding: 24px !important;
-    }
-
-    div[data-baseweb="tab-list"] {
-        gap: 6px;
-        border-bottom: 1px solid var(--border-subtle);
-    }
-
-    button[data-baseweb="tab"] {
-        border-radius: var(--radius) var(--radius) 0 0;
-        padding-inline: 16px;
-    }
-
-    button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: var(--surface-raised) !important;
-        color: var(--accent-strong) !important;
-    }
-
-    .stButton > button, .stFormSubmitButton > button {
-        border-radius: var(--radius) !important;
-        border-color: var(--accent) !important;
-        transition: border-color 120ms ease, background-color 120ms ease, transform 80ms ease;
-    }
-
-    .stButton > button:hover, .stFormSubmitButton > button:hover {
-        background-color: var(--accent) !important;
-        color: var(--surface-base) !important;
-        border-color: var(--accent) !important;
-    }
-
-    .stButton > button:active, .stFormSubmitButton > button:active {
-        transform: translateY(1px);
-    }
-
-    /* Cartões de métricas: uma linguagem visual, sem brilho decorativo. */
-    .card-container {
-        display: flex;
-        gap: 12px;
-        justify-content: space-between;
-        margin-bottom: 25px;
-        flex-wrap: wrap;
-    }
-
-    .neon-card {
-        flex: 1;
-        min-width: 150px;
-        padding: 20px;
-        border-radius: var(--radius);
-        color: var(--text-primary);
-        background: var(--surface-panel);
-        border: 1px solid var(--border-subtle);
-        border-top: 3px solid var(--accent);
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 8px 24px rgba(1, 8, 12, 0.24);
-    }
-
-    .neon-card .card-title {
-        color: var(--text-muted) !important;
-        font-size: 15px;
-        font-weight: 650;
-        letter-spacing: 1.1px;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .neon-card .card-value {
-        font-size: 38px;
-        font-weight: 720;
-        color: var(--text-primary) !important;
-        letter-spacing: -0.03em;
-    }
-    
-    .card-cyan, .card-emerald, .card-violet, .card-crimson, .card-orange {
-        border-top-color: var(--accent);
-    }
-
-    span[data-baseweb="tag"] {
-        background-color: var(--accent) !important;
-        color: var(--surface-base) !important;
-        font-weight: 700;
-        border-radius: var(--radius) !important;
-    }
-    
-    hr { border-color: var(--border-subtle) !important; }
-</style>
-""", unsafe_allow_html=True)
+apply_theme()
 
 # --- BANCO DE DADOS ---
 @st.cache_resource
 def init_connection() -> Client:
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-supabase = init_connection()
+# Demonstration is explicitly opt-in and never connects to Supabase.
+if os.environ.get("SOLEM_DEMO") == "1":
+    from demo_data import DemoClient
+    supabase = DemoClient()
+    st.caption("DEMONSTRAÇÃO · Dados fictícios. Alterações ficam apenas nesta sessão.")
+else:
+    try:
+        supabase = init_connection()
+    except Exception:
+        st.error("Não foi possível conectar ao banco. Verifique a configuração de conexão do app.")
+        st.stop()
 
 def fetch_data():
     response = supabase.table("treinos").select("*").execute()
@@ -800,7 +655,14 @@ def simulado_ja_importado(df, importacao_id):
     )
 
 
-df_raw = fetch_data()
+try:
+    with st.spinner("Preparando seu espaço de evolução…"):
+        df_raw = fetch_data()
+except Exception:
+    st.error("Não foi possível carregar seu histórico. Tente novamente em instantes.")
+    if st.button("Tentar novamente"):
+        st.rerun()
+    st.stop()
 
 if not df_raw.empty:
     df_raw['data'] = pd.to_datetime(df_raw['data'])
@@ -815,22 +677,20 @@ else:
     df_estudos = pd.DataFrame()
 
 # --- INTERFACE MAIN ---
-st.markdown("<h1 style='text-align: center; font-weight: 800; letter-spacing: -1px; color: #FFF;'>Sistema Solem</h1>", unsafe_allow_html=True)
-st.write("")
+pagina, progresso = shell(df_raw)
 
-# Abas sem o Modo Flow
-tab_registro, tab_dash_treino, tab_dieta, tab_peso, tab_estudo, tab_dash_estudo, tab_prompts, tab_gerenciar = st.tabs([
-    "📝 Treino", "📊 Dash Físico", "🥗 Dieta", "⚖️ Peso", "📚 Estudar", "📈 Dash Estudos", "📋 Prompts", "⚙️ Config"
-])
+if pagina == "Visão geral":
+    overview(progresso)
 
 # ==========================================
 # ABA 1: REGISTRO DE TREINO 
 # ==========================================
-with tab_registro:
+if pagina == "Treino":
+    section_intro('CORPO EM MOVIMENTO', 'Seu treino começa aqui.', 'Registre o que você fez e acompanhe sua evolução, uma sessão por vez.')
     modo_insercao = st.radio("Selecione o formato do treino:", ["🏋️ Exercício Isolado (Convencional)", "🔥 Circuito AMRAP 20' (5 Barras / 10 Flexões / 15 Agachamentos)"], horizontal=True)
     if modo_insercao == "🏋️ Exercício Isolado (Convencional)":
         with st.form("registro_treino", clear_on_submit=True):
-            st.markdown("<h3 style='margin-bottom: 20px; color: #009CA6;'>🏋️ Inserir Dados Físicos</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='margin-bottom: 20px; color: #C6E58B;'>Registrar atividade</h3>", unsafe_allow_html=True)
             c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
             with c_top1: data_treino = st.date_input("Data do Treino", value=(datetime.utcnow() - timedelta(hours=3)).date())
             agora = datetime.utcnow() - timedelta(hours=3)
@@ -855,14 +715,14 @@ with tab_registro:
                     else: sugestao = "Mantenha o ritmo e otimize o movimento."
                     
                     html_overload = (
-                        '<div style="background-color: #121212; border-left: 3px solid #009CA6; padding: 10px; border-radius: 5px; margin-top: 5px; margin-bottom: 20px;">'
+                        '<div style="background-color: #121212; border-left: 3px solid #C6E58B; padding: 10px; border-radius: 5px; margin-top: 5px; margin-bottom: 20px;">'
                         f'<span style="color: #AAA; font-size: 12px;">ÚLTIMO TREINO: {reps_u} reps | {iso_u}s isometria | {carga_u}kg | {desc_u}s descanso</span><br>'
-                        f'<span style="color: #009CA6; font-size: 14px; font-weight: bold;">⚡ Sugestão de Overload: {sugestao} Reduza o descanso para {max(0, desc_u - 15)}s se estiver fácil.</span>'
+                        f'<span style="color: #C6E58B; font-size: 14px; font-weight: bold;">⚡ Sugestão de Overload: {sugestao} Reduza o descanso para {max(0, desc_u - 15)}s se estiver fácil.</span>'
                         '</div>'
                     )
                     st.markdown(html_overload, unsafe_allow_html=True)
             
-            st.markdown("#### 📊 Métricas do Exercício")
+            st.markdown("#### Detalhes do exercício")
             c1, c2, c3 = st.columns(3)
             with c1:
                 series = st.number_input("Séries / Tentativas", min_value=0, value=1, step=1)
@@ -879,7 +739,7 @@ with tab_registro:
             st.markdown("---")
             humor = st.selectbox("Estado Mental no Treino", ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"])
             
-            if st.form_submit_button("🚀 Gravar Treino", use_container_width=True):
+            if st.form_submit_button("Salvar treino", use_container_width=True):
                 grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if exercicio_input in l), "Outro")
                 mochila_json = {"humor": humor, "isometria_tentativas": isometria_tentativas, "isometria_segundos": isometria_segundos}
                 dados = {
@@ -890,7 +750,7 @@ with tab_registro:
                     "peso_corporal": 0.0, "dados_extras": mochila_json 
                 }
                 supabase.table("treinos").insert(dados).execute()
-                st.success("Dados físicos processados e salvos!")
+                st.session_state["solem_feedback"] = "Treino salvo. Seu progresso foi atualizado."
                 st.rerun()
 
     else:
@@ -953,14 +813,15 @@ with tab_registro:
                     dados_agachamento = dados_barra.copy()
                     dados_agachamento.update({"grupo_muscular": "Pernas", "exercicio": "Agachamento", "repeticoes": int(rounds * 15), "duracao_min": 0})
                     supabase.table("treinos").insert([dados_barra, dados_flexao, dados_agachamento]).execute()
-                    st.success("🔥 WOD AMRAP destruído! Os 3 exercícios foram registrados no sistema com sucesso.")
+                    st.session_state["solem_feedback"] = "Circuito salvo. Os três exercícios estão no seu histórico."
                     st.rerun()
                 else: st.error("Insira pelo menos 1 round para registrar o treino.")
 
 # ==========================================
 # ABA 2: DASHBOARD FÍSICO
 # ==========================================
-with tab_dash_treino:
+if pagina == "Evolução física":
+    section_intro('SEU HISTÓRICO FÍSICO', 'Veja o quanto você avançou.', 'Compare seus registros de treino e encontre seu próprio ritmo.')
     filtro_tempo_fisico = st.selectbox(
         "Período:",
         PERIODOS_DASHBOARD,
@@ -977,25 +838,7 @@ with tab_dash_treino:
         df_hoje_tr = df_treinos_dash[df_treinos_dash['data_real'] == hoje_data]
         if not df_hoje_tr.empty: reps_treino_hoje = int(df_hoje_tr['repeticoes'].sum())
             
-    faltam_reps = max(0, meta_fisica_diaria - reps_treino_hoje)
-    cor_alerta_f = "#F43F5E" if faltam_reps > 0 else "#10B981"
-    msg_alerta_f = f"💪 FALTAM {faltam_reps} REPETIÇÕES HOJE!" if faltam_reps > 0 else "🏆 META FÍSICA BATIDA!"
-    bg_color_f = "rgba(244, 63, 94, 0.1)" if faltam_reps > 0 else "rgba(16, 185, 129, 0.1)"
-    
-    st.markdown(f"""
-    <div style="background: {bg_color_f}; border: 2px solid {cor_alerta_f}; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 0 20px {cor_alerta_f}40; margin-bottom: 30px;">
-        <h2 style="color: {cor_alerta_f}; margin: 0; font-size: 38px; font-weight: 900; letter-spacing: 1px;">{msg_alerta_f}</h2>
-        <p style="color: #E0E0E0; font-size: 18px; margin-top: 10px; font-weight: bold;">Meta de Volume: {meta_fisica_diaria} Reps | Realizadas Hoje: {reps_treino_hoje}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    fig_gauge_f = go.Figure(go.Indicator(
-        mode = "gauge+number", value = reps_treino_hoje, domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': "Progresso de Repetições", 'font': {'color': '#E0E0E0', 'size': 20}},
-        gauge = { 'axis': {'range': [None, meta_fisica_diaria], 'tickwidth': 1, 'tickcolor': "#E0E0E0"}, 'bar': {'color': cor_alerta_f}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 2, 'bordercolor': "#1F1F1F", 'steps': [ {'range': [0, meta_fisica_diaria*0.5], 'color': '#333'}, {'range': [meta_fisica_diaria*0.5, meta_fisica_diaria*0.9], 'color': '#555'} ] }
-    ))
-    fig_gauge_f.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), height=320, margin=dict(l=30, r=30, t=70, b=40))
-    st.plotly_chart(fig_gauge_f, use_container_width=True)
+    goal_panel("Meta diária de repetições", reps_treino_hoje, meta_fisica_diaria, "repetições")
 
     if not df_treinos_dash.empty:
         df_treinos_dash['isometria_segundos'] = df_treinos_dash['dados_extras'].apply(lambda x: safe_get(x, 'isometria_segundos', 0))
@@ -1011,7 +854,7 @@ with tab_dash_treino:
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("### 🎛️ Controles Visuais")
+        st.markdown("### Personalize a visualização")
         c_ctrl1, c_ctrl2 = st.columns(2)
         with c_ctrl1: ex_selecionados = st.multiselect("Quais exercícios visualizar?", options=TODOS_EXERCICIOS, default=[])
         with c_ctrl2: st.write(""); mostrar_peso_corporal = st.checkbox("Incluir gráfico de Evolução do Peso Corporal", value=True)
@@ -1031,7 +874,7 @@ with tab_dash_treino:
                         if not df_peso.empty:
                             df_peso['data_format'] = df_peso['data'].dt.strftime('%d/%m')
                             fig_peso = px.line(df_peso, x='data_format', y='peso_corporal', markers=True, text='peso_corporal')
-                            fig_peso.update_traces(line_color='#009CA6', marker=dict(size=10, color='#8B5CF6'), textposition="top center", texttemplate='%{text:.1f}')
+                            fig_peso.update_traces(line_color='#C6E58B', marker=dict(size=10, color='#BBA6D9'), textposition="top center", texttemplate='%{text:.1f}')
                             fig_peso.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), margin=dict(l=0, r=0, t=20, b=20), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#1F1F1F"))
                             st.plotly_chart(fig_peso, use_container_width=True)
                         else: st.info("Sem registros de peso.")
@@ -1045,7 +888,7 @@ with tab_dash_treino:
                 limite_reps = float(df_reps_dia['repeticoes'].max()) * 1.15
                 fig_reps = px.bar(df_reps_dia, x='data', y='repeticoes', text_auto=True)
                 fig_reps.update_traces(
-                    marker_color='#009CA6',
+                    marker_color='#C6E58B',
                     textfont_color='white',
                     textposition='outside',
                     cliponaxis=False,
@@ -1081,47 +924,50 @@ with tab_dash_treino:
 # ==========================================
 # ABA 3: REGISTRO DE ALIMENTAÇÃO
 # ==========================================
-with tab_dieta:
+if pagina == "Alimentação":
+    section_intro('CUIDADO DIÁRIO', 'Alimente uma boa rotina.', 'Um espaço para observar sua alimentação, sem julgamentos.')
     with st.form("registro_dieta", clear_on_submit=True):
-        st.markdown("<h3 style='margin-bottom: 20px; color: #10B981;'>🍏 Diário Alimentar</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 20px; color: #10B981;'>Registrar refeição</h3>", unsafe_allow_html=True)
         data_dieta = st.date_input("Data da Refeição", value=(datetime.utcnow() - timedelta(hours=3)).date(), key="data_dieta")
         c_alim1, c_alim2 = st.columns(2)
         with c_alim1:
-            st.markdown("#### 🥗 Combustível Limpo")
+            st.markdown("#### Alimentos habituais")
             alim_s_preset = st.multiselect("Selecione os alimentos:", ALIMENTOS_SAUDAVEIS)
             alim_s_extra = st.text_input("Outros (opcional):", placeholder="Ex: Frango, Aveia...")
         with c_alim2:
-            st.markdown("#### 🍔 Junk Food")
-            alim_b_preset = st.multiselect("Selecione as besteiras:", ALIMENTOS_BESTEIROL)
-            alim_b_extra = st.text_input("Outras besteiras (opcional):", placeholder="Ex: Cerveja, Doce de leite...")
-        if st.form_submit_button("💾 Salvar Refeição", use_container_width=True):
+            st.markdown("#### Outros alimentos")
+            alim_b_preset = st.multiselect("Selecione outros alimentos:", ALIMENTOS_BESTEIROL)
+            alim_b_extra = st.text_input("Adicionar outros alimentos (opcional):", placeholder="Ex: Cerveja, Doce de leite...")
+        if st.form_submit_button("Salvar refeição", use_container_width=True):
             lista_s = alim_s_preset + ([alim_s_extra.strip()] if alim_s_extra.strip() else [])
             lista_b = alim_b_preset + ([alim_b_extra.strip()] if alim_b_extra.strip() else [])
             dados_dieta = { "data": str(data_dieta), "horario": "00:00:00", "grupo_muscular": "Nutrição", "exercicio": "Refeição Diária", "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0, "alimentacao_saudavel": ", ".join(lista_s), "alimentacao_besteirol": ", ".join(lista_b), "peso_corporal": 0.0, "dados_extras": {} }
             supabase.table("treinos").insert(dados_dieta).execute()
-            st.success("Nutrição indexada!")
+            st.session_state["solem_feedback"] = "Refeição registrada. Seu diário está atualizado."
             st.rerun()
 
 # ==========================================
 # ABA 4: REGISTRO DE PESO
 # ==========================================
-with tab_peso:
+if pagina == "Peso":
+    section_intro('ACOMPANHAMENTO PESSOAL', 'Observe sua trajetória.', 'Registre uma medida para acompanhar as mudanças ao longo do tempo.')
     with st.form("registro_peso", clear_on_submit=True):
-        st.markdown("<h3 style='margin-bottom: 20px; color: #8B5CF6;'>⚖️ Biometria Diária</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 20px; color: #BBA6D9;'>Registrar peso</h3>", unsafe_allow_html=True)
         c_p1, c_p2 = st.columns(2)
         with c_p1: data_peso = st.date_input("Data da Pesagem", value=(datetime.utcnow() - timedelta(hours=3)).date(), key="data_peso")
         with c_p2: peso_corporal_input = st.number_input("Seu Peso (kg)", min_value=0.0, step=0.1)
-        if st.form_submit_button("💾 Atualizar Biometria", use_container_width=True):
+        if st.form_submit_button("Salvar medida", use_container_width=True):
             dados_peso = { "data": str(data_peso), "horario": "00:00:00", "grupo_muscular": "Métricas", "exercicio": "Peso Diário", "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0, "alimentacao_saudavel": "", "alimentacao_besteirol": "", "peso_corporal": float(peso_corporal_input), "dados_extras": {} }
             supabase.table("treinos").insert(dados_peso).execute()
-            st.success("Métrica salva com sucesso!")
+            st.session_state["solem_feedback"] = "Medida salva no seu histórico."
             st.rerun()
 
 # ==========================================
 # ABA 5: REGISTRO DE ESTUDOS E POMODORO
 # ==========================================
-with tab_estudo:
-    st.markdown("<h3 style='margin-bottom: 20px; color: #009CA6;'>📚 Central de Foco: Operação FGV</h3>", unsafe_allow_html=True)
+if pagina == "Estudar":
+    section_intro('MENTE EM MOVIMENTO', 'Um espaço para o foco.', 'Escolha seu próximo tema, concentre-se e registre seu aprendizado.')
+    st.markdown("<h3 style='margin-bottom: 20px; color: #C6E58B;'>Central de foco · Operação FGV</h3>", unsafe_allow_html=True)
 
     mensagem_importacao = st.session_state.pop("mensagem_importacao_simulado", None)
     if mensagem_importacao:
@@ -1217,8 +1063,8 @@ with tab_estudo:
     topico_matematica = obter_pior_topico(df_estudos, "Matemática e Estatística Aplicada")
 
     html_bussola = (
-        '<div style="background-color: #0A0A0A; border-left: 4px solid #8B5CF6; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">'
-        '<span style="color: #009CA6; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Inteligente (Foco nos Pontos Fracos)</span><br>'
+        '<div style="background-color: #0A0A0A; border-left: 4px solid #BBA6D9; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">'
+        '<span style="color: #C6E58B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Inteligente (Foco nos Pontos Fracos)</span><br>'
         '<div style="margin-top: 12px; padding-bottom: 8px; border-bottom: 1px solid #1F1F1F;">'
         '<span style="color: #AAA; font-size: 13px;">ROTAÇÃO PRINCIPAL:</span><br>'
         f'<span style="color: #FFF; font-size: 18px; font-weight: 700;">🎯 {prox_disciplina}</span><br>'
@@ -1285,9 +1131,9 @@ with tab_estudo:
                     html_pomodoro = """
                     <!DOCTYPE html><html><head><style>
                             body { background-color: transparent; color: #E0E0E0; font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
-                            .time { font-size: 65px; color: #009CA6; text-shadow: 0 0 15px rgba(0,156,166,0.5); font-weight: bold; margin: 10px 0 20px 0; }
-                            .btn { padding: 10px 20px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
-                            .btn:hover { background-color: #009CA6; color: #000; box-shadow: 0 0 10px rgba(0,156,166,0.5); }
+                            .time { font-size: 65px; color: #C6E58B; text-shadow: 0 0 15px rgba(0,156,166,0.5); font-weight: bold; margin: 10px 0 20px 0; }
+                            .btn { padding: 10px 20px; background-color: #0A0A0A; color: #C6E58B; border: 2px solid #C6E58B; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+                            .btn:hover { background-color: #C6E58B; color: #000; box-shadow: 0 0 10px rgba(0,156,166,0.5); }
                     </style></head><body>
                         <div class="time" id="display">[INITIAL_TIME]</div>
                         <button class="btn" onclick="startPomodoro()">▶️ Iniciar Foco</button>
@@ -1299,9 +1145,9 @@ with tab_estudo:
                                 var parentDoc = window.parent.document; var style = parentDoc.createElement('style'); style.id = 'cinema-style';
                                 style.innerHTML = `
                                     .cinema-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(5, 5, 5, 0.95); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
-                                    .cinema-video { width: 80vw; max-height: 75vh; border: 2px solid #009CA6; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }
-                                    .btn-fechar { margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }
-                                    .btn-fechar:hover { background-color: #009CA6; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }
+                                    .cinema-video { width: 80vw; max-height: 75vh; border: 2px solid #C6E58B; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }
+                                    .btn-fechar { margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #C6E58B; border: 2px solid #C6E58B; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }
+                                    .btn-fechar:hover { background-color: #C6E58B; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }
                                 `;
                                 parentDoc.head.appendChild(style);
                                 var overlay = parentDoc.createElement('div'); overlay.className = 'cinema-overlay'; overlay.id = 'cinema-modal';
@@ -1324,12 +1170,12 @@ with tab_estudo:
                 html_cronometro = """
                 <!DOCTYPE html><html><head><style>
                         body { background-color: transparent; color: #E0E0E0; font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
-                        .time { font-size: 65px; color: #009CA6; text-shadow: 0 0 15px rgba(0,156,166,0.5); font-weight: bold; margin: 10px 0 20px 0; }
+                        .time { font-size: 65px; color: #C6E58B; text-shadow: 0 0 15px rgba(0,156,166,0.5); font-weight: bold; margin: 10px 0 20px 0; }
                         .btn-group { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-                        .btn { padding: 10px 20px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
-                        .btn:hover { background-color: #009CA6; color: #000; box-shadow: 0 0 10px rgba(0,156,166,0.5); }
-                        .btn-finish { border-color: #8B5CF6; color: #8B5CF6; }
-                        .btn-finish:hover { background-color: #8B5CF6; color: #000; box-shadow: 0 0 10px rgba(139,92,246,0.5); }
+                        .btn { padding: 10px 20px; background-color: #0A0A0A; color: #C6E58B; border: 2px solid #C6E58B; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+                        .btn:hover { background-color: #C6E58B; color: #000; box-shadow: 0 0 10px rgba(0,156,166,0.5); }
+                        .btn-finish { border-color: #BBA6D9; color: #BBA6D9; }
+                        .btn-finish:hover { background-color: #BBA6D9; color: #000; box-shadow: 0 0 10px rgba(139,92,246,0.5); }
                 </style></head><body>
                     <div class="time" id="display">00:00</div>
                     <div class="btn-group">
@@ -1347,9 +1193,9 @@ with tab_estudo:
                             var parentDoc = window.parent.document; var style = parentDoc.createElement('style'); style.id = 'cinema-style';
                             style.innerHTML = `
                                 .cinema-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(5, 5, 5, 0.95); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
-                                .cinema-video { width: 80vw; max-height: 75vh; border: 2px solid #009CA6; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }
-                                .btn-fechar { margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #009CA6; border: 2px solid #009CA6; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }
-                                .btn-fechar:hover { background-color: #009CA6; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }
+                                .cinema-video { width: 80vw; max-height: 75vh; border: 2px solid #C6E58B; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }
+                                .btn-fechar { margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #C6E58B; border: 2px solid #C6E58B; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }
+                                .btn-fechar:hover { background-color: #C6E58B; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }
                             `;
                             parentDoc.head.appendChild(style);
                             var overlay = parentDoc.createElement('div'); overlay.className = 'cinema-overlay'; overlay.id = 'cinema-modal';
@@ -1369,7 +1215,7 @@ with tab_estudo:
                 components.html(html_cronometro, height=180)
 
     with col_registro:
-        st.markdown("#### 📝 Input de Produtividade")
+        st.markdown("#### Registrar sessão")
         tipo_sessao = st.radio("Tipo de Sessão", ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"], horizontal=True)
 
         if tipo_sessao == "🃏 Revisão (Anki)":
@@ -1413,7 +1259,7 @@ with tab_estudo:
                 fonte_questoes = "Anki"
 
             st.write("")
-            if st.form_submit_button("💾 Computar Sessão", use_container_width=True):
+            if st.form_submit_button("Salvar sessão", use_container_width=True):
                 total_q = cartoes_anki if tipo_sessao == "🃏 Revisão (Anki)" else certas + erradas
                 mochila_estudo_json = { "topico_edital": topicos_str, "q_certas": certas, "q_erradas": erradas, "tempo_video": tempo_video, "fonte_questoes": fonte_questoes }
                 horario_br = (datetime.utcnow() - timedelta(hours=3)).strftime("%H:%M:%S")
@@ -1423,13 +1269,14 @@ with tab_estudo:
                     "distancia_km": 0.0, "alimentacao_saudavel": "", "alimentacao_besteirol": "", "peso_corporal": 0.0, "dados_extras": mochila_estudo_json 
                 }
                 supabase.table("treinos").insert(dados_estudo).execute()
-                st.success("Sessão arquivada na base de conhecimento!")
+                st.session_state["solem_feedback"] = "Sessão salva. Mais um passo na sua jornada."
                 st.rerun()      
 
 # ==========================================
 # ABA 6: BIBLIOTECA DE PROMPTS
 # ==========================================
-with tab_prompts:
+if pagina == "Prompts":
+    section_intro('SUA BIBLIOTECA', 'Mais recursos para aprender.', 'Encontre os prompts para praticar, revisar e preparar seus simulados.')
     st.markdown("### 📋 Prompts de estudo")
     prompts_estudo = carregar_prompts_estudo()
 
@@ -1453,7 +1300,8 @@ with tab_prompts:
 # ==========================================
 # ABA 7: DASHBOARD DE ESTUDOS
 # ==========================================
-with tab_dash_estudo:
+if pagina == "Evolução nos estudos":
+    section_intro('SEU HISTÓRICO DE ESTUDOS', 'Transforme esforço em clareza.', 'Explore seu desempenho por disciplina e identifique o próximo passo.')
     filtro_tempo_estudos = st.selectbox(
         "Período:",
         PERIODOS_DASHBOARD,
@@ -1463,7 +1311,7 @@ with tab_dash_estudo:
 
     html_motivacional = (
         '<div style="text-align: center; margin-bottom: 25px;">'
-        '<p style="color: #009CA6; font-style: italic; font-size: 16px;">"Se você não gosta do seu destino, não o aceite. Em vez disso, tenha a coragem para transformá-lo naquilo que você quer que ele seja." <br>'
+        '<p style="color: #C6E58B; font-style: italic; font-size: 16px;">"Se você não gosta do seu destino, não o aceite. Em vez disso, tenha a coragem para transformá-lo naquilo que você quer que ele seja." <br>'
         '<span style="font-weight: bold; color: #FFF;">— Naruto Uzumaki</span></p></div>'
     )
     st.markdown(html_motivacional, unsafe_allow_html=True)
@@ -1500,27 +1348,9 @@ with tab_dash_estudo:
         df_hoje_est = df_estudos_dash[(df_estudos_dash['data_real'] == hoje_data) & (df_estudos_dash['fonte_questoes'] != 'Anki')]
         if not df_hoje_est.empty: questoes_hoje = int(df_hoje_est['repeticoes'].sum())
             
-    faltam_questoes = max(0, meta_diaria - questoes_hoje)
-    cor_alerta = "#F43F5E" if faltam_questoes > 0 else "#10B981"
-    msg_alerta = f"🚨 FALTAM {faltam_questoes} QUESTÕES HOJE!" if faltam_questoes > 0 else "🏆 META DIÁRIA BATIDA!"
-    bg_color = "rgba(244, 63, 94, 0.1)" if faltam_questoes > 0 else "rgba(16, 185, 129, 0.1)"
-    
-    st.markdown(f"""
-    <div style="background: {bg_color}; border: 2px solid {cor_alerta}; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 0 20px {cor_alerta}40; margin-bottom: 30px;">
-        <h2 style="color: {cor_alerta}; margin: 0; font-size: 42px; font-weight: 900; letter-spacing: 1px;">{msg_alerta}</h2>
-        <p style="color: #E0E0E0; font-size: 18px; margin-top: 10px; font-weight: bold;">Meta Inegociável: {meta_diaria} Questões | Realizadas Hoje: {questoes_hoje}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    fig_gauge = go.Figure(go.Indicator(
-        mode = "gauge+number", value = questoes_hoje, domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': "Progresso Diário", 'font': {'color': '#E0E0E0', 'size': 20}},
-        gauge = { 'axis': {'range': [None, meta_diaria], 'tickwidth': 1, 'tickcolor': "#E0E0E0"}, 'bar': {'color': cor_alerta}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 2, 'bordercolor': "#1F1F1F", 'steps': [ {'range': [0, meta_diaria*0.5], 'color': '#333'}, {'range': [meta_diaria*0.5, meta_diaria*0.9], 'color': '#555'} ] }
-    ))
-    fig_gauge.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), height=320, margin=dict(l=30, r=30, t=70, b=40))
-    st.plotly_chart(fig_gauge, use_container_width=True)
+    goal_panel("Meta diária de questões", questoes_hoje, meta_diaria, "questões")
 
-    st.markdown("### 📈 Analytics Acadêmico")
+    st.markdown("### Seu desempenho")
     if not df_estudos_dash.empty:
         df_estudos_dash['q_certas'] = df_estudos_dash['dados_extras'].apply(lambda x: safe_get(x, 'q_certas', 0))
         df_estudos_dash['q_erradas'] = df_estudos_dash['dados_extras'].apply(lambda x: safe_get(x, 'q_erradas', 0))
@@ -1561,7 +1391,7 @@ with tab_dash_estudo:
         """, unsafe_allow_html=True)
         
         st.write("---")
-        st.markdown("#### 🚨 Radar de Pontos Críticos (Menor Aproveitamento)")
+        st.markdown("#### Tópicos que merecem atenção")
         st.markdown("<span style='color: #AAA; font-size: 14px;'>Mostrando os tópicos que você mais errou (mínimo de 5 questões resolvidas).</span>", unsafe_allow_html=True)
         
         df_criticos = df_questoes_reais.copy()
@@ -1638,7 +1468,7 @@ with tab_dash_estudo:
 
             fig_q_dia = px.bar(df_q_dia_exibido, x='data_format', y='repeticoes', text_auto=True)
             fig_q_dia.update_traces(
-                marker_color='#8B5CF6',
+                marker_color='#BBA6D9',
                 textfont_color='white',
                 width=18 * 60 * 60 * 1000,
                 hovertemplate="Data: %{x|%d/%m/%Y}<br>Questões: %{y}<extra></extra>"
@@ -1739,9 +1569,10 @@ with tab_dash_estudo:
 # ==========================================
 # ABA 8: GERENCIAR
 # ==========================================
-with tab_gerenciar:
+if pagina == "Configurações":
+    section_intro('SEUS REGISTROS', 'Organize seu histórico.', 'Consulte e ajuste as informações que fazem parte da sua jornada.')
     if not df_raw.empty:
-        st.markdown("### ⚙️ Engine de Banco de Dados (Edição Completa)")
+        st.markdown("### Gerenciar registros")
         df_raw['data_formatada'] = pd.to_datetime(df_raw['data']).dt.strftime('%d/%m/%Y')
         
         def formatar_registro(row):
@@ -1906,15 +1737,15 @@ with tab_gerenciar:
                 update_data["peso_corporal"] = new_peso
             
             supabase.table("treinos").update(update_data).eq("id", id_real).execute()
-            st.success("Registro atualizado com sucesso!")
+            st.session_state["solem_feedback"] = "Registro atualizado. Seu progresso foi recalculado."
             st.rerun()
 
         st.write("---")
         with st.container(border=True):
-            st.markdown("#### 🗑️ Purge de Registro")
-            st.warning("⚠️ DROP irreversível da linha no banco Supabase.")
-            if st.button("Executar Delete", type="primary", use_container_width=True):
+            st.markdown("#### Excluir registro")
+            st.warning("A exclusão é permanente e recalcula o progresso associado a esta atividade.")
+            if st.button("Excluir registro permanentemente", type="primary", use_container_width=True):
                 supabase.table("treinos").delete().eq("id", id_real).execute()
-                st.success("Linha expurgada com sucesso!")
+                st.session_state["solem_feedback"] = "Registro excluído. Seu histórico foi atualizado."
                 st.rerun()
-    else: st.info("O Banco de Dados está vazio no momento.")
+    else: st.info("Seu histórico ainda está vazio. Registre uma atividade para começar sua jornada.")
