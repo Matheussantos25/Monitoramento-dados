@@ -5,6 +5,7 @@ import streamlit as st
 import plotly.io as pio
 import plotly.graph_objects as go
 from solem_progress import calculate_progress
+from solem_journal_ui import character_panel, monthly_journal
 
 PAGES = ["Visão geral", "Treino", "Evolução física", "Alimentação", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Configurações"]
 
@@ -44,17 +45,13 @@ def goal_panel(title, current, target, unit):
     st.html(f'''<section class="goal-panel"><div><span class="eyebrow">{escape(title)}</span><h3>{current:,} <small>/ {target:,} {escape(unit)}</small></h3></div><span class="goal-label">{'Meta alcançada' if current >= target else 'Em progresso'}</span><progress value="{pct}" max="100" aria-label="{escape(title)}">{pct:.0f}%</progress></section>'''.replace(",", "."))
 
 
-def overview(p):
+def overview(p, records=None):
     today = p["today"]
-    months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
-    weekdays = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
-    st.html(f'<div class="overview-heading"><div><span class="eyebrow">SEU PAINEL PESSOAL</span><h1>Pequenos passos.<br><span>Uma nova versão de você.</span></h1></div><span class="date-label">{weekdays[today.weekday()]}<br>{today.day} de {months[today.month-1]}, {today.year}</span></div>')
-
-    hero, journey = st.columns([1.65, 1], gap="medium")
-    with hero:
-        st.html(f'''<section class="journey-hero"><div class="hero-copy"><span class="eyebrow">SUA JORNADA, NO SEU RITMO</span><h2>Consistência é<br>o seu superpoder.</h2><p>Treine o corpo. Alimente a mente.<br>Cada atividade registrada conta.</p><span class="hero-stat">{p['week_days']} dias ativos <span>nesta semana</span></span></div><div class="solar-art" aria-hidden="true"><div class="orbit orbit-outer"></div><div class="orbit orbit-inner"></div><div class="sun-core">✳</div><span class="orbit-point"></span><span class="orbit-caption">EM CONSTANTE<br>EVOLUÇÃO</span></div></section>''')
-    with journey:
-        st.html(f'''<section class="level-panel"><div class="panel-top"><span class="eyebrow">SEU PROGRESSO</span><span class="mini-tag">{p['xp']:,} XP no total</span></div><div class="level-row"><div class="level-emblem">{p['level']:02}</div><div><span class="muted">Nível atual</span><h2>{'Explorador' if p['level'] < 5 else 'Construtor' if p['level'] < 10 else 'Realizador'}</h2></div></div><div class="xp-label"><span>{p['level_xp']} / 250 XP</span><span>Nível {p['level'] + 1:02} ↗</span></div><progress value="{p['level_xp']}" max="250" aria-label="Experiência para o próximo nível"></progress><p class="level-caption">Faltam {250-p['level_xp']} XP para o próximo nível.</p><div class="streak-row"><span class="streak-icon" aria-hidden="true">↗</span><div><strong>{p['streak']} {'dia' if p['streak'] == 1 else 'dias'} de sequência</strong><span>Seu histórico continua valendo a cada retomada.</span></div></div></section>''')
+    st.html('<div class="section-intro"><span class="eyebrow">SUA JORNADA</span><h1>Corpo, mente e constância.</h1></div>')
+    if records is not None:
+        character_panel(records, p)
+        monthly_journal(records, today)
+    st.progress(p['level_xp']/250, text=f"Nível {p['level']} · {p['level_xp']}/250 XP para o próximo nível · {p['streak']} dias de sequência")
 
     st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>TEMPO DE ESTUDO</span><strong>{int(p['study_minutes']//60)}<small>h </small>{int(p['study_minutes']%60):02}<small>min</small></strong></div><div><span>QUESTÕES RESOLVIDAS</span><strong>{p['questions']}<small> nesta semana</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP conquistados</small></strong></div></section>''')
 

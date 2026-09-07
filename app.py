@@ -680,7 +680,7 @@ else:
 pagina, progresso = shell(df_raw)
 
 if pagina == "Visão geral":
-    overview(progresso)
+    overview(progresso, df_raw.to_dict("records"))
 
 # ==========================================
 # ABA 1: REGISTRO DE TREINO 

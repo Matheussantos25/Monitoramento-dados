@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="300" viewBox="0 0 240 300" role="img" aria-label="Personagem masculino 2D, explorador Solem">
+ <circle cx="120" cy="138" r="102" fill="#273324"/>
+ <circle cx="120" cy="138" r="86" fill="none" stroke="#60714c" stroke-dasharray="2 10"/>
+ <ellipse cx="120" cy="275" rx="66" ry="9" fill="#121a13"/>
+ <path d="M88 109L62 245Q120 267 178 245L150 109Z" fill="#3f5735"/>
+ <path d="M94 195L91 258L112 258L123 203L132 258L152 258L146 195Z" fill="#253130"/>
+ <path d="M90 253L85 270L113 270L115 253ZM131 253L131 270L160 270L153 253Z" fill="#15211e"/>
+ <path d="M90 110L75 168L89 175L101 139L99 202L145 202L140 138L157 176L170 167L151 111Z" fill="#b8cf92"/>
+ <path d="M99 130L142 130L145 191L98 191Z" fill="#637d4c"/>
+ <path d="M101 114L142 160" stroke="#e8d5a8" stroke-width="10"/>
+ <path d="M98 187L145 187L145 199L98 199Z" fill="#3c362b"/>
+ <rect x="116" y="187" width="13" height="12" rx="2" fill="#dcc597"/>
+ <path d="M75 168L74 184Q80 197 90 181L89 175M157 176L158 185Q170 191 173 178L170 167" fill="#c49e7b"/>
+ <rect x="110" y="89" width="23" height="25" rx="8" fill="#b58c69"/>
+ <path d="M96 59Q118 39 144 61L144 86Q137 108 120 108Q100 101 96 85Z" fill="#d2ad88"/>
+ <path d="M95 77L93 59Q99 35 122 39Q146 39 148 61L144 79L135 59Q116 71 100 62Z" fill="#29312c"/>
+ <path d="M105 80L112 80M129 80L136 80" stroke="#29312c" stroke-width="3" stroke-linecap="round"/>
+ <path d="M116 95L127 95" stroke="#8e614b" stroke-width="2" stroke-linecap="round"/>
+ <path d="M177 114L177 258" stroke="#b49f75" stroke-width="6" stroke-linecap="round"/>
+ <path d="M177 99L185 110L177 124L169 110Z" fill="#c6e58b"/>
+</svg>
