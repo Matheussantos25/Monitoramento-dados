@@ -46,12 +46,4 @@ def monthly_journal(records, today):
             cells += f'<div class="month-cell {state}{" current" if day == today else ""}" aria-label="{escape(label)}"><b>{n}</b><div class="day-badges">{badges}</div><small>{minutes}</small></div>'
     st.html(f'<div class="month-grid" role="group" aria-label="Calendário de {MONTHS[month-1]} de {year}">{cells}</div>')
     st.caption('E = estudou · T = treinou · os dois marcadores indicam corpo e mente no mesmo dia.')
-    selected = st.selectbox('Detalhes do dia', list(days), format_func=lambda d: d.strftime('%d/%m/%Y'), key=f'journal_day_{year}_{month}')
-    item = days[selected]
-    if not item['activities']:
-        st.info('Nenhuma sessão de estudo ou treino registrada neste dia.')
-    else:
-        st.write(f"Estudo: {item['study_minutes']:.1f} min · Treino cronometrado: {item['workout_minutes']:.1f} min · {item['reps']} repetições · {item['distance']:.2f} km")
-        for activity in item['activities']:
-            st.text(activity)
     st.caption('Tempo de estudo inclui vídeo-aulas e Anki. Não estimamos duração de exercícios registrados apenas por repetições. Registros futuros e sessões vazias não contam como prática.')

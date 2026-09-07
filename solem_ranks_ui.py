@@ -3,8 +3,14 @@ import io
 import math
 import struct
 import wave
+from pathlib import Path
+import base64
 import streamlit as st
 from solem_ranks import ranks, NAMES, REP_LIMITS, ACCURACY_LIMITS, SAMPLE_LIMITS
+
+def emblem(tier, width):
+    data = (Path(__file__).parent / 'assets/ranks' / f'rank_{tier}.svg').read_bytes()
+    st.html(f'<img alt="Insígnia {NAMES[tier]}" width="{width}" src="data:image/svg+xml;base64,{base64.b64encode(data).decode()}"/>')
 
 def promotion_sound():
     buffer = io.BytesIO()
@@ -38,7 +44,11 @@ def rank_panel(records, topics, today):
             st.balloons()
         if sound:
             st.audio(promotion_sound(), format='audio/wav', autoplay=True)
-    st.metric('Elo físico', data['physical_rank'], delta=f"{data['reps']:,} repetições registradas", delta_color='off')
+    art, detail = st.columns([1,4], vertical_alignment='center')
+    with art:
+        emblem(data['physical_tier'], 180)
+    with detail:
+        st.metric('Elo físico', data['physical_rank'], delta=f"{data['reps']:,} repetições registradas", delta_color='off')
     tier = data['physical_tier']
     if tier < 7:
         start, target = REP_LIMITS[tier:tier + 2]
@@ -47,6 +57,11 @@ def rank_panel(records, topics, today):
         st.caption('Mestre alcançado. Mantenha sua rotina e respeite o descanso.')
     discipline = st.selectbox('Elos por disciplina do edital', list(topics), key='rank_discipline')
     selected = [x for x in data['topics'] if x['discipline'] == discipline]
+    topic_name = st.selectbox('Insígnia do tópico', [x['topic'] for x in selected], key='rank_topic_emblem')
+    selected_rank = next((x for x in selected if x['topic'] == topic_name), None)
+    if selected_rank and selected_rank['tier'] >= 0:
+        emblem(selected_rank['tier'], 150)
+        st.caption(selected_rank['rank'])
     placed = sum(x['tier'] >= 0 for x in data['topics'])
     st.caption(f"Cobertura do edital: {placed}/{len(data['topics'])} tópicos com pelo menos 20 questões classificáveis.")
     st.dataframe([{'Tópico': x['topic'], 'Elo': x['rank'], 'Acerto (%)': round(x['accuracy'], 1) if x['total'] else None, 'Questões': x['total'], 'Próximo passo': f"Resolver mais {20 - x['total']} questões" if x['total'] < 20 else ('Manter a revisão' if x['tier'] == 7 else f"{NAMES[x['tier']+1]}: ≥{SAMPLE_LIMITS[x['tier']+1]} questões e ≥{ACCURACY_LIMITS[x['tier']+1]}% de acerto")} for x in selected], hide_index=True, use_container_width=True)

@@ -679,6 +679,10 @@ else:
 # --- INTERFACE MAIN ---
 pagina, progresso = shell(df_raw)
 
+if pagina == "Espaço privado":
+    from solem_workspace_ui import workspace_page
+    workspace_page()
+
 if pagina == "Visão geral":
     overview(progresso, df_raw.to_dict("records"))
     from solem_ranks_ui import rank_panel

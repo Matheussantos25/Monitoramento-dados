@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from solem_progress import calculate_progress
 from solem_journal_ui import character_panel, monthly_journal
 
-PAGES = ["Visão geral", "Treino", "Evolução física", "Alimentação", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Configurações"]
+PAGES = ["Visão geral", "Treino", "Evolução física", "Alimentação", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Configurações", "Espaço privado"]
 
 
 def apply_theme():
