@@ -681,6 +681,8 @@ pagina, progresso = shell(df_raw)
 
 if pagina == "Visão geral":
     overview(progresso, df_raw.to_dict("records"))
+    from solem_ranks_ui import rank_panel
+    rank_panel(df_raw.to_dict("records"), TOPICOS_EDITAL, progresso['today'])
 
 # ==========================================
 # ABA 1: REGISTRO DE TREINO 
