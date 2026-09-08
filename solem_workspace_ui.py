@@ -14,9 +14,9 @@ def safe_error(error):
         return 'O espaço privado ainda precisa ser ativado: execute supabase/migrations/20260907_personal_workspace.sql no mesmo projeto Supabase.'
     return 'Não foi possível concluir. Verifique a conexão, sua sessão e a ativação do espaço privado. Seus campos não foram apagados. Se o envio de PDF já ocorreu, tente baixá-lo antes de reenviar.'
 
-def workspace_page():
-    st.header('Seu espaço privado')
-    st.caption('Biblioteca, planejamento e patrimônio manual. Sincronizados entre site e Android após ativação do banco. O login abaixo protege estes novos módulos; não altera o histórico de treinos existente.')
+def workspace_page(module=None):
+    st.header(module or 'Login')
+    st.caption('Um lugar para suas ideias, referências e próximos passos.' if module else 'Entre para acessar suas páginas e continuar de onde parou.')
     try:
         url = st.secrets.get('SUPABASE_URL', '')
         key = st.secrets.get('SUPABASE_PUBLISHABLE_KEY', '') or st.secrets.get('SUPABASE_KEY', '')
@@ -29,6 +29,10 @@ def workspace_page():
         st.session_state.private_client = create_client(url, key)
     client = st.session_state.private_client
     if not client.auth.get_session():
+        if module:
+            st.info('Entre na sua conta para abrir esta coleção.')
+            st.button('Ir para Login', on_click=lambda: st.session_state.update(solem_page='Login'))
+            return
         with st.form('private_login', clear_on_submit=True):
             email = st.text_input('E-mail', max_chars=254)
             password = st.text_input('Senha', type='password', max_chars=256)
@@ -47,7 +51,7 @@ def workspace_page():
             except Exception:
                 st.error('Não foi possível autenticar. Confira e-mail, senha, confirmação do e-mail e conexão. A política de cadastro é definida no Supabase.')
         return
-    if st.button('Sair do espaço privado'):
+    if module is None and st.button('Sair da conta'):
         try:
             client.auth.sign_out()
         except Exception:
@@ -56,6 +60,10 @@ def workspace_page():
             if k.startswith(('private_', 'ws_')):
                 del st.session_state[k]
         st.rerun()
+    if module is None:
+        st.success('Você está conectado.')
+        st.button('Abrir minhas anotações', on_click=lambda: st.session_state.update(solem_page='Anotações'))
+        return
     repo = Workspace(client)
     try:
         client.auth.get_user()  # Validate identity with Auth before showing private records.
@@ -65,40 +73,51 @@ def workspace_page():
         st.error(safe_error(error))
         st.button('Tentar carregar novamente')
         return
-    render_workspace(repo, items)
+    render_workspace(repo, items, module)
 
-def render_workspace(repo, items):
+def render_workspace(repo, items, module=None):
     message = st.session_state.pop('ws_feedback', None)
     if message:
         st.success(message)
-    module = st.selectbox('Módulo', list(KINDS), key='ws_module')
+    if module is None:
+        module = st.selectbox('Módulo', list(KINDS), key='ws_module')
     kind = KINDS[module]
-    st.button('Atualizar do Supabase', key='ws_refresh')
-    search = st.text_input('Buscar por título ou conteúdo', key='ws_search')
-    archived = st.toggle('Mostrar arquivados', key='ws_archived')
-    filtered = [x for x in items if x['kind'] == kind and x['archived'] == archived and search.casefold() in (x['title']+' '+x['body']).casefold()]
-    if kind == 'plan':
-        month = st.date_input('Mês do cronograma', value=date.today(), key='ws_month')
-        filtered = sorted([x for x in filtered if (x.get('event_date') or '').startswith(month.strftime('%Y-%m'))], key=lambda x:(x['event_date'],x['event_time']))
-        st.caption('Compromissos planejados não geram XP nem contam como prática. Registre a sessão em Estudar ou Treino após praticar.')
-        st.dataframe([{'Data':x['event_date'],'Horário':x['event_time'],'Atividade':x['title'],'Minutos':x['duration_minutes'],'Concluído':x['done']} for x in filtered], hide_index=True)
-    if kind == 'investment':
-        st.caption('Registro manual em BRL. Sem cotações ao vivo, conexão bancária, compras ou vendas. Registre o saldo e a data de referência de cada posição; a diferença abaixo não é rentabilidade anualizada.')
-        cost = sum(x['invested_cents'] for x in filtered)
-        value = sum(x['value_cents'] for x in filtered)
-        a,b,c = st.columns(3)
-        a.metric('Aplicado (lista filtrada)', f'R$ {cost/100:,.2f}')
-        b.metric('Saldo informado', f'R$ {value/100:,.2f}')
-        c.metric('Diferença nominal', f'R$ {(value-cost)/100:,.2f}')
-    if not filtered:
-        st.info('Nenhum registro neste filtro. Crie seu primeiro item abaixo ou ajuste a busca.')
-    by_id = {x['id']:x for x in filtered}
-    selection_key = f'ws_select_{kind}_{archived}'
-    next_selected = st.session_state.pop('ws_next_selected', None)
-    if next_selected in by_id:
-        st.session_state[selection_key] = next_selected
-    selected = st.selectbox('Abrir ou editar', ['new']+list(by_id), format_func=lambda x:'Novo registro' if x == 'new' else by_id[x]['title'], key=selection_key)
-    old = by_id.get(selected)
+    library, document = st.columns([1, 3], gap='large')
+    with library:
+        st.markdown('##### Páginas')
+        st.button('Atualizar', key='ws_refresh', use_container_width=True)
+        search = st.text_input('Buscar por título ou conteúdo', key='ws_search', placeholder='Buscar nesta coleção…', label_visibility='collapsed')
+        archived = st.toggle('Mostrar arquivados', key='ws_archived')
+        filtered = [x for x in items if x['kind'] == kind and x['archived'] == archived and search.casefold() in (x['title']+' '+x['body']).casefold()]
+        if kind == 'plan':
+            month = st.date_input('Mês do cronograma', value=date.today(), key='ws_month')
+            filtered = sorted([x for x in filtered if (x.get('event_date') or '').startswith(month.strftime('%Y-%m'))], key=lambda x:(x['event_date'],x['event_time']))
+        by_id = {x['id']:x for x in filtered}
+        selection_key = f'ws_select_{kind}_{archived}'
+        next_selected = st.session_state.pop('ws_next_selected', None)
+        if next_selected in by_id:
+            st.session_state[selection_key] = next_selected
+        if st.button('＋ Nova página', disabled=archived, use_container_width=True):
+            st.session_state[selection_key] = 'new'
+        st.caption(f'{len(filtered)} páginas' if filtered else 'Sua coleção começa com uma página.')
+        selected = st.radio('Abrir ou editar', ['new']+list(by_id), format_func=lambda x:'Página em branco' if x == 'new' else by_id[x]['title'], key=selection_key, label_visibility='collapsed')
+    with document:
+        with st.container(key='document_canvas'):
+            if kind == 'plan' and filtered:
+                st.dataframe([{'Data':x['event_date'],'Horário':x['event_time'],'Atividade':x['title'],'Minutos':x['duration_minutes'],'Concluído':x['done']} for x in filtered], hide_index=True, use_container_width=True)
+            if kind == 'investment':
+                cost = sum(x['invested_cents'] for x in filtered)
+                value = sum(x['value_cents'] for x in filtered)
+                a,b,c = st.columns(3)
+                a.metric('Aplicado', f'R$ {cost/100:,.2f}')
+                b.metric('Saldo informado', f'R$ {value/100:,.2f}')
+                c.metric('Diferença nominal', f'R$ {(value-cost)/100:,.2f}')
+                st.caption('Valores manuais em reais, nas datas informadas.')
+            render_document(repo, kind, archived, selected, by_id.get(selected))
+
+def render_document(repo, kind, archived, selected, old):
+    st.caption('COLEÇÃO / ' + next(k for k,v in KINDS.items() if v == kind).upper())
+    st.subheader(old['title'] if old else 'Sem título')
     if old:
         if kind == 'mindmap':
             try:
@@ -111,8 +130,7 @@ def render_workspace(repo, items):
                 st.graphviz_chart('\n'.join(lines+['}']))
             except ValueError as error:
                 st.warning(str(error))
-        elif kind in ('note','summary'):
-            st.text(old['body'])
+
         if st.button('Restaurar' if archived else 'Arquivar', key=f'ws_archive_{old["id"]}'):
             try:
                 repo.archive(old, not archived)
@@ -147,6 +165,14 @@ def render_workspace(repo, items):
             st.rerun()
         old = st.session_state[snapshot_key]
     base = old or {}
+    if kind in ('note','summary'):
+        st.caption('A leitura mostra a versão salva. Salve suas alterações antes de trocar de modo ou página.')
+        mode = st.radio('Modo da página', ['Editar', 'Leitura'], horizontal=True, key=f'ws_view_{kind}_{selected}')
+        if mode == 'Leitura':
+            st.markdown(base.get('body') or '*Esta página ainda está em branco.*')
+            return
+    if kind in ('note','summary'):
+        st.caption('Markdown: # título · **negrito** · - lista · [texto](link). Salve para sincronizar.')
     draft_key = f'ws_draft_{kind}'
     if draft_key not in st.session_state:
         st.session_state[draft_key] = str(uuid4())
@@ -154,7 +180,7 @@ def render_workspace(repo, items):
         title = st.text_input('Título', value=base.get('title',''), max_chars=160)
         if kind == 'mindmap':
             st.caption('Escreva uma raiz. Use 2 espaços para cada nível filho; até 80 tópicos e 5 níveis. A árvore visual aparece após salvar.')
-        body = st.text_area('Conteúdo / observações', value=base.get('body',''), height=220, max_chars=50000)
+        body = st.text_area('Conteúdo / observações', value=base.get('body',''), height=480 if kind in ('note','summary') else 260, max_chars=50000)
         event_date, event_time, duration, done, invested, current = None, '', 0, False, 0, 0
         if kind in ('plan','investment'):
             event_date = st.date_input('Data' if kind == 'plan' else 'Data do saldo', value=date.fromisoformat(base['event_date']) if base.get('event_date') else date.today(), min_value=date(1900,1,1), max_value=date(2200,12,31))
@@ -173,7 +199,7 @@ def render_workspace(repo, items):
             st.session_state['ws_next_selected'] = saved['id']
             st.session_state.pop(f'ws_snapshot_{saved["id"]}', None)
             st.session_state[draft_key] = str(uuid4())
-            st.session_state.ws_feedback = 'Salvo no Supabase. Para PDFs, selecione o registro criado e envie o arquivo. Atualize no outro dispositivo para ver a alteração.' if kind == 'pdf' else 'Salvo no Supabase. Atualize no outro dispositivo para ver a alteração.'
+            st.session_state.ws_feedback = 'Página salva. Agora você pode anexar seu PDF.' if kind == 'pdf' else 'Página salva.'
             st.rerun()
         except Exception as error:
             st.error(safe_error(error))

@@ -1,0 +1,24 @@
+/* Persistent navigation and a quieter writing surface. */
+:root{--base:#171918;--panel:#202321;--raised:#282c29;--line:#373d38;--text:#f0f1ed;--muted:#b1b8ae}
+[data-testid="stSidebar"]{background:#202321;border-right:1px solid var(--line)}
+[data-testid="stSidebarUserContent"]{padding:1.2rem .9rem}
+.sidebar-brand{font-size:23px;color:var(--accent);padding:8px 12px 22px;letter-spacing:-1px}
+.sidebar-brand b{color:var(--text);margin-left:5px}.sidebar-brand small{display:block;font-size:9px;letter-spacing:1.7px;color:var(--muted);margin-top:9px}
+[data-testid="stSidebar"] .st-key-solem_page [role="radiogroup"]{display:flex;flex-direction:column;gap:2px;flex-wrap:nowrap}
+[data-testid="stSidebar"] .st-key-solem_page [role="radiogroup"] label{width:100%;padding:9px 12px!important;border-radius:6px}
+[data-testid="stSidebar"] .st-key-solem_page label p{font-size:13px!important;font-weight:500}
+[data-testid="stSidebar"] .st-key-solem_page label:hover{background:#30362f}
+[data-testid="stSidebar"] .st-key-solem_page label:has(input:checked){background:#35402f;color:var(--accent)}
+header[data-testid="stHeader"]{height:2.8rem;background:var(--base)}
+[data-testid="stMainBlockContainer"]{padding-top:3rem}
+.solem-header{padding-bottom:15px}.solem-brand{font-size:22px}.solem-logo{font-size:31px}
+.st-key-document_canvas{min-height:650px;padding:24px 30px;border-left:1px solid var(--line)}
+.st-key-document_canvas h3{font-size:30px;line-height:1.25;margin:0 0 14px}
+.st-key-document_canvas [data-testid="stForm"]{border:0;padding:0;background:transparent}
+.st-key-document_canvas textarea{font-family:'Segoe UI',sans-serif;font-size:16px;line-height:1.8;background:#1c1f1c;border:0;padding:18px}
+.st-key-document_canvas [data-testid="stMarkdownContainer"]{line-height:1.85;overflow-wrap:anywhere}
+.st-key-document_canvas [data-testid="stMarkdownContainer"] h1{font-size:30px}
+.st-key-document_canvas [data-testid="stMarkdownContainer"] h2{font-size:24px}
+.st-key-document_canvas [data-testid="stMarkdownContainer"] h3{font-size:20px}
+.st-key-document_canvas [data-testid="stTextInput"] input{font-size:20px;font-weight:600}
+@media(max-width:768px){.st-key-document_canvas{padding:14px 0;border-left:0;border-top:1px solid var(--line)}.header-status{display:none}[data-testid="stMainBlockContainer"]{padding-top:3rem}}

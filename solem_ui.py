@@ -7,11 +7,12 @@ import plotly.graph_objects as go
 from solem_progress import calculate_progress
 from solem_journal_ui import character_panel, monthly_journal
 
-PAGES = ["Visão geral", "Treino", "Evolução física", "Alimentação", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Configurações", "Espaço privado"]
+PAGES = ["Visão geral", "Treino", "Evolução física", "Alimentação", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos", "Configurações", "Login"]
 
 
 def apply_theme():
     st.html("<style>" + (Path(__file__).parent / "assets" / "solem.css").read_text(encoding="utf-8") + "</style>")
+    st.html("<style>" + (Path(__file__).parent / "assets" / "workspace.css").read_text(encoding="utf-8") + "</style>")
     pio.templates["solem"] = go.layout.Template(layout=dict(
         colorway=["#C6E58B", "#89B8C5", "#BBA6D9", "#E5BE8B"],
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
@@ -29,7 +30,12 @@ def navigate(page):
 def shell(df):
     progress = calculate_progress(df.to_dict("records"))
     st.html(f'''<header class="solem-header"><div class="solem-brand"><span class="solem-logo" aria-hidden="true">✳</span><div>solem<span class="brand-sub">CORPO & MENTE</span></div></div><div class="header-status"><span class="status-dot"></span> Seu espaço de evolução <span class="header-level">Nível {progress['level']:02}</span></div></header>''')
-    page = st.radio("Navegação principal", PAGES, horizontal=True, key="solem_page", label_visibility="collapsed")
+    if st.session_state.get('solem_page') not in PAGES:
+        st.session_state['solem_page'] = 'Visão geral'
+    with st.sidebar:
+        st.html('<div class="sidebar-brand">✳ <b>solem</b><small>SEU ESPAÇO PESSOAL</small></div>')
+        page = st.radio("Navegação principal", PAGES, key="solem_page", label_visibility="collapsed")
+        st.caption(f"Nível {progress['level']} · {progress['xp']} XP")
     message = st.session_state.pop("solem_feedback", None)
     if message:
         st.toast(message, icon=":material/check_circle:")

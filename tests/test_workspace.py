@@ -88,5 +88,20 @@ class Repo: pass
 render_workspace(Repo(), [dict(id='map-1',kind='mindmap',title='Mapa',body='Raiz\\n  Filho',archived=False,revision=1)])
 ''').run()
         app.selectbox(key='ws_module').select('Mapas mentais').run()
-        app.selectbox(key='ws_select_mindmap_False').select('map-1').run()
+        app.radio(key='ws_select_mindmap_False').set_value('map-1').run()
         self.assertFalse(app.exception)
+
+    def test_dedicated_note_collection_and_markdown_reading(self):
+        from streamlit.testing.v1 import AppTest
+        app=AppTest.from_string('''
+from solem_workspace_ui import render_workspace
+class Repo: pass
+render_workspace(Repo(), [dict(id='note-1',kind='note',title='Minha página',body='# Meu resumo\\n\\n**Conceito importante**',archived=False,revision=1)], 'Anotações')
+''').run()
+        self.assertFalse(app.exception)
+        self.assertFalse(app.selectbox)
+        app.radio(key='ws_select_note_False').set_value('note-1').run()
+        app.radio(key='ws_view_note_note-1').set_value('Leitura').run()
+        self.assertFalse(app.exception)
+        self.assertTrue(any('# Meu resumo' in x.value for x in app.markdown))
+        self.assertFalse(app.text_area)

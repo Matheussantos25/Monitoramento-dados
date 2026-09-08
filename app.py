@@ -294,7 +294,7 @@ st.set_page_config(
     page_title="Solem · Corpo & Mente",
     page_icon="✳",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 apply_theme()
@@ -679,9 +679,9 @@ else:
 # --- INTERFACE MAIN ---
 pagina, progresso = shell(df_raw)
 
-if pagina == "Espaço privado":
+if pagina in ("Login", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos"):
     from solem_workspace_ui import workspace_page
-    workspace_page()
+    workspace_page(None if pagina == "Login" else pagina)
 
 if pagina == "Visão geral":
     overview(progresso, df_raw.to_dict("records"))
