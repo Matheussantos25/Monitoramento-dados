@@ -7,7 +7,7 @@
 - Salvamento explícito: no site, salve antes de trocar de modo ou página. A leitura mostra a última versão salva.
 - Arquivamento e controle de conflitos existentes foram preservados.
 
-Esta atualização não altera tabelas nem regras de acesso. Os módulos pessoais continuam dependendo da migração `supabase/migrations/20260907_personal_workspace.sql` no mesmo Supabase e de uma conta autenticada. Não há confirmação da execução dessa migração no ambiente de produção.
+Esta atualização não altera as tabelas legadas. Em 08/09/2026, a migração `supabase/migrations/20260907_personal_workspace.sql` foi confirmada no projeto de produção `frxgrkgljsepykhutskq`: tabela com RLS, políticas por usuário, gatilho de revisão e bucket privado de PDFs estão ativos. Os módulos pessoais exigem uma conta autenticada.
 
 O APK de teste é debug, versão 0.6.0, código 6. A distribuição release exige configurar o keystore conforme o README Android. Instale sobre o APK anterior se a assinatura for a mesma; não desinstale sem antes salvar qualquer conteúdo pendente.
 
