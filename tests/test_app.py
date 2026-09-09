@@ -17,6 +17,7 @@ class AppTests(unittest.TestCase):
 
     def test_all_pages_with_records_and_empty_history(self):
         pages = self.app.radio(key="solem_page").options
+        self.assertNotIn("Login", pages)
         for empty in (False, True):
             if empty:
                 self.app.session_state["solem_demo_records"] = []

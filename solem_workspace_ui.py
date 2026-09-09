@@ -11,59 +11,73 @@ def safe_error(error):
         return str(error)
     code = str(getattr(error, 'code', ''))
     if code in ('42P01', 'PGRST205'):
-        return 'O espaço privado ainda precisa ser ativado: execute supabase/migrations/20260907_personal_workspace.sql no mesmo projeto Supabase.'
-    return 'Não foi possível concluir. Verifique a conexão, sua sessão e a ativação do espaço privado. Seus campos não foram apagados. Se o envio de PDF já ocorreu, tente baixá-lo antes de reenviar.'
+        return 'A biblioteca pessoal ainda precisa ser ativada no mesmo projeto Supabase.'
+    return 'Não foi possível concluir. Verifique a conexão e sua sessão. Seus campos não foram apagados. Se o envio de PDF já ocorreu, tente baixá-lo antes de reenviar.'
 
-def workspace_page(module=None):
-    st.header(module or 'Login')
-    st.caption('Um lugar para suas ideias, referências e próximos passos.' if module else 'Entre para acessar suas páginas e continuar de onde parou.')
+
+def _private_client():
     try:
         url = st.secrets.get('SUPABASE_URL', '')
         key = st.secrets.get('SUPABASE_PUBLISHABLE_KEY', '') or st.secrets.get('SUPABASE_KEY', '')
     except Exception:
         url, key = '', ''
     if not url.startswith('https://') or not public_key(key):
-        st.info('Configure SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY nos Secrets do Streamlit. Use a chave pública do mesmo projeto, nunca service_role. A tabela solem_items e o bucket privado também precisam da migração SQL.')
-        return
+        return None
     if 'private_client' not in st.session_state:
         st.session_state.private_client = create_client(url, key)
-    client = st.session_state.private_client
-    if not client.auth.get_session():
-        if module:
-            st.info('Entre na sua conta para abrir esta coleção.')
-            st.button('Ir para Login', on_click=lambda: st.session_state.update(solem_page='Login'))
-            return
-        with st.form('private_login', clear_on_submit=True):
-            email = st.text_input('E-mail', max_chars=254)
-            password = st.text_input('Senha', type='password', max_chars=256)
-            mode = st.radio('Conta', ['Entrar', 'Criar conta'], horizontal=True)
-            submit = st.form_submit_button('Continuar')
-        if submit:
-            try:
-                with st.spinner('Conectando ao seu espaço…'):
-                    if mode == 'Entrar':
-                        client.auth.sign_in_with_password({'email':email.strip(), 'password':password})
-                    else:
-                        client.auth.sign_up({'email':email.strip(), 'password':password})
-                if client.auth.get_session():
-                    st.rerun()
-                st.info('Se o cadastro for permitido, confira seu e-mail para confirmar a conta e depois entre. Se já possui conta, use Entrar.')
-            except Exception:
-                st.error('Não foi possível autenticar. Confira e-mail, senha, confirmação do e-mail e conexão. A política de cadastro é definida no Supabase.')
-        return
-    if module is None and st.button('Sair da conta'):
+    return st.session_state.private_client
+
+
+def logout_private():
+    client = st.session_state.get('private_client')
+    if client:
         try:
             client.auth.sign_out()
         except Exception:
             pass
-        for k in list(st.session_state):
-            if k.startswith(('private_', 'ws_')):
-                del st.session_state[k]
-        st.rerun()
-    if module is None:
-        st.success('Você está conectado.')
-        st.button('Abrir minhas anotações', on_click=lambda: st.session_state.update(solem_page='Anotações'))
-        return
+    for key in list(st.session_state):
+        if key.startswith(('private_', 'ws_')):
+            del st.session_state[key]
+    st.session_state.solem_page = 'Visão geral'
+
+
+def require_login():
+    client = _private_client()
+    if client is None:
+        st.error('O acesso não está configurado. Adicione a URL e a chave pública do Supabase nos Secrets do Streamlit.')
+        st.stop()
+    if client.auth.get_session():
+        return client
+    st.html('''<style>[data-testid="stSidebar"],[data-testid="stSidebarCollapsedControl"]{display:none!important}header[data-testid="stHeader"]{height:0!important}</style><section class="auth-intro"><div class="auth-mark">✳</div><h1>Seu espaço começa aqui.</h1><p>Entre para acessar seu histórico, sua evolução e sua biblioteca pessoal em um único lugar.</p></section>''')
+    _, center, _ = st.columns([1, 1.15, 1])
+    with center:
+        with st.form('private_login', clear_on_submit=True):
+            email = st.text_input('E-mail', max_chars=254)
+            password = st.text_input('Senha', type='password', max_chars=256)
+            mode = st.radio('Conta', ['Entrar', 'Criar conta'], horizontal=True)
+            submit = st.form_submit_button('Continuar', use_container_width=True)
+        if submit:
+            if not email.strip() or not password:
+                st.error('Preencha e-mail e senha.')
+            else:
+                try:
+                    with st.spinner('Conectando…'):
+                        if mode == 'Entrar':
+                            client.auth.sign_in_with_password({'email':email.strip(), 'password':password})
+                        else:
+                            client.auth.sign_up({'email':email.strip(), 'password':password})
+                    if client.auth.get_session():
+                        st.rerun()
+                    st.info('Confira seu e-mail para confirmar a conta e depois entre.')
+                except Exception:
+                    st.error('Não foi possível entrar. Confira e-mail, senha e confirmação da conta.')
+    st.stop()
+
+
+def workspace_page(module):
+    client = require_login()
+    st.header(module)
+    st.caption('Um lugar para suas ideias, referências e próximos passos.')
     repo = Workspace(client)
     try:
         client.auth.get_user()  # Validate identity with Auth before showing private records.
@@ -71,7 +85,7 @@ def workspace_page(module=None):
             items = repo.list()
     except Exception as error:
         st.error(safe_error(error))
-        st.button('Tentar carregar novamente')
+        st.button('Entrar novamente', on_click=logout_private)
         return
     render_workspace(repo, items, module)
 

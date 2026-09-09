@@ -299,13 +299,19 @@ st.set_page_config(
 
 apply_theme()
 
+IS_DEMO = os.environ.get("SOLEM_DEMO") == "1"
+logout_private = None
+if not IS_DEMO:
+    from solem_workspace_ui import require_login, logout_private
+    require_login()
+
 # --- BANCO DE DADOS ---
 @st.cache_resource
 def init_connection() -> Client:
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
 # Demonstration is explicitly opt-in and never connects to Supabase.
-if os.environ.get("SOLEM_DEMO") == "1":
+if IS_DEMO:
     from demo_data import DemoClient
     supabase = DemoClient()
     st.caption("DEMONSTRAÇÃO · Dados fictícios. Alterações ficam apenas nesta sessão.")
@@ -677,11 +683,11 @@ else:
     df_estudos = pd.DataFrame()
 
 # --- INTERFACE MAIN ---
-pagina, progresso = shell(df_raw)
+pagina, progresso = shell(df_raw, on_logout=logout_private)
 
-if pagina in ("Login", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos"):
+if pagina in ("Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos"):
     from solem_workspace_ui import workspace_page
-    workspace_page(None if pagina == "Login" else pagina)
+    workspace_page(pagina)
 
 if pagina == "Visão geral":
     overview(progresso, df_raw.to_dict("records"))

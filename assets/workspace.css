@@ -11,7 +11,6 @@
 [data-testid="stSidebar"] .st-key-solem_page label:has(input:checked){background:#35402f;color:var(--accent)}
 header[data-testid="stHeader"]{height:2.8rem;background:var(--base)}
 [data-testid="stMainBlockContainer"]{padding-top:3rem}
-.solem-header{padding-bottom:15px}.solem-brand{font-size:22px}.solem-logo{font-size:31px}
 .st-key-document_canvas{min-height:650px;padding:24px 30px;border-left:1px solid var(--line)}
 .st-key-document_canvas h3{font-size:30px;line-height:1.25;margin:0 0 14px}
 .st-key-document_canvas [data-testid="stForm"]{border:0;padding:0;background:transparent}
@@ -21,4 +20,7 @@ header[data-testid="stHeader"]{height:2.8rem;background:var(--base)}
 .st-key-document_canvas [data-testid="stMarkdownContainer"] h2{font-size:24px}
 .st-key-document_canvas [data-testid="stMarkdownContainer"] h3{font-size:20px}
 .st-key-document_canvas [data-testid="stTextInput"] input{font-size:20px;font-weight:600}
-@media(max-width:768px){.st-key-document_canvas{padding:14px 0;border-left:0;border-top:1px solid var(--line)}.header-status{display:none}[data-testid="stMainBlockContainer"]{padding-top:3rem}}
+.auth-intro{text-align:center;margin:8vh auto 2.2rem;max-width:34rem}.auth-intro .auth-mark{color:var(--accent);font-size:42px;line-height:1}.auth-intro h1{font-size:34px;letter-spacing:-1.3px;margin:.7rem 0 .35rem}.auth-intro p{color:var(--muted);line-height:1.7;margin:0 auto;max-width:30rem}
+.st-key-private_login{max-width:29rem;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1.4rem 1.5rem 1.65rem}
+.st-key-private_login [data-testid="stFormSubmitButton"] button{width:100%}
+@media(max-width:768px){.st-key-document_canvas{padding:14px 0;border-left:0;border-top:1px solid var(--line)}[data-testid="stMainBlockContainer"]{padding-top:3rem}.auth-intro{margin-top:4vh}.auth-intro h1{font-size:29px}.st-key-private_login{padding:1rem}}

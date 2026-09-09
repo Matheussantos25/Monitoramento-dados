@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from solem_progress import calculate_progress
 from solem_journal_ui import character_panel, monthly_journal
 
-PAGES = ["Visão geral", "Treino", "Evolução física", "Alimentação", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos", "Configurações", "Login"]
+PAGES = ["Visão geral", "Treino", "Evolução física", "Alimentação", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos", "Configurações"]
 
 
 def apply_theme():
@@ -27,15 +27,17 @@ def navigate(page):
     st.session_state["solem_page"] = page
 
 
-def shell(df):
+def shell(df, on_logout=None):
     progress = calculate_progress(df.to_dict("records"))
-    st.html(f'''<header class="solem-header"><div class="solem-brand"><span class="solem-logo" aria-hidden="true">✳</span><div>solem<span class="brand-sub">CORPO & MENTE</span></div></div><div class="header-status"><span class="status-dot"></span> Seu espaço de evolução <span class="header-level">Nível {progress['level']:02}</span></div></header>''')
     if st.session_state.get('solem_page') not in PAGES:
         st.session_state['solem_page'] = 'Visão geral'
     with st.sidebar:
         st.html('<div class="sidebar-brand">✳ <b>solem</b><small>SEU ESPAÇO PESSOAL</small></div>')
         page = st.radio("Navegação principal", PAGES, key="solem_page", label_visibility="collapsed")
         st.caption(f"Nível {progress['level']} · {progress['xp']} XP")
+        if on_logout:
+            st.divider()
+            st.button('Sair', on_click=on_logout, key='solem_logout', use_container_width=True)
     message = st.session_state.pop("solem_feedback", None)
     if message:
         st.toast(message, icon=":material/check_circle:")

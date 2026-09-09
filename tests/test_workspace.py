@@ -51,6 +51,34 @@ render_workspace(Repo(), [])
             app.selectbox(key='ws_module').select(module).run()
             self.assertFalse(app.exception, module)
 
+    def test_login_gate_blocks_content_until_session_exists(self):
+        from streamlit.testing.v1 import AppTest
+        locked=AppTest.from_string('''
+import streamlit as st
+import solem_workspace_ui as ui
+class Auth:
+    def get_session(self): return None
+class Client: auth=Auth()
+ui._private_client=lambda: Client()
+ui.require_login()
+st.write('CONTEUDO_PROTEGIDO')
+''').run()
+        self.assertFalse(locked.exception)
+        self.assertTrue(any(x.label == 'E-mail' for x in locked.text_input))
+        self.assertFalse(any('CONTEUDO_PROTEGIDO' in x.value for x in locked.markdown))
+        unlocked=AppTest.from_string('''
+import streamlit as st
+import solem_workspace_ui as ui
+class Auth:
+    def get_session(self): return object()
+class Client: auth=Auth()
+ui._private_client=lambda: Client()
+ui.require_login()
+st.write('CONTEUDO_PROTEGIDO')
+''').run()
+        self.assertFalse(unlocked.exception)
+        self.assertTrue(any('CONTEUDO_PROTEGIDO' in x.value for x in unlocked.markdown))
+
     def test_ui_note_create_edit_and_archive(self):
         from streamlit.testing.v1 import AppTest
         app=AppTest.from_string('''
