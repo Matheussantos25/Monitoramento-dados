@@ -24,25 +24,39 @@ def promotion_sound():
                 wav.writeframesraw(struct.pack('<h', int(4000 * envelope * math.sin(2 * math.pi * frequency * i / 16000))))
     return buffer.getvalue()
 
+def promotion_overlay(tier, label):
+    data = (Path(__file__).parent / 'assets/ranks' / f'rank_{tier}.svg').read_bytes()
+    source = base64.b64encode(data).decode()
+    st.html(f'''<section class="rank-promotion" role="status" aria-live="polite">
+        <div class="rank-promotion__veil"></div>
+        <div class="rank-promotion__rays" aria-hidden="true"></div>
+        <div class="rank-promotion__ring" aria-hidden="true"></div>
+        <div class="rank-promotion__content">
+            <span>PROMOÇÃO DE ELO</span>
+            <img src="data:image/svg+xml;base64,{source}" alt="Insígnia {NAMES[tier]}" />
+            <h2>{NAMES[tier]}</h2>
+            <p>{label}</p>
+        </div>
+    </section>''')
+
 def rank_panel(records, topics, today):
     data = ranks(records, topics, today)
     st.subheader('Sua jornada ranqueada')
     st.caption('Físico por repetições acumuladas · Estudos por acerto e volume de questões em cada tópico do edital.')
     with st.expander('Efeitos e regras dos elos'):
-        animation = st.toggle('Celebrar promoções com animação', value=False, key='rank_animation')
-        sound = st.toggle('Som de promoção (opcional)', value=False, key='rank_sound')
-        st.caption('Sem perda por descanso. Corrigir ou excluir registros recalcula os elos. Os efeitos são detectados nesta sessão, sem repetir ao atualizar a página. O navegador pode bloquear reprodução automática.')
+        st.caption('As promoções são celebradas automaticamente com animação e som. Sem perda por descanso. Corrigir ou excluir registros recalcula os elos; a celebração não se repete ao atualizar a página. O navegador pode bloquear áudio automático até a primeira interação.')
         st.dataframe([{'Elo': n, 'Repetições acumuladas': REP_LIMITS[i], 'Acerto mínimo (%)': ACCURACY_LIMITS[i], 'Questões mínimas por tópico': SAMPLE_LIMITS[i]} for i, n in enumerate(NAMES)], hide_index=True)
         st.caption('Faixas propostas para gamificação pessoal, não um sistema competitivo Elo. Estudos usam todo o histórico válido; não são uma previsão de aprovação. Físico conta repetições totais, sem multiplicar séries. Cardio e isometria continuam no calendário e XP, sem conversão artificial em repetições.')
     current = {'physical': data['physical_tier'], **{(x['discipline'], x['topic']): x['tier'] for x in data['topics']}}
     previous = st.session_state.get('rank_high_water')
-    promoted = previous is not None and any(v > previous.get(k, v) for k, v in current.items())
+    promotions = [(key, tier) for key, tier in current.items() if previous is not None and tier > previous.get(key, tier)]
+    promoted = bool(promotions)
     st.session_state['rank_high_water'] = {k: max(v, (previous or {}).get(k, v)) for k, v in current.items()}
     if promoted:
-        st.success('Promoção conquistada. Seu histórico avançou para um novo elo.')
-        if animation:
-            st.balloons()
-        if sound:
+        promoted_key, promoted_tier = max(promotions, key=lambda item: item[1])
+        promoted_label = 'Elo físico' if promoted_key == 'physical' else f'{promoted_key[0]} · {promoted_key[1]}'
+        promotion_overlay(promoted_tier, promoted_label)
+        with st.container(key='rank_promotion_audio'):
             st.audio(promotion_sound(), format='audio/wav', autoplay=True)
     art, detail = st.columns([1,4], vertical_alignment='center')
     with art:

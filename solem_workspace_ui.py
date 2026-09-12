@@ -47,6 +47,13 @@ def require_login():
         st.error('O acesso não está configurado. Adicione a URL e a chave pública do Supabase nos Secrets do Streamlit.')
         st.stop()
     if client.auth.get_session():
+        # Some browsers keep the login run's injected style alive for one extra
+        # render. Restore the authenticated shell explicitly so navigation does
+        # not depend on Chrome's DOM cleanup timing.
+        st.html('''<style>
+        [data-testid="stSidebar"]{display:flex!important;visibility:visible!important;opacity:1!important}
+        [data-testid="stSidebarCollapsedControl"]{display:flex!important;visibility:visible!important}
+        </style>''')
         return client
     st.html('''<style>[data-testid="stSidebar"],[data-testid="stSidebarCollapsedControl"]{display:none!important}header[data-testid="stHeader"]{height:0!important}</style><section class="auth-intro"><div class="auth-mark">✳</div><h1>Seu espaço começa aqui.</h1><p>Entre para acessar seu histórico, sua evolução e sua biblioteca pessoal em um único lugar.</p></section>''')
     _, center, _ = st.columns([1, 1.15, 1])
