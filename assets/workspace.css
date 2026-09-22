@@ -1,7 +1,8 @@
 /* Persistent navigation and a quieter writing surface. */
 :root{--base:#171918;--panel:#202321;--raised:#282c29;--line:#373d38;--text:#f0f1ed;--muted:#b1b8ae}
 [data-testid="stSidebar"]{background:#202321;border-right:1px solid var(--line)}
-[data-testid="stSidebar"]{display:flex;visibility:visible;opacity:1}
+/* Let Streamlit own the collapsed/open state on every browser and viewport. */
+body:has(.auth-intro) [data-testid="stSidebar"],body:has(.auth-intro) [data-testid="stSidebarCollapsedControl"]{display:none!important}
 [data-testid="stSidebarUserContent"]{padding:1.2rem .9rem}
 .sidebar-brand{font-size:23px;color:var(--accent);padding:8px 12px 22px;letter-spacing:-1px}
 .sidebar-brand b{color:var(--text);margin-left:5px}.sidebar-brand small{display:block;font-size:9px;letter-spacing:1.7px;color:var(--muted);margin-top:9px}

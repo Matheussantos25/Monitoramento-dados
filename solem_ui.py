@@ -13,12 +13,13 @@ PAGES = ["Visão geral", "Treino", "Evolução física", "Alimentação", "Peso"
 def apply_theme():
     st.html("<style>" + (Path(__file__).parent / "assets" / "solem.css").read_text(encoding="utf-8") + "</style>")
     st.html("<style>" + (Path(__file__).parent / "assets" / "workspace.css").read_text(encoding="utf-8") + "</style>")
+    st.html("<style>" + (Path(__file__).parent / "assets" / "system.css").read_text(encoding="utf-8") + "</style>")
     pio.templates["solem"] = go.layout.Template(layout=dict(
-        colorway=["#C6E58B", "#89B8C5", "#BBA6D9", "#E5BE8B"],
+        colorway=["#83DCFF", "#9B8CFF", "#71D2C4", "#F4C87D"],
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Segoe UI, sans-serif", color="#EDF1E8", size=13),
-        xaxis=dict(gridcolor="#2A322B", zerolinecolor="#2A322B"),
-        yaxis=dict(gridcolor="#2A322B", zerolinecolor="#2A322B"),
+        font=dict(family="Segoe UI, sans-serif", color="#E7F1FF", size=13),
+        xaxis=dict(gridcolor="#293C55", zerolinecolor="#293C55"),
+        yaxis=dict(gridcolor="#293C55", zerolinecolor="#293C55"),
         margin=dict(l=20, r=20, t=35, b=25)))
     pio.templates.default = "solem"
 
@@ -38,6 +39,21 @@ def shell(df, on_logout=None):
         if on_logout:
             st.divider()
             st.button('Sair', on_click=on_logout, key='solem_logout', use_container_width=True)
+    # In-content navigation remains reachable when a browser or narrow viewport
+    # collapses Streamlit's native sidebar. It does not depend on its DOM toggle.
+    with st.container(key="system_navigation"):
+        with st.popover(f"☰  Menu  /  {page}"):
+            for group, destinations in (
+                ("JORNADA", PAGES[:7]),
+                ("BIBLIOTECA", PAGES[7:12]),
+                ("PLANEJAMENTO", PAGES[12:14]),
+                ("CONTA", PAGES[14:]),
+            ):
+                st.caption(group)
+                for destination in destinations:
+                    st.button(destination, key=f"system_nav_{PAGES.index(destination)}",
+                              on_click=navigate, args=(destination,),
+                              disabled=destination == page, use_container_width=True)
     message = st.session_state.pop("solem_feedback", None)
     if message:
         st.toast(message, icon=":material/check_circle:")
@@ -55,17 +71,25 @@ def goal_panel(title, current, target, unit):
 
 def overview(p, records=None):
     today = p["today"]
-    st.html('<div class="section-intro"><span class="eyebrow">SUA JORNADA</span><h1>Corpo, mente e constância.</h1></div>')
+    st.html('<div class="section-intro"><span class="eyebrow">SISTEMA / SUA JORNADA</span><h1>Seu progresso é real.</h1><p>Cada registro transforma constância em experiência.</p></div>')
+    level_pct = max(0, min(100, p['level_xp'] / 250 * 100))
+    st.html(f'''<section class="system-status" aria-label="Status do personagem">
+        <div class="system-status__top"><span>STATUS DO PERSONAGEM</span><span>JORNADA EM CURSO</span></div>
+        <div class="system-status__main"><div><small>NÍVEL ATUAL</small><strong>{p['level']:02}</strong></div>
+        <p>Seu nível reflete os dias em que você praticou de verdade.<br><span>Continue avançando no seu próprio ritmo.</span></p></div>
+        <div class="system-status__xp"><span>EXPERIÊNCIA</span><strong>{p['level_xp']} / 250 XP</strong></div>
+        <progress value="{level_pct:.1f}" max="100" aria-label="Progresso até o próximo nível">{level_pct:.0f}%</progress>
+        <div class="system-status__foot"><span>◈ {p['streak']} dias de sequência</span><span>+{p['today_xp']} XP hoje</span></div>
+    </section>''')
     if records is not None:
         character_panel(records, p)
         monthly_journal(records, today)
-    st.progress(p['level_xp']/250, text=f"Nível {p['level']} · {p['level_xp']}/250 XP para o próximo nível · {p['streak']} dias de sequência")
 
     st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>TEMPO DE ESTUDO</span><strong>{int(p['study_minutes']//60)}<small>h </small>{int(p['study_minutes']%60):02}<small>min</small></strong></div><div><span>QUESTÕES RESOLVIDAS</span><strong>{p['questions']}<small> nesta semana</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP conquistados</small></strong></div></section>''')
 
     missions, rhythm = st.columns([1.65, 1], gap="medium")
     with missions:
-        st.html('<div class="section-title"><h2>Seu próximo passo</h2><span>Um pouco a cada dia</span></div>')
+        st.html('<div class="section-title"><h2>Missões diárias</h2><span>Seu próximo passo · XP por dia, não por volume</span></div>')
         for category, title, description, xp, destination, glyph in [
             ("treino", "Coloque o corpo em movimento", "Registre uma atividade do seu treino.", 30, "Treino", "↗"),
             ("estudo", "Abra espaço para o foco", "Salve uma sessão de estudo ou revisão.", 30, "Estudar", "▤"),
