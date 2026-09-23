@@ -34,6 +34,9 @@ class HealthAnalyticsTest {
         assertEquals(2, summary.days)
         assertEquals(30.0, summary.meanRepsPerDay, 0.001)
         assertEquals(30, summary.record.repeticoes)
+        val category = categorySnapshot(rows, "Peitoral")!!
+        assertEquals(2, category.days)
+        assertEquals(30.0, category.meanRepsPerDay, 0.001)
     }
 
     @Test fun recommendationAvoidsRecentlyTrainedGroups() {

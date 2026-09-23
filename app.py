@@ -12,7 +12,7 @@ import hashlib
 from pathlib import Path
 import streamlit.components.v1 as components
 from solem_ui import apply_theme, shell, overview, section_intro, goal_panel
-from solem_health import training_stats, training_recommendation, now_local
+from solem_health import training_stats, training_category_stats, training_recommendation, now_local
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
 def safe_get(val, key, default=None):
@@ -725,8 +725,9 @@ if pagina == "Treino":
                 b.metric("Recorde registrado", f"{int(stats['best']['repeticoes'])} rep", help="Maior total de repetições em um registro, não por série.")
                 c.metric("Média por dia treinado", f"{stats['average_reps_per_day']:.1f} rep", help=f"{stats['days']} dias com este exercício.")
                 group = next((g for g, items in EXERCICIOS_PRESETADOS.items() if exercicio_input in items), "Outro")
-                group_days = {str(row.get('data'))[:10] for row in df_raw.to_dict("records") if row.get('grupo_muscular') == group and row.get('data') is not None}
-                st.caption(f"Categoria {group}: {len(group_days)} dias registrados no histórico. Progrida apenas quando a técnica e a recuperação permitirem.")
+                category_stats = training_category_stats(df_raw.to_dict("records"), group)
+                if category_stats:
+                    st.caption(f"Categoria {group}: {category_stats['days']} dias · média {category_stats['average_reps_per_day']:.1f} rep por dia treinado. Progrida apenas quando a técnica e a recuperação permitirem.")
             
             st.markdown("#### Detalhes do exercício")
             c1, c2, c3 = st.columns(3)

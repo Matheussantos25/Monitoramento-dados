@@ -72,6 +72,17 @@ def training_stats(records, exercise):
                 last_day=record_date(last.get("data")))
 
 
+def training_category_stats(records, group):
+    days = {}
+    for row in records:
+        day = record_date(row.get("data"))
+        if row.get("grupo_muscular") == group and day is not None:
+            days[day] = days.get(day, 0) + number(row.get("repeticoes"))
+    if not days:
+        return None
+    return {"days": len(days), "average_reps_per_day": sum(days.values()) / len(days)}
+
+
 def training_recommendation(records, today=None):
     """Suggest the least recently used calisthenics group, not a prescription."""
     today = today or now_local().date()

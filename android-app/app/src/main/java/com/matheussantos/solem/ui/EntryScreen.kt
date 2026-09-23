@@ -70,7 +70,10 @@ import java.time.ZoneOffset
                         Panel("SEU HISTÓRICO · $exercise") {
                             Text("Último treino: ${stats.last.repeticoes} rep · ${stats.last.data.take(10)}")
                             Text("Recorde: ${stats.record.repeticoes} rep em um registro")
-                            Text("Média: %.1f rep por dia treinado · %d dias".format(stats.meanRepsPerDay,stats.days))
+                            Text("Média do exercício: %.1f rep por dia treinado · %d dias".format(stats.meanRepsPerDay,stats.days))
+                            categorySnapshot(rows, catalog.group(exercise))?.let { category ->
+                                Text("Categoria ${catalog.group(exercise)}: %.1f rep por dia · %d dias".format(category.meanRepsPerDay,category.days))
+                            }
                             Text("Aumente o esforço apenas com boa técnica e recuperação.", color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }

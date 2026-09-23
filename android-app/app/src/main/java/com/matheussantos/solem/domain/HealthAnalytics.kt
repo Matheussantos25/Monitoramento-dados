@@ -37,6 +37,16 @@ fun trainingSnapshot(rows: List<TrainingRecord>, exercise: String): TrainingSnap
     )
 }
 
+data class CategorySnapshot(val days: Int, val meanRepsPerDay: Double)
+
+fun categorySnapshot(rows: List<TrainingRecord>, group: String): CategorySnapshot? {
+    val matches = rows.filter { it.isWorkout() && it.group == group &&
+        runCatching { LocalDate.parse(it.data.take(10)) }.isSuccess }
+    if (matches.isEmpty()) return null
+    val days = matches.groupBy { it.data.take(10) }
+    return CategorySnapshot(days.size, matches.sumOf { it.repeticoes }.toDouble() / days.size)
+}
+
 fun suggestTraining(rows: List<TrainingRecord>, day: LocalDate = today()): String {
     val last = mainGroups.associateWith { group -> rows.filter { it.isWorkout() && it.group == group }
         .mapNotNull { runCatching { LocalDate.parse(it.data.take(10)) }.getOrNull() }

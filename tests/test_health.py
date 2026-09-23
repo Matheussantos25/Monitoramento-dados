@@ -4,7 +4,7 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
-from solem_health import base_record, daily_water_ml, sleep_minutes, training_recommendation, training_stats
+from solem_health import base_record, daily_water_ml, sleep_minutes, training_category_stats, training_recommendation, training_stats
 from solem_photos_ui import normalized_jpeg
 
 
@@ -31,6 +31,9 @@ def test_training_summary_and_recovery_suggestion():
     assert stats["days"] == 2
     assert stats["average_reps_per_day"] == 45
     assert stats["best"]["repeticoes"] == 40
+    category = training_category_stats(rows, "Peitoral")
+    assert category["days"] == 2
+    assert category["average_reps_per_day"] == 45
     assert training_recommendation(rows, date(2026, 9, 23))["group"] == "Costas"
 
 
