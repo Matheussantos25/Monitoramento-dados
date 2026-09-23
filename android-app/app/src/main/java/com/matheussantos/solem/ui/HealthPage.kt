@@ -88,7 +88,10 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                     }
                 }
             }
-            2 -> DailyWeight(day, weight, state.busy, vm)
+            2 -> {
+                DailyWeight(day, weight, state.busy, vm)
+                PrivateWeightLine(state.healthEntries)
+            }
             3 -> DailySleep(day, sleep, state.busy, vm)
             4 -> ProgressPhotosPage(vm, day)
         }

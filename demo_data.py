@@ -47,8 +47,17 @@ class DemoClient:
 class DemoQuery:
     def __init__(self):
         self.operation, self.payload, self.filters = "select", None, []
+        self.order_field, self.start, self.end = None, None, None
 
     def select(self, columns):
+        return self
+
+    def order(self, field, desc=False):
+        self.order_field = (field, desc)
+        return self
+
+    def range(self, start, end):
+        self.start, self.end = start, end
         return self
 
     def insert(self, data):
@@ -81,4 +90,10 @@ class DemoQuery:
                     row.update(self.payload)
         elif self.operation == "delete":
             st.session_state["solem_demo_records"] = [row for row in rows if not matches(row)]
-        return SimpleNamespace(data=deepcopy([row for row in st.session_state["solem_demo_records"] if matches(row)]))
+        result = [row for row in st.session_state["solem_demo_records"] if matches(row)]
+        if self.order_field:
+            field, desc = self.order_field
+            result.sort(key=lambda row: row.get(field, 0), reverse=desc)
+        if self.start is not None:
+            result = result[self.start:self.end + 1]
+        return SimpleNamespace(data=deepcopy(result))

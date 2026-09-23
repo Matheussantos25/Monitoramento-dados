@@ -1,7 +1,8 @@
 """Authenticated health diary. New sensitive entries never go to public treinos."""
 from datetime import datetime
 import streamlit as st
-from solem_health import MEAL_TYPES, now_local, sleep_minutes
+import plotly.graph_objects as go
+from solem_health import MEAL_TYPES, now_local, private_weight_history, sleep_minutes
 from solem_health_private import delete_entry, list_entries, save_entry
 from solem_ui import section_intro
 
@@ -104,6 +105,20 @@ def health_page(client, healthy_options, occasional_options, demo=False):
             if kg is None: st.error("Informe seu peso antes de salvar.")
             else: _save(client, day, "00:00:00", "weight", {"kg": float(kg)},
                         "Peso atualizado." if weight else "Peso registrado.", old=weight, demo=demo)
+        st.markdown("#### Evolução do peso corporal")
+        weight_points = private_weight_history(entries)
+        if weight_points:
+            fig = go.Figure(go.Scatter(x=[point[0] for point in weight_points],
+                                       y=[point[1] for point in weight_points],
+                                       mode="lines+markers", line=dict(color="#83DCFF", width=3),
+                                       marker=dict(color="#BBA6D9", size=9),
+                                       hovertemplate="%{x|%d/%m/%Y}<br>%{y:.1f} kg<extra></extra>"))
+            fig.update_layout(xaxis_title=None, yaxis_title="kg", height=300,
+                              plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                              font=dict(color="#DCE9F9"), margin=dict(l=5, r=5, t=10, b=10))
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Registre o peso para acompanhar a evolução aqui.")
 
     with sleep_tab:
         st.caption("O dia selecionado é o dia em que você acordou. Um registro por dia.")

@@ -40,6 +40,38 @@ class AppTests(unittest.TestCase):
         self.app.radio(key="solem_page").set_value("Visão geral").run()
         self.assertFalse(self.app.exception)
 
+    def test_workout_history_updates_when_exercise_changes(self):
+        self.app.session_state["solem_demo_records"].extend([
+            {"id": 1001, "data": "2026-09-20", "horario": "08:00:00", "grupo_muscular": "Cardio",
+             "exercicio": "Caminhada", "repeticoes": 0, "distancia_km": 2.5, "duracao_min": 30,
+             "carga_kg": 0.0, "dados_extras": {}},
+            {"id": 1002, "data": "2026-09-21", "horario": "08:00:00", "grupo_muscular": "Cardio",
+             "exercicio": "Caminhada", "repeticoes": 0, "distancia_km": 3.5, "duracao_min": 40,
+             "carga_kg": 0.0, "dados_extras": {}},
+        ])
+        self.app.radio(key="solem_page").set_value("Treino").run()
+        self.app.selectbox(key="treino_exercicio").set_value("Caminhada").run()
+        self.assertFalse(self.app.exception)
+        values = {metric.label: metric.value for metric in self.app.metric}
+        self.assertEqual(values["Recorde registrado"], "3.50 km")
+        self.app.selectbox(key="treino_exercicio").set_value("Flexão").run()
+        self.assertFalse(self.app.exception)
+        values = {metric.label: metric.value for metric in self.app.metric}
+        self.assertTrue(values["Recorde registrado"].endswith("rep"))
+
+    def test_workout_history_reads_beyond_first_supabase_page(self):
+        self.app.session_state["solem_demo_records"] = [
+            {"id": index, "data": "2026-09-20", "horario": "08:00:00", "grupo_muscular": "Peitoral",
+             "exercicio": "Flexão", "repeticoes": 1, "distancia_km": 0.0, "duracao_min": 0,
+             "carga_kg": 0.0, "dados_extras": {}}
+            for index in range(1, 502)
+        ]
+        self.app.radio(key="solem_page").set_value("Treino").run()
+        self.app.selectbox(key="treino_exercicio").set_value("Flexão").run()
+        self.assertFalse(self.app.exception)
+        values = {metric.label: metric.value for metric in self.app.metric}
+        self.assertEqual(values["Média por dia treinado"], "501 rep")
+
 
 if __name__ == "__main__":
     unittest.main()

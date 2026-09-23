@@ -12,7 +12,8 @@ import hashlib
 from pathlib import Path
 import streamlit.components.v1 as components
 from solem_ui import apply_theme, shell, overview, section_intro, goal_panel
-from solem_health import training_stats, training_category_stats, training_recommendation, now_local
+from solem_health import training_measure_stats, training_category_stats, training_recommendation, now_local
+from solem_gps import gps_distance_tracker
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
 def safe_get(val, key, default=None):
@@ -324,8 +325,14 @@ else:
         st.stop()
 
 def fetch_data():
-    response = supabase.table("treinos").select("*").execute()
-    return pd.DataFrame(response.data)
+    rows = []
+    page_size = 500
+    while True:
+        page = supabase.table("treinos").select("*").order("id").range(
+            len(rows), len(rows) + page_size - 1).execute().data
+        rows.extend(page)
+        if len(page) < page_size:
+            return pd.DataFrame(rows)
 
 PERIODOS_DASHBOARD = ["Todo o Histórico", "Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Este Ano"]
 
@@ -708,6 +715,34 @@ if pagina == "Treino":
             " É uma sugestão baseada apenas no histórico, não um plano clínico ou prescrição.")
     modo_insercao = st.radio("Selecione o formato do treino:", ["🏋️ Exercício Isolado (Convencional)", "🔥 Circuito AMRAP 20' (5 Barras / 10 Flexões / 15 Agachamentos)"], horizontal=True)
     if modo_insercao == "🏋️ Exercício Isolado (Convencional)":
+        exercicios_disponiveis = sorted(set(TODOS_EXERCICIOS) | set(df_treinos.get("exercicio", pd.Series(dtype=str)).dropna()))
+        exercicio_input = st.selectbox("Exercício", exercicios_disponiveis, key="treino_exercicio")
+        if st.session_state.get("treino_exercicio_anterior") != exercicio_input:
+            st.session_state["treino_exercicio_anterior"] = exercicio_input
+            st.session_state["treino_distancia"] = 0.0
+        stats = training_measure_stats(df_raw.to_dict("records"), exercicio_input)
+        if stats:
+            unit = stats["unit"]
+            fmt = (lambda value: f"{value:.2f} {unit}") if unit == "km" else (lambda value: f"{value:g} {unit}")
+            a, b, c = st.columns(3)
+            a.metric("Último treino", fmt(stats["last"]), help=str(stats["last_day"]))
+            b.metric("Recorde registrado", fmt(stats["record"]), help="Maior valor em um registro deste exercício.")
+            c.metric("Média por dia treinado", fmt(stats["average_per_day"]), help=f"{stats['days']} dias com este exercício.")
+            group = next((g for g, items in EXERCICIOS_PRESETADOS.items() if exercicio_input in items), "Outro")
+            category_stats = training_category_stats(df_raw.to_dict("records"), group)
+            if category_stats and unit == "rep":
+                st.caption(f"Categoria {group}: {category_stats['days']} dias · média {category_stats['average_reps_per_day']:.1f} rep por dia treinado. Progrida apenas quando a técnica e a recuperação permitirem.")
+        else:
+            st.caption("Ainda não há histórico deste exercício.")
+        if exercicio_input in ("Caminhada", "Corrida"):
+            gps_result = gps_distance_tracker(key="gps_treino_web")
+            if isinstance(gps_result, dict) and gps_result.get("event") == "finished":
+                event_id = gps_result.get("id")
+                if event_id != st.session_state.get("gps_event_id"):
+                    st.session_state["gps_event_id"] = event_id
+                    st.session_state["treino_distancia"] = max(0.0, round(float(gps_result.get("km", 0)), 3))
+        else:
+            st.caption("GPS opcional disponível ao selecionar Caminhada ou Corrida. A distância também pode ser informada manualmente.")
         with st.form("registro_treino", clear_on_submit=True):
             st.markdown("<h3 style='margin-bottom: 20px; color: #83DCFF;'>Registrar atividade</h3>", unsafe_allow_html=True)
             c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
@@ -717,18 +752,6 @@ if pagina == "Treino":
             with c_top3: minuto = st.selectbox("Min.", [f"{i:02d}" for i in range(60)], index=agora.minute)
             horario = f"{hora}:{minuto}:00"
             st.markdown("---")
-            exercicio_input = st.selectbox("Exercício", TODOS_EXERCICIOS)
-            stats = training_stats(df_raw.to_dict("records"), exercicio_input)
-            if stats:
-                a, b, c = st.columns(3)
-                a.metric("Último treino", f"{int(stats['last']['repeticoes'])} rep", help=str(stats['last_day']))
-                b.metric("Recorde registrado", f"{int(stats['best']['repeticoes'])} rep", help="Maior total de repetições em um registro, não por série.")
-                c.metric("Média por dia treinado", f"{stats['average_reps_per_day']:.1f} rep", help=f"{stats['days']} dias com este exercício.")
-                group = next((g for g, items in EXERCICIOS_PRESETADOS.items() if exercicio_input in items), "Outro")
-                category_stats = training_category_stats(df_raw.to_dict("records"), group)
-                if category_stats:
-                    st.caption(f"Categoria {group}: {category_stats['days']} dias · média {category_stats['average_reps_per_day']:.1f} rep por dia treinado. Progrida apenas quando a técnica e a recuperação permitirem.")
-            
             st.markdown("#### Detalhes do exercício")
             c1, c2, c3 = st.columns(3)
             with c1:
@@ -740,7 +763,7 @@ if pagina == "Treino":
                 intervalo = st.number_input("Intervalo de Descanso (seg)", min_value=0, step=15)
             with c3:
                 duracao = st.number_input("Cardio: Duração (min)", min_value=0)
-                distancia = st.number_input("Cardio: Distância (km)", min_value=0.0)
+                distancia = st.number_input("Cardio: Distância (km)", min_value=0.0, step=0.01, key="treino_distancia")
                 
             isometria_tentativas = series  
             st.markdown("---")
@@ -835,84 +858,51 @@ if pagina == "Evolução física":
         key="filtro_tempo_dash_fisico"
     )
     df_treinos_dash = filtrar_por_periodo(df_treinos, filtro_tempo_fisico)
-    df_raw_dash_fisico = filtrar_por_periodo(df_raw, filtro_tempo_fisico)
-
-    meta_fisica_diaria = 200 
-    reps_treino_hoje = 0
     if not df_treinos_dash.empty:
-        df_treinos_dash['data_real'] = pd.to_datetime(df_treinos_dash['data'])
-        hoje_data = (pd.Timestamp.utcnow() - pd.Timedelta(hours=3)).normalize().tz_localize(None)
-        df_hoje_tr = df_treinos_dash[df_treinos_dash['data_real'] == hoje_data]
-        if not df_hoje_tr.empty: reps_treino_hoje = int(df_hoje_tr['repeticoes'].sum())
-            
-    goal_panel("Meta diária de repetições", reps_treino_hoje, meta_fisica_diaria, "repetições")
-
-    if not df_treinos_dash.empty:
-        df_treinos_dash['isometria_segundos'] = df_treinos_dash['dados_extras'].apply(lambda x: safe_get(x, 'isometria_segundos', 0))
-        total_dias = len(df_treinos_dash['data'].unique())
-        total_reps = int(df_treinos_dash['repeticoes'].sum())
-        carga_max = df_treinos_dash['carga_kg'].max()
+        exercicios_historicos = sorted(set(TODOS_EXERCICIOS) | set(df_treinos_dash['exercicio'].dropna()))
+        ex_selecionados = st.multiselect("Filtrar evolução por exercício", options=exercicios_historicos,
+                                         default=[], help="Sem seleção, mostra todos os exercícios.")
+        df_filtrado = df_treinos_dash[df_treinos_dash['exercicio'].isin(ex_selecionados)].copy() if ex_selecionados else df_treinos_dash.copy()
+        df_filtrado['isometria_segundos'] = df_filtrado['dados_extras'].apply(lambda x: safe_get(x, 'isometria_segundos', 0))
+        total_dias = df_filtrado['data'].nunique()
+        total_reps = int(pd.to_numeric(df_filtrado['repeticoes'], errors='coerce').fillna(0).sum())
+        carga_max = pd.to_numeric(df_filtrado['carga_kg'], errors='coerce').max()
+        distancia_total = pd.to_numeric(df_filtrado['distancia_km'], errors='coerce').fillna(0).sum()
+        duracao_total = pd.to_numeric(df_filtrado['duracao_min'], errors='coerce').fillna(0).sum()
+        hoje_data = pd.Timestamp(now_local().date())
+        reps_treino_hoje = int(pd.to_numeric(df_filtrado.loc[df_filtrado['data'] == hoje_data, 'repeticoes'], errors='coerce').fillna(0).sum())
+        if total_reps > 0 or not ex_selecionados:
+            goal_panel("Meta diária de repetições", reps_treino_hoje, 200, "repetições")
+        st.caption("Os indicadores e gráficos abaixo seguem o período e os exercícios selecionados.")
         
         st.markdown(f"""
         <div class="card-container">
             <div class="neon-card card-cyan"><div class="card-title">Dias treinados</div><div class="card-value">{total_dias}</div></div>
             <div class="neon-card card-emerald"><div class="card-title">Repetições (total)</div><div class="card-value">{total_reps}</div></div>
-            <div class="neon-card card-violet"><div class="card-title">Carga máxima</div><div class="card-value">{carga_max:.1f} kg</div></div>
+            <div class="neon-card card-violet"><div class="card-title">Carga máxima</div><div class="card-value">{(carga_max if pd.notna(carga_max) else 0):.1f} kg</div></div>
+            <div class="neon-card card-cyan"><div class="card-title">Distância</div><div class="card-value">{distancia_total:.2f} km</div></div>
+            <div class="neon-card card-violet"><div class="card-title">Duração</div><div class="card-value">{duracao_total:.0f} min</div></div>
         </div>
         """, unsafe_allow_html=True)
-
-        st.markdown("### Personalize a visualização")
-        c_ctrl1, c_ctrl2 = st.columns(2)
-        with c_ctrl1: ex_selecionados = st.multiselect("Quais exercícios visualizar?", options=TODOS_EXERCICIOS, default=[])
-        with c_ctrl2: st.write(""); mostrar_peso_corporal = st.checkbox("Incluir gráfico de Evolução do Peso Corporal", value=True)
-            
         st.write("---")
-        df_filtrado = df_treinos_dash.copy()
-        if ex_selecionados: df_filtrado = df_filtrado[df_filtrado['exercicio'].isin(ex_selecionados)]
-
-        col_graf1, col_graf2 = st.columns(2) if mostrar_peso_corporal else (None, st.container())
-        
-        if mostrar_peso_corporal and col_graf1:
-            with col_graf1:
-                with st.container(border=True):
-                    st.markdown("#### ⚖️ Evolução do Peso Corporal (kg)")
-                    if 'peso_corporal' in df_raw_dash_fisico.columns:
-                        df_peso = df_raw_dash_fisico[df_raw_dash_fisico['peso_corporal'] > 0].groupby('data', as_index=False)['peso_corporal'].mean()
-                        if not df_peso.empty:
-                            df_peso['data_format'] = df_peso['data'].dt.strftime('%d/%m')
-                            fig_peso = px.line(df_peso, x='data_format', y='peso_corporal', markers=True, text='peso_corporal')
-                            fig_peso.update_traces(line_color='#83DCFF', marker=dict(size=10, color='#BBA6D9'), textposition="top center", texttemplate='%{text:.1f}')
-                            fig_peso.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), margin=dict(l=0, r=0, t=20, b=20), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#1F1F1F"))
-                            st.plotly_chart(fig_peso, use_container_width=True)
-                        else: st.info("Sem registros de peso.")
-                    else: st.info("Adicione dados de peso.")
-
-        with col_graf2:
-            st.markdown("#### 📊 Volume de Repetições Diárias")
-            df_reps = df_filtrado[df_filtrado['repeticoes'] > 0].copy()
-            if not df_reps.empty:
-                df_reps_dia = df_reps.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
-                limite_reps = float(df_reps_dia['repeticoes'].max()) * 1.15
-                fig_reps = px.bar(df_reps_dia, x='data', y='repeticoes', text_auto=True)
-                fig_reps.update_traces(
-                    marker_color='#83DCFF',
-                    textfont_color='white',
-                    textposition='outside',
-                    cliponaxis=False,
-                    width=18 * 60 * 60 * 1000
-                )
-                fig_reps.update_layout(
-                    xaxis_title="",
-                    yaxis_title="Total Reps",
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#E0E0E0"),
-                    margin=dict(l=0, r=0, t=35, b=0),
-                    xaxis=dict(showgrid=False, tickformat="%d/%m", tickangle=0),
-                    yaxis=dict(showgrid=False, zeroline=False, range=[0, limite_reps])
-                )
-                st.plotly_chart(fig_reps, use_container_width=True)
-            else: st.info("Sem dados de repetições para os exercícios selecionados.")
+        st.markdown("#### 📊 Volume de Repetições Diárias")
+        df_reps = df_filtrado[df_filtrado['repeticoes'] > 0].copy()
+        if not df_reps.empty:
+            df_reps_dia = df_reps.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
+            limite_reps = float(df_reps_dia['repeticoes'].max()) * 1.15
+            fig_reps = px.bar(df_reps_dia, x='data', y='repeticoes', text_auto=True)
+            fig_reps.update_traces(marker_color='#83DCFF', textfont_color='white', textposition='outside',
+                                   cliponaxis=False, width=18 * 60 * 60 * 1000)
+            fig_reps.update_layout(xaxis_title="", yaxis_title="Total Reps", plot_bgcolor="rgba(0,0,0,0)",
+                                   paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"),
+                                   margin=dict(l=0, r=0, t=35, b=0), xaxis=dict(showgrid=False, tickformat="%d/%m"),
+                                   yaxis=dict(showgrid=False, zeroline=False, range=[0, limite_reps]))
+            st.plotly_chart(fig_reps, use_container_width=True)
+        else: st.info("Sem dados de repetições para os exercícios selecionados.")
+        df_distancia = df_filtrado[df_filtrado['distancia_km'] > 0]
+        if not df_distancia.empty:
+            st.markdown("#### Distância diária")
+            st.bar_chart(df_distancia.groupby('data')['distancia_km'].sum(), y_label="km")
 
         st.markdown("#### ⏱️ Tempo Sustentado (Cardio / Isometria)")
         df_dur = df_filtrado[(df_filtrado['isometria_segundos'] > 0) | (df_filtrado['duracao_min'] > 0)].copy()

@@ -34,6 +34,8 @@ Não configure `SOLEM_DEMO=1` no app de produção. Para voltar ao banco no Powe
 
 A aba Saúde permite várias refeições e registros de água por dia, mas apenas um peso e um sono por dia. Água é volume do recipiente × quantidade; os horários vêm preenchidos com a hora atual e podem ser editados. Fotos de rosto/corpo são opcionais, ficam num bucket privado por usuário e são recodificadas para remover EXIF antes do envio. A comparação usa datas escolhidas pelo usuário. Não há análise automática de rosto ou músculos.
 
+Em **Treino**, a escolha do exercício atualiza imediatamente último registro, recorde e média; caminhada/corrida usam km registrados em vez de repetições. O botão **Iniciar GPS** aparece só nesses dois exercícios. No navegador, exige HTTPS e permissão explícita, mede apenas com a página aberta/visível e transfere ao formulário apenas a distância ao tocar em **Parar GPS**; se indisponível, digite km manualmente. Em **Evolução física**, o período e os exercícios filtram tanto os cards quanto os gráficos. O gráfico de peso foi movido para **Saúde → Peso** e mostra só o diário privado da conta; registros legados de peso não são migrados automaticamente.
+
 **Atenção:** o projeto Supabase existente tem uma policy `treinos` de acesso público total (`public`, `ALL`, `true`). Os novos dados de saúde **não** são gravados nela; ficam em `solem_health_entries` sob RLS por usuário. O histórico antigo de alimentação/peso em `treinos` não é migrado sem atribuição segura de proprietário. Treinos/estudos e a pontuação legada continuam compartilhados; revisar a proteção da tabela `treinos` é o próximo passo de privacidade. O diário privado novo ainda não adiciona XP.
 
 ## Gamificação

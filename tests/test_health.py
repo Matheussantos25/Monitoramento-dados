@@ -4,7 +4,8 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
-from solem_health import base_record, daily_water_ml, sleep_minutes, training_category_stats, training_recommendation, training_stats
+from solem_health import (base_record, daily_water_ml, private_weight_history, sleep_minutes,
+                          training_category_stats, training_measure_stats, training_recommendation, training_stats)
 from solem_photos_ui import normalized_jpeg
 
 
@@ -35,6 +36,26 @@ def test_training_summary_and_recovery_suggestion():
     assert category["days"] == 2
     assert category["average_reps_per_day"] == 45
     assert training_recommendation(rows, date(2026, 9, 23))["group"] == "Costas"
+
+
+def test_training_measure_is_specific_to_exercise_and_cardio_unit():
+    rows = [base_record("2026-09-20", "08:00:00", "Peitoral", "Flexão", repeticoes=30),
+            base_record("2026-09-21", "08:00:00", "Peitoral", "Flexão", repeticoes=40),
+            base_record("2026-09-22", "08:00:00", "Cardio", "Caminhada", distancia_km=2.5),
+            base_record("2026-09-23", "08:00:00", "Cardio", "Caminhada", distancia_km=3.5)]
+    flexao = training_measure_stats(rows, "Flexão")
+    caminhada = training_measure_stats(rows, "Caminhada")
+    assert (flexao["unit"], flexao["record"], flexao["average_per_day"]) == ("rep", 40, 35)
+    assert (caminhada["unit"], caminhada["record"], caminhada["average_per_day"]) == ("km", 3.5, 3)
+    assert caminhada["last_day"] == date(2026, 9, 23)
+
+
+def test_weight_chart_only_uses_private_weight_entries():
+    rows = [{"kind": "meal", "day": "2026-09-23", "details": {"kg": 80}},
+            {"kind": "weight", "day": "2026-09-23", "details": {"kg": 68.1}},
+            {"kind": "weight", "day": "2026-09-20", "details": {"kg": 68.5}},
+            {"kind": "weight", "day": "invalid", "details": {"kg": 70}}]
+    assert private_weight_history(rows) == [(date(2026, 9, 20), 68.5), (date(2026, 9, 23), 68.1)]
 
 
 def test_photo_reencoding_strips_metadata():

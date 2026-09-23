@@ -10,8 +10,8 @@ Aplicativo nativo Kotlin / Compose / Material 3. Usa o mesmo projeto Supabase do
 |---|---|
 | Visão geral | XP, níveis, sequência, marcos, resumo semanal e registros recentes |
 | Treino | Todos os exercícios do catálogo web, séries, repetições, carga, descanso, isometria, cardio, distância, humor e AMRAP de 20 minutos |
-| Evolução física | Filtros de período/exercício, repetições, cardio, isometria e curva do peso |
-| Saúde | Refeições por tipo/horário, água por volume × quantidade, peso/sono uma vez ao dia e fotos privadas antes/depois |
+| Evolução física | Filtros de período/exercício aplicados aos indicadores e gráficos, repetições, distância, cardio e isometria |
+| Saúde | Refeições por tipo/horário, água por volume × quantidade, peso/sono uma vez ao dia, gráfico de peso privado e fotos antes/depois |
 | Estudar | Questões, vídeo-aula, decks Anki, disciplinas e tópicos do edital; bússola de estudos |
 | Foco | Pomodoro, cronômetro, pausa/reinício e vídeos motivacionais originais |
 | Simulados | Colar JSON, validar, conferir prévia e importar os dois formatos usados pela web |

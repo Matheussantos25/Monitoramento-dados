@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.text.selection.SelectionContainer
 import com.matheussantos.solem.data.model.TrainingRecord
+import com.matheussantos.solem.data.model.HealthEntry
 import com.matheussantos.solem.domain.*
 
 @Composable fun Bars(title: String, points: List<Pair<String, Double>>, unit: String = "") {
@@ -28,8 +29,9 @@ import com.matheussantos.solem.domain.*
         }
     }
 }
-@Composable fun WeightLine(rows: List<TrainingRecord>) {
-    val points = rows.filter { it.bodyWeight > 0 }.groupBy { it.data }.toSortedMap().map { it.key to it.value.map { r -> r.bodyWeight }.average() }
+@Composable fun PrivateWeightLine(rows: List<HealthEntry>) {
+    val points = rows.filter { it.kind == "weight" && it.number("kg") in 1.0..500.0 }
+        .groupBy { it.day }.toSortedMap().map { it.key to it.value.map { r -> r.number("kg") }.average() }
     Panel("Evolução do peso corporal") {
         if (points.isEmpty()) Text("Sem registros de peso.")
         else {
@@ -56,19 +58,23 @@ import com.matheussantos.solem.domain.*
 @Composable fun PhysicalCharts(rows: List<TrainingRecord>, catalog: Catalog) {
     var period by rememberSaveable { mutableStateOf(catalog.periods.first()) }
     var exercises by rememberSaveable { mutableStateOf(listOf<String>()) }
-    var showWeight by rememberSaveable { mutableStateOf(true) }
     val all = filterPeriod(rows, period)
     val training = all.filter { it.isWorkout() }
+    val available = (catalog.exercises + training.map { it.exercicio }).distinct().sorted()
     val selected = training.filter { exercises.isEmpty() || it.exercicio in exercises }
     fun totals(value: (TrainingRecord) -> Double) = selected.groupBy { it.data }.toSortedMap().map { it.key to it.value.sumOf(value) }.filter { it.second > 0 }
     Page("Evolução física") {
         Choice("Período", period, catalog.periods) { period = it }
-        Goal("Repetições de hoje", training.filter { it.data == today().toString() }.sumOf { it.repeticoes.toDouble() }, 200)
-        Text("${training.map { it.data }.distinct().size} dias • ${training.sumOf { it.repeticoes.toLong() }} repetições • ${training.maxOfOrNull { it.loadKg } ?: 0} kg de carga máxima")
-        MultiChoice("Exercícios", exercises, catalog.exercises) { exercises = it }
-        Row { Checkbox(showWeight, { showWeight = it }); Text("Mostrar evolução do peso") }
-        if (showWeight) WeightLine(all)
+        MultiChoice("Filtrar por exercício (vazio = todos)", exercises, available) { exercises = it }
+        if (selected.any { it.repeticoes > 0 } || exercises.isEmpty())
+            Goal("Repetições de hoje", selected.filter { it.data.take(10) == today().toString() }.sumOf { it.repeticoes.toDouble() }, 200)
+        Panel("RESUMO DO FILTRO") {
+            Text("${selected.map { it.data.take(10) }.distinct().size} dias treinados • ${selected.sumOf { it.repeticoes.toLong() }} repetições")
+            Text("%.1f kg de carga máxima • %.2f km • %d min".format(
+                selected.maxOfOrNull { it.loadKg } ?: 0.0, selected.sumOf { it.distanceKm }, selected.sumOf { it.durationMinutes }))
+        }
         Bars("Repetições por dia", totals { it.repeticoes.toDouble() }, "reps")
+        Bars("Distância por dia", totals { it.distanceKm }, "km")
         Bars("Cardio por dia", totals { if (it.number("isometria_segundos") > 0) 0.0 else it.durationMinutes.toDouble() }, "min")
         Bars("Isometria por dia", totals { it.number("isometria_segundos") }, "s")
     }

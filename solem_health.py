@@ -72,6 +72,45 @@ def training_stats(records, exercise):
                 last_day=record_date(last.get("data")))
 
 
+def training_measure_stats(records, exercise):
+    """Use the unit actually recorded for an exercise, not reps for cardio."""
+    rows = [row for row in records if row.get("exercicio") == exercise and
+            row.get("grupo_muscular") not in ("Nutrição", "Métricas", "Estudos") and
+            record_date(row.get("data")) is not None]
+    if not rows:
+        return None
+    cardio = exercise in ("Caminhada", "Corrida", "Bike")
+    candidates = (("distancia_km", "km"), ("duracao_min", "min")) if cardio else (
+        ("repeticoes", "rep"), ("isometria_segundos", "seg"),
+        ("duracao_min", "min"), ("distancia_km", "km"))
+    def measured(row, field):
+        return number(extras_of(row.get("dados_extras")).get(field)) if field == "isometria_segundos" else number(row.get(field))
+    field, unit = next(((field, unit) for field, unit in candidates
+                        if any(measured(row, field) > 0 for row in rows)), candidates[0])
+    rows.sort(key=lambda row: (record_date(row.get("data")), str(row.get("horario", ""))))
+    days = {}
+    for row in rows:
+        day = record_date(row.get("data"))
+        days[day] = days.get(day, 0.0) + measured(row, field)
+    return {"unit": unit, "last": measured(rows[-1], field),
+            "record": max(measured(row, field) for row in rows),
+            "average_per_day": sum(days.values()) / len(days),
+            "days": len(days), "last_day": record_date(rows[-1].get("data"))}
+
+
+def private_weight_history(entries):
+    """Chronological weight points from the owner-scoped health diary only."""
+    points = []
+    for row in entries:
+        if row.get("kind") != "weight":
+            continue
+        day = record_date(row.get("day"))
+        kg = number((row.get("details") or {}).get("kg"))
+        if day is not None and 1 <= kg <= 500:
+            points.append((day, kg))
+    return sorted(points)
+
+
 def training_category_stats(records, group):
     days = {}
     for row in records:

@@ -25,6 +25,27 @@ fun sleepMinutes(bed: String, wake: String): Int {
 
 data class TrainingSnapshot(val last: TrainingRecord, val record: TrainingRecord, val days: Int, val meanRepsPerDay: Double)
 
+data class TrainingMeasureSnapshot(val unit: String, val last: Double, val record: Double,
+    val days: Int, val meanPerDay: Double, val lastDay: String)
+
+fun trainingMeasureSnapshot(rows: List<TrainingRecord>, exercise: String): TrainingMeasureSnapshot? {
+    val matches = rows.filter { it.isWorkout() && it.exercicio == exercise &&
+        runCatching { LocalDate.parse(it.data.take(10)) }.isSuccess }
+    if (matches.isEmpty()) return null
+    val cardio = exercise in listOf("Caminhada", "Corrida", "Bike")
+    val candidates: List<Pair<String, (TrainingRecord) -> Double>> = if (cardio) listOf(
+        "km" to { it.distanceKm }, "min" to { it.durationMinutes.toDouble() }
+    ) else listOf(
+        "rep" to { it.repeticoes.toDouble() }, "seg" to { it.number("isometria_segundos") },
+        "min" to { it.durationMinutes.toDouble() }, "km" to { it.distanceKm }
+    )
+    val (unit, measure) = candidates.firstOrNull { (_, value) -> matches.any { value(it) > 0 } } ?: candidates.first()
+    val last = matches.maxWith(compareBy<TrainingRecord> { it.data }.thenBy { it.horario })
+    val byDay = matches.groupBy { it.data.take(10) }
+    return TrainingMeasureSnapshot(unit, measure(last), matches.maxOf(measure), byDay.size,
+        matches.sumOf(measure) / byDay.size, last.data.take(10))
+}
+
 fun trainingSnapshot(rows: List<TrainingRecord>, exercise: String): TrainingSnapshot? {
     val matches = rows.filter { it.isWorkout() && it.exercicio == exercise && runCatching { LocalDate.parse(it.data.take(10)) }.isSuccess }
     if (matches.isEmpty()) return null

@@ -65,14 +65,16 @@ import java.time.ZoneOffset
                     Field("Rounds completos", rounds, true) { rounds = it }
                 } else {
                     Choice("Exercício", exercise, catalog.exercises + listOfNotNull(existing?.exercicio)) { exercise = it }
-                    val stats = trainingSnapshot(rows, exercise)
+                    val stats = trainingMeasureSnapshot(rows, exercise)
                     if (existing == null && stats != null) {
                         Panel("SEU HISTÓRICO · $exercise") {
-                            Text("Último treino: ${stats.last.repeticoes} rep · ${stats.last.data.take(10)}")
-                            Text("Recorde: ${stats.record.repeticoes} rep em um registro")
-                            Text("Média do exercício: %.1f rep por dia treinado · %d dias".format(stats.meanRepsPerDay,stats.days))
+                            fun measured(value: Double) = if (stats.unit == "km") "%.2f km".format(value)
+                                else "%.1f %s".format(value, stats.unit)
+                            Text("Último treino: ${measured(stats.last)} · ${stats.lastDay}")
+                            Text("Recorde: ${measured(stats.record)} em um registro")
+                            Text("Média do exercício: ${measured(stats.meanPerDay)} por dia treinado · ${stats.days} dias")
                             categorySnapshot(rows, catalog.group(exercise))?.let { category ->
-                                Text("Categoria ${catalog.group(exercise)}: %.1f rep por dia · %d dias".format(category.meanRepsPerDay,category.days))
+                                if (stats.unit == "rep") Text("Categoria ${catalog.group(exercise)}: %.1f rep por dia · %d dias".format(category.meanRepsPerDay,category.days))
                             }
                             Text("Aumente o esforço apenas com boa técnica e recuperação.", color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
