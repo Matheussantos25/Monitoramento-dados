@@ -1,0 +1,552 @@
+[
+  {
+    "input": {
+      "schema": "solem_simulado_v1",
+      "simulado_id": "Teste-solem_simulado_v1",
+      "data": "06/09/2026",
+      "questoes": [
+        {
+          "numero": 1,
+          "disciplina": "Atualidades e IA",
+          "topico_edital": "1 Tópicos atuais: segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, sustentabilidade e ecologia",
+          "resultado": "certo",
+          "tempo_segundos": 30,
+          "tempo_informado": true,
+          "confianca": 3,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 2,
+          "disciplina": "Banco de Dados (SQL/NoSQL/Big Data)",
+          "topico_edital": "1 Modelagem de dados (conceitual, lógica e física)",
+          "resultado": "erro",
+          "tempo_segundos": 30,
+          "tempo_informado": true,
+          "confianca": null,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 3,
+          "disciplina": "Ciência de Dados (ML/DL/PLN/Visão)",
+          "topico_edital": "1 Aprendizado supervisionado: regressão, classificação, métricas, overfitting/underfitting, regularização, validação cruzada, viés-variância, regressão linear/logística, árvores/random forest, SVM, K-NN",
+          "resultado": "anulada",
+          "tempo_segundos": 30,
+          "tempo_informado": true,
+          "confianca": 3,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 4,
+          "disciplina": "Atualidades e IA",
+          "topico_edital": "1 Tópicos atuais: segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, sustentabilidade e ecologia",
+          "resultado": "certo",
+          "tempo_segundos": 60.5,
+          "tempo_informado": true,
+          "confianca": null,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 5,
+          "disciplina": "Banco de Dados (SQL/NoSQL/Big Data)",
+          "topico_edital": "1 Modelagem de dados (conceitual, lógica e física)",
+          "resultado": "erro",
+          "tempo_segundos": "01:31",
+          "tempo_informado": true,
+          "confianca": 3,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 6,
+          "disciplina": "Ciência de Dados (ML/DL/PLN/Visão)",
+          "topico_edital": "1 Aprendizado supervisionado: regressão, classificação, métricas, overfitting/underfitting, regularização, validação cruzada, viés-variância, regressão linear/logística, árvores/random forest, SVM, K-NN",
+          "resultado": "anulada",
+          "tempo_segundos": "01:00:02",
+          "tempo_informado": true,
+          "confianca": null,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 7,
+          "disciplina": "Atualidades e IA",
+          "topico_edital": "1 Tópicos atuais: segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, sustentabilidade e ecologia",
+          "resultado": "certo",
+          "tempo_segundos": 0,
+          "tempo_informado": false,
+          "confianca": 3,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        }
+      ]
+    },
+    "expected": [
+      {
+        "data": "2026-09-06",
+        "horario": "12:00:00",
+        "grupo_muscular": "Estudos",
+        "exercicio": "Atualidades e IA",
+        "series": 0,
+        "repeticoes": 3,
+        "carga_kg": 0.0,
+        "descanso_seg": 0,
+        "duracao_min": 1,
+        "distancia_km": 0.0,
+        "alimentacao_saudavel": "",
+        "alimentacao_besteirol": "",
+        "peso_corporal": 0.0,
+        "dados_extras": {
+          "topico_edital": "1 Tópicos atuais: segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, sustentabilidade e ecologia",
+          "q_certas": 3,
+          "q_erradas": 0,
+          "q_anuladas": 0,
+          "tempo_video": 0,
+          "fonte_questoes": "IA (Estilo FGV)",
+          "origem_importacao": "simulado_json",
+          "simulado_id": "Teste-solem_simulado_v1",
+          "importacao_id": "solem:teste-solem_simulado_v1",
+          "tempo_segundos_exato": 90,
+          "tempo_estimado": true,
+          "questoes_numeros": [
+            1,
+            4,
+            7
+          ],
+          "detalhes_questoes": [
+            {
+              "numero": 1,
+              "resultado": "correta",
+              "tempo_segundos": 30,
+              "tempo_informado": true,
+              "confianca": 3,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            },
+            {
+              "numero": 4,
+              "resultado": "correta",
+              "tempo_segundos": 60,
+              "tempo_informado": true,
+              "confianca": null,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            },
+            {
+              "numero": 7,
+              "resultado": "correta",
+              "tempo_segundos": 0,
+              "tempo_informado": false,
+              "confianca": 3,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            }
+          ]
+        }
+      },
+      {
+        "data": "2026-09-06",
+        "horario": "12:00:00",
+        "grupo_muscular": "Estudos",
+        "exercicio": "Banco de Dados (SQL/NoSQL/Big Data)",
+        "series": 0,
+        "repeticoes": 2,
+        "carga_kg": 0.0,
+        "descanso_seg": 0,
+        "duracao_min": 2,
+        "distancia_km": 0.0,
+        "alimentacao_saudavel": "",
+        "alimentacao_besteirol": "",
+        "peso_corporal": 0.0,
+        "dados_extras": {
+          "topico_edital": "1 Modelagem de dados (conceitual, lógica e física)",
+          "q_certas": 0,
+          "q_erradas": 2,
+          "q_anuladas": 0,
+          "tempo_video": 0,
+          "fonte_questoes": "IA (Estilo FGV)",
+          "origem_importacao": "simulado_json",
+          "simulado_id": "Teste-solem_simulado_v1",
+          "importacao_id": "solem:teste-solem_simulado_v1",
+          "tempo_segundos_exato": 121,
+          "tempo_estimado": false,
+          "questoes_numeros": [
+            2,
+            5
+          ],
+          "detalhes_questoes": [
+            {
+              "numero": 2,
+              "resultado": "errada",
+              "tempo_segundos": 30,
+              "tempo_informado": true,
+              "confianca": null,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            },
+            {
+              "numero": 5,
+              "resultado": "errada",
+              "tempo_segundos": 91,
+              "tempo_informado": true,
+              "confianca": 3,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            }
+          ]
+        }
+      },
+      {
+        "data": "2026-09-06",
+        "horario": "12:00:00",
+        "grupo_muscular": "Estudos",
+        "exercicio": "Ciência de Dados (ML/DL/PLN/Visão)",
+        "series": 0,
+        "repeticoes": 0,
+        "carga_kg": 0.0,
+        "descanso_seg": 0,
+        "duracao_min": 61,
+        "distancia_km": 0.0,
+        "alimentacao_saudavel": "",
+        "alimentacao_besteirol": "",
+        "peso_corporal": 0.0,
+        "dados_extras": {
+          "topico_edital": "1 Aprendizado supervisionado: regressão, classificação, métricas, overfitting/underfitting, regularização, validação cruzada, viés-variância, regressão linear/logística, árvores/random forest, SVM, K-NN",
+          "q_certas": 0,
+          "q_erradas": 0,
+          "q_anuladas": 2,
+          "tempo_video": 0,
+          "fonte_questoes": "IA (Estilo FGV)",
+          "origem_importacao": "simulado_json",
+          "simulado_id": "Teste-solem_simulado_v1",
+          "importacao_id": "solem:teste-solem_simulado_v1",
+          "tempo_segundos_exato": 3632,
+          "tempo_estimado": false,
+          "questoes_numeros": [
+            3,
+            6
+          ],
+          "detalhes_questoes": [
+            {
+              "numero": 3,
+              "resultado": "anulada",
+              "tempo_segundos": 30,
+              "tempo_informado": true,
+              "confianca": 3,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            },
+            {
+              "numero": 6,
+              "resultado": "anulada",
+              "tempo_segundos": 3602,
+              "tempo_informado": true,
+              "confianca": null,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "input": {
+      "schema": "solem_simulado_ce_v1",
+      "simulado_id": "Teste-solem_simulado_ce_v1",
+      "data": "06/09/2026",
+      "questoes": [
+        {
+          "numero": 1,
+          "disciplina": "Atualidades e IA",
+          "topico_edital": "1 Tópicos atuais: segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, sustentabilidade e ecologia",
+          "resultado": "certo",
+          "tempo_segundos": 30,
+          "tempo_informado": true,
+          "confianca": 3,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 2,
+          "disciplina": "Banco de Dados (SQL/NoSQL/Big Data)",
+          "topico_edital": "1 Modelagem de dados (conceitual, lógica e física)",
+          "resultado": "erro",
+          "tempo_segundos": 30,
+          "tempo_informado": true,
+          "confianca": null,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 3,
+          "disciplina": "Ciência de Dados (ML/DL/PLN/Visão)",
+          "topico_edital": "1 Aprendizado supervisionado: regressão, classificação, métricas, overfitting/underfitting, regularização, validação cruzada, viés-variância, regressão linear/logística, árvores/random forest, SVM, K-NN",
+          "resultado": "anulada",
+          "tempo_segundos": 30,
+          "tempo_informado": true,
+          "confianca": 3,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 4,
+          "disciplina": "Atualidades e IA",
+          "topico_edital": "1 Tópicos atuais: segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, sustentabilidade e ecologia",
+          "resultado": "certo",
+          "tempo_segundos": 60.5,
+          "tempo_informado": true,
+          "confianca": null,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 5,
+          "disciplina": "Banco de Dados (SQL/NoSQL/Big Data)",
+          "topico_edital": "1 Modelagem de dados (conceitual, lógica e física)",
+          "resultado": "erro",
+          "tempo_segundos": "01:31",
+          "tempo_informado": true,
+          "confianca": 3,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 6,
+          "disciplina": "Ciência de Dados (ML/DL/PLN/Visão)",
+          "topico_edital": "1 Aprendizado supervisionado: regressão, classificação, métricas, overfitting/underfitting, regularização, validação cruzada, viés-variância, regressão linear/logística, árvores/random forest, SVM, K-NN",
+          "resultado": "anulada",
+          "tempo_segundos": "01:00:02",
+          "tempo_informado": true,
+          "confianca": null,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        },
+        {
+          "numero": 7,
+          "disciplina": "Atualidades e IA",
+          "topico_edital": "1 Tópicos atuais: segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, sustentabilidade e ecologia",
+          "resultado": "certo",
+          "tempo_segundos": 0,
+          "tempo_informado": false,
+          "confianca": 3,
+          "resposta_usuario": " a ",
+          "gabarito": "B",
+          "tipo_erro": "conteúdo"
+        }
+      ]
+    },
+    "expected": [
+      {
+        "data": "2026-09-06",
+        "horario": "12:00:00",
+        "grupo_muscular": "Estudos",
+        "exercicio": "Atualidades e IA",
+        "series": 0,
+        "repeticoes": 3,
+        "carga_kg": 0.0,
+        "descanso_seg": 0,
+        "duracao_min": 1,
+        "distancia_km": 0.0,
+        "alimentacao_saudavel": "",
+        "alimentacao_besteirol": "",
+        "peso_corporal": 0.0,
+        "dados_extras": {
+          "topico_edital": "1 Tópicos atuais: segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, sustentabilidade e ecologia",
+          "q_certas": 3,
+          "q_erradas": 0,
+          "q_anuladas": 0,
+          "tempo_video": 0,
+          "fonte_questoes": "IA (FGV adaptado C/E)",
+          "origem_importacao": "simulado_json",
+          "simulado_id": "Teste-solem_simulado_ce_v1",
+          "importacao_id": "solem:teste-solem_simulado_ce_v1",
+          "tempo_segundos_exato": 90,
+          "tempo_estimado": true,
+          "questoes_numeros": [
+            1,
+            4,
+            7
+          ],
+          "detalhes_questoes": [
+            {
+              "numero": 1,
+              "resultado": "correta",
+              "tempo_segundos": 30,
+              "tempo_informado": true,
+              "confianca": 3,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            },
+            {
+              "numero": 4,
+              "resultado": "correta",
+              "tempo_segundos": 60,
+              "tempo_informado": true,
+              "confianca": null,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            },
+            {
+              "numero": 7,
+              "resultado": "correta",
+              "tempo_segundos": 0,
+              "tempo_informado": false,
+              "confianca": 3,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            }
+          ]
+        }
+      },
+      {
+        "data": "2026-09-06",
+        "horario": "12:00:00",
+        "grupo_muscular": "Estudos",
+        "exercicio": "Banco de Dados (SQL/NoSQL/Big Data)",
+        "series": 0,
+        "repeticoes": 2,
+        "carga_kg": 0.0,
+        "descanso_seg": 0,
+        "duracao_min": 2,
+        "distancia_km": 0.0,
+        "alimentacao_saudavel": "",
+        "alimentacao_besteirol": "",
+        "peso_corporal": 0.0,
+        "dados_extras": {
+          "topico_edital": "1 Modelagem de dados (conceitual, lógica e física)",
+          "q_certas": 0,
+          "q_erradas": 2,
+          "q_anuladas": 0,
+          "tempo_video": 0,
+          "fonte_questoes": "IA (FGV adaptado C/E)",
+          "origem_importacao": "simulado_json",
+          "simulado_id": "Teste-solem_simulado_ce_v1",
+          "importacao_id": "solem:teste-solem_simulado_ce_v1",
+          "tempo_segundos_exato": 121,
+          "tempo_estimado": false,
+          "questoes_numeros": [
+            2,
+            5
+          ],
+          "detalhes_questoes": [
+            {
+              "numero": 2,
+              "resultado": "errada",
+              "tempo_segundos": 30,
+              "tempo_informado": true,
+              "confianca": null,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            },
+            {
+              "numero": 5,
+              "resultado": "errada",
+              "tempo_segundos": 91,
+              "tempo_informado": true,
+              "confianca": 3,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            }
+          ]
+        }
+      },
+      {
+        "data": "2026-09-06",
+        "horario": "12:00:00",
+        "grupo_muscular": "Estudos",
+        "exercicio": "Ciência de Dados (ML/DL/PLN/Visão)",
+        "series": 0,
+        "repeticoes": 0,
+        "carga_kg": 0.0,
+        "descanso_seg": 0,
+        "duracao_min": 61,
+        "distancia_km": 0.0,
+        "alimentacao_saudavel": "",
+        "alimentacao_besteirol": "",
+        "peso_corporal": 0.0,
+        "dados_extras": {
+          "topico_edital": "1 Aprendizado supervisionado: regressão, classificação, métricas, overfitting/underfitting, regularização, validação cruzada, viés-variância, regressão linear/logística, árvores/random forest, SVM, K-NN",
+          "q_certas": 0,
+          "q_erradas": 0,
+          "q_anuladas": 2,
+          "tempo_video": 0,
+          "fonte_questoes": "IA (FGV adaptado C/E)",
+          "origem_importacao": "simulado_json",
+          "simulado_id": "Teste-solem_simulado_ce_v1",
+          "importacao_id": "solem:teste-solem_simulado_ce_v1",
+          "tempo_segundos_exato": 3632,
+          "tempo_estimado": false,
+          "questoes_numeros": [
+            3,
+            6
+          ],
+          "detalhes_questoes": [
+            {
+              "numero": 3,
+              "resultado": "anulada",
+              "tempo_segundos": 30,
+              "tempo_informado": true,
+              "confianca": 3,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            },
+            {
+              "numero": 6,
+              "resultado": "anulada",
+              "tempo_segundos": 3602,
+              "tempo_informado": true,
+              "confianca": null,
+              "resposta_usuario": "A",
+              "gabarito": "B",
+              "marcacao": "",
+              "tipo_erro": "conteúdo"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

@@ -4,3 +4,4 @@ numpy>=2.1,<2.5
 pyarrow>=22,<25
 plotly==6.9.0
 supabase==2.31.0
+Pillow>=12,<13

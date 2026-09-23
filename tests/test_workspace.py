@@ -124,7 +124,7 @@ render_workspace(Repo(), [dict(id='map-1',kind='mindmap',title='Mapa',body='Raiz
         app=AppTest.from_string('''
 from solem_workspace_ui import render_workspace
 class Repo: pass
-render_workspace(Repo(), [dict(id='note-1',kind='note',title='Minha página',body='# Meu resumo\\n\\n**Conceito importante**',archived=False,revision=1)], 'Anotações')
+render_workspace(Repo(), [dict(id='note-1',kind='note',title='Minha p'+chr(225)+'gina',body='# Meu resumo\\n\\n**Conceito importante**',archived=False,revision=1)], 'Anota'+chr(231)+chr(245)+'es')
 ''').run()
         self.assertFalse(app.exception)
         self.assertFalse(app.selectbox)

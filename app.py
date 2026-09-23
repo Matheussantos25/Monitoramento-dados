@@ -12,6 +12,7 @@ import hashlib
 from pathlib import Path
 import streamlit.components.v1 as components
 from solem_ui import apply_theme, shell, overview, section_intro, goal_panel
+from solem_health import training_stats, training_recommendation, now_local
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
 def safe_get(val, key, default=None):
@@ -694,15 +695,21 @@ if pagina == "Visão geral":
     from solem_ranks_ui import rank_panel
     rank_panel(df_raw.to_dict("records"), TOPICOS_EDITAL, progresso['today'])
 
+if pagina == "Saúde":
+    from solem_health_ui import health_page
+    health_page(st.session_state.get("private_client"), ALIMENTOS_SAUDAVEIS, ALIMENTOS_BESTEIROL, demo=IS_DEMO)
+
 # ==========================================
 # ABA 1: REGISTRO DE TREINO 
 # ==========================================
 if pagina == "Treino":
     section_intro('CORPO EM MOVIMENTO', 'Seu treino começa aqui.', 'Registre o que você fez e acompanhe sua evolução, uma sessão por vez.')
+    st.info(training_recommendation(df_raw.to_dict("records"), now_local().date())["message"] +
+            " É uma sugestão baseada apenas no histórico, não um plano clínico ou prescrição.")
     modo_insercao = st.radio("Selecione o formato do treino:", ["🏋️ Exercício Isolado (Convencional)", "🔥 Circuito AMRAP 20' (5 Barras / 10 Flexões / 15 Agachamentos)"], horizontal=True)
     if modo_insercao == "🏋️ Exercício Isolado (Convencional)":
         with st.form("registro_treino", clear_on_submit=True):
-            st.markdown("<h3 style='margin-bottom: 20px; color: #C6E58B;'>Registrar atividade</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='margin-bottom: 20px; color: #83DCFF;'>Registrar atividade</h3>", unsafe_allow_html=True)
             c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
             with c_top1: data_treino = st.date_input("Data do Treino", value=(datetime.utcnow() - timedelta(hours=3)).date())
             agora = datetime.utcnow() - timedelta(hours=3)
@@ -711,28 +718,15 @@ if pagina == "Treino":
             horario = f"{hora}:{minuto}:00"
             st.markdown("---")
             exercicio_input = st.selectbox("Exercício", TODOS_EXERCICIOS)
-            
-            if not df_treinos.empty:
-                df_hist_ex = df_treinos[df_treinos['exercicio'] == exercicio_input].sort_values(by=['data', 'horario'])
-                if not df_hist_ex.empty:
-                    ult = df_hist_ex.iloc[-1]
-                    reps_u = int(ult['repeticoes'])
-                    carga_u = float(ult['carga_kg'])
-                    desc_u = int(ult['descanso_seg'])
-                    iso_u = int(safe_get(ult['dados_extras'], 'isometria_segundos', 0))
-
-                    sugestao = ""
-                    if iso_u > 0: sugestao = f"Tente segurar {iso_u + 2}s a {iso_u + 5}s (Progressão Isométrica)."
-                    elif reps_u > 0: sugestao = f"Tente {reps_u + 1} a {reps_u + 2} reps, ou aumente a carga para {carga_u + 1}kg."
-                    else: sugestao = "Mantenha o ritmo e otimize o movimento."
-                    
-                    html_overload = (
-                        '<div style="background-color: #121212; border-left: 3px solid #C6E58B; padding: 10px; border-radius: 5px; margin-top: 5px; margin-bottom: 20px;">'
-                        f'<span style="color: #AAA; font-size: 12px;">ÚLTIMO TREINO: {reps_u} reps | {iso_u}s isometria | {carga_u}kg | {desc_u}s descanso</span><br>'
-                        f'<span style="color: #C6E58B; font-size: 14px; font-weight: bold;">⚡ Sugestão de Overload: {sugestao} Reduza o descanso para {max(0, desc_u - 15)}s se estiver fácil.</span>'
-                        '</div>'
-                    )
-                    st.markdown(html_overload, unsafe_allow_html=True)
+            stats = training_stats(df_raw.to_dict("records"), exercicio_input)
+            if stats:
+                a, b, c = st.columns(3)
+                a.metric("Último treino", f"{int(stats['last']['repeticoes'])} rep", help=str(stats['last_day']))
+                b.metric("Recorde registrado", f"{int(stats['best']['repeticoes'])} rep", help="Maior total de repetições em um registro, não por série.")
+                c.metric("Média por dia treinado", f"{stats['average_reps_per_day']:.1f} rep", help=f"{stats['days']} dias com este exercício.")
+                group = next((g for g, items in EXERCICIOS_PRESETADOS.items() if exercicio_input in items), "Outro")
+                group_days = {str(row.get('data'))[:10] for row in df_raw.to_dict("records") if row.get('grupo_muscular') == group and row.get('data') is not None}
+                st.caption(f"Categoria {group}: {len(group_days)} dias registrados no histórico. Progrida apenas quando a técnica e a recuperação permitirem.")
             
             st.markdown("#### Detalhes do exercício")
             c1, c2, c3 = st.columns(3)
@@ -775,7 +769,7 @@ if pagina == "Treino":
             <!DOCTYPE html><html><head><style>
                     body { background-color: transparent; color: #E0E0E0; font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
                     .time { font-size: 68px; color: #F43F5E; text-shadow: 0 0 15px rgba(244,63,94,0.5); font-weight: bold; margin: 10px 0 15px 0; transition: color 0.3s; }
-                    .time.done { color: #10B981; text-shadow: 0 0 20px rgba(16,185,129,0.6); animation: pulseAmrap 1s infinite; }
+                    .time.done { color: #83DCFF; text-shadow: 0 0 20px rgba(131,220,255,0.6); animation: pulseAmrap 1s infinite; }
                     @keyframes pulseAmrap { 0% { opacity: 1; } 50% { opacity: 0.35; } 100% { opacity: 1; } }
                     .btn-group { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
                     .btn { padding: 10px 20px; background-color: #0A0A0A; color: #F43F5E; border: 2px solid #F43F5E; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
@@ -886,7 +880,7 @@ if pagina == "Evolução física":
                         if not df_peso.empty:
                             df_peso['data_format'] = df_peso['data'].dt.strftime('%d/%m')
                             fig_peso = px.line(df_peso, x='data_format', y='peso_corporal', markers=True, text='peso_corporal')
-                            fig_peso.update_traces(line_color='#C6E58B', marker=dict(size=10, color='#BBA6D9'), textposition="top center", texttemplate='%{text:.1f}')
+                            fig_peso.update_traces(line_color='#83DCFF', marker=dict(size=10, color='#BBA6D9'), textposition="top center", texttemplate='%{text:.1f}')
                             fig_peso.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), margin=dict(l=0, r=0, t=20, b=20), xaxis=dict(type='category', showgrid=False), yaxis=dict(showgrid=True, gridcolor="#1F1F1F"))
                             st.plotly_chart(fig_peso, use_container_width=True)
                         else: st.info("Sem registros de peso.")
@@ -900,7 +894,7 @@ if pagina == "Evolução física":
                 limite_reps = float(df_reps_dia['repeticoes'].max()) * 1.15
                 fig_reps = px.bar(df_reps_dia, x='data', y='repeticoes', text_auto=True)
                 fig_reps.update_traces(
-                    marker_color='#C6E58B',
+                    marker_color='#83DCFF',
                     textfont_color='white',
                     textposition='outside',
                     cliponaxis=False,
@@ -939,7 +933,7 @@ if pagina == "Evolução física":
 if pagina == "Alimentação":
     section_intro('CUIDADO DIÁRIO', 'Alimente uma boa rotina.', 'Um espaço para observar sua alimentação, sem julgamentos.')
     with st.form("registro_dieta", clear_on_submit=True):
-        st.markdown("<h3 style='margin-bottom: 20px; color: #10B981;'>Registrar refeição</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 20px; color: #83DCFF;'>Registrar refeição</h3>", unsafe_allow_html=True)
         data_dieta = st.date_input("Data da Refeição", value=(datetime.utcnow() - timedelta(hours=3)).date(), key="data_dieta")
         c_alim1, c_alim2 = st.columns(2)
         with c_alim1:
@@ -979,7 +973,7 @@ if pagina == "Peso":
 # ==========================================
 if pagina == "Estudar":
     section_intro('MENTE EM MOVIMENTO', 'Um espaço para o foco.', 'Escolha seu próximo tema, concentre-se e registre seu aprendizado.')
-    st.markdown("<h3 style='margin-bottom: 20px; color: #C6E58B;'>Central de foco · Operação FGV</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='margin-bottom: 20px; color: #83DCFF;'>Central de foco · Operação FGV</h3>", unsafe_allow_html=True)
 
     mensagem_importacao = st.session_state.pop("mensagem_importacao_simulado", None)
     if mensagem_importacao:
@@ -1076,11 +1070,11 @@ if pagina == "Estudar":
 
     html_bussola = (
         '<div style="background-color: #0A0A0A; border-left: 4px solid #BBA6D9; padding: 18px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">'
-        '<span style="color: #C6E58B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Inteligente (Foco nos Pontos Fracos)</span><br>'
+        '<span style="color: #83DCFF; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">🧭 Bússola Inteligente (Foco nos Pontos Fracos)</span><br>'
         '<div style="margin-top: 12px; padding-bottom: 8px; border-bottom: 1px solid #1F1F1F;">'
         '<span style="color: #AAA; font-size: 13px;">ROTAÇÃO PRINCIPAL:</span><br>'
         f'<span style="color: #FFF; font-size: 18px; font-weight: 700;">🎯 {prox_disciplina}</span><br>'
-        f'<span style="color: #10B981; font-size: 13px; font-weight: 600;">📖 Prioridade: {prox_topico_sugerido}</span>'
+        f'<span style="color: #83DCFF; font-size: 13px; font-weight: 600;">📖 Prioridade: {prox_topico_sugerido}</span>'
         '</div>'
         '<div style="margin-top: 8px; display: flex; gap: 20px;">'
         '<div style="flex: 1;">'
@@ -1143,9 +1137,9 @@ if pagina == "Estudar":
                     html_pomodoro = """
                     <!DOCTYPE html><html><head><style>
                             body { background-color: transparent; color: #E0E0E0; font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
-                            .time { font-size: 65px; color: #C6E58B; text-shadow: 0 0 15px rgba(0,156,166,0.5); font-weight: bold; margin: 10px 0 20px 0; }
-                            .btn { padding: 10px 20px; background-color: #0A0A0A; color: #C6E58B; border: 2px solid #C6E58B; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
-                            .btn:hover { background-color: #C6E58B; color: #000; box-shadow: 0 0 10px rgba(0,156,166,0.5); }
+                            .time { font-size: 65px; color: #83DCFF; text-shadow: 0 0 15px rgba(0,156,166,0.5); font-weight: bold; margin: 10px 0 20px 0; }
+                            .btn { padding: 10px 20px; background-color: #0A0A0A; color: #83DCFF; border: 2px solid #83DCFF; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+                            .btn:hover { background-color: #83DCFF; color: #000; box-shadow: 0 0 10px rgba(0,156,166,0.5); }
                     </style></head><body>
                         <div class="time" id="display">[INITIAL_TIME]</div>
                         <button class="btn" onclick="startPomodoro()">▶️ Iniciar Foco</button>
@@ -1157,9 +1151,9 @@ if pagina == "Estudar":
                                 var parentDoc = window.parent.document; var style = parentDoc.createElement('style'); style.id = 'cinema-style';
                                 style.innerHTML = `
                                     .cinema-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(5, 5, 5, 0.95); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
-                                    .cinema-video { width: 80vw; max-height: 75vh; border: 2px solid #C6E58B; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }
-                                    .btn-fechar { margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #C6E58B; border: 2px solid #C6E58B; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }
-                                    .btn-fechar:hover { background-color: #C6E58B; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }
+                                    .cinema-video { width: 80vw; max-height: 75vh; border: 2px solid #83DCFF; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }
+                                    .btn-fechar { margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #83DCFF; border: 2px solid #83DCFF; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }
+                                    .btn-fechar:hover { background-color: #83DCFF; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }
                                 `;
                                 parentDoc.head.appendChild(style);
                                 var overlay = parentDoc.createElement('div'); overlay.className = 'cinema-overlay'; overlay.id = 'cinema-modal';
@@ -1182,10 +1176,10 @@ if pagina == "Estudar":
                 html_cronometro = """
                 <!DOCTYPE html><html><head><style>
                         body { background-color: transparent; color: #E0E0E0; font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
-                        .time { font-size: 65px; color: #C6E58B; text-shadow: 0 0 15px rgba(0,156,166,0.5); font-weight: bold; margin: 10px 0 20px 0; }
+                        .time { font-size: 65px; color: #83DCFF; text-shadow: 0 0 15px rgba(0,156,166,0.5); font-weight: bold; margin: 10px 0 20px 0; }
                         .btn-group { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-                        .btn { padding: 10px 20px; background-color: #0A0A0A; color: #C6E58B; border: 2px solid #C6E58B; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
-                        .btn:hover { background-color: #C6E58B; color: #000; box-shadow: 0 0 10px rgba(0,156,166,0.5); }
+                        .btn { padding: 10px 20px; background-color: #0A0A0A; color: #83DCFF; border: 2px solid #83DCFF; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+                        .btn:hover { background-color: #83DCFF; color: #000; box-shadow: 0 0 10px rgba(0,156,166,0.5); }
                         .btn-finish { border-color: #BBA6D9; color: #BBA6D9; }
                         .btn-finish:hover { background-color: #BBA6D9; color: #000; box-shadow: 0 0 10px rgba(139,92,246,0.5); }
                 </style></head><body>
@@ -1205,9 +1199,9 @@ if pagina == "Estudar":
                             var parentDoc = window.parent.document; var style = parentDoc.createElement('style'); style.id = 'cinema-style';
                             style.innerHTML = `
                                 .cinema-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(5, 5, 5, 0.95); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
-                                .cinema-video { width: 80vw; max-height: 75vh; border: 2px solid #C6E58B; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }
-                                .btn-fechar { margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #C6E58B; border: 2px solid #C6E58B; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }
-                                .btn-fechar:hover { background-color: #C6E58B; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }
+                                .cinema-video { width: 80vw; max-height: 75vh; border: 2px solid #83DCFF; border-radius: 12px; box-shadow: 0 0 50px rgba(0, 156, 166, 0.5); outline: none; }
+                                .btn-fechar { margin-top: 25px; padding: 12px 30px; background-color: #0A0A0A; color: #83DCFF; border: 2px solid #83DCFF; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: sans-serif; }
+                                .btn-fechar:hover { background-color: #83DCFF; color: #000; box-shadow: 0 0 20px rgba(0,156,166,0.6); }
                             `;
                             parentDoc.head.appendChild(style);
                             var overlay = parentDoc.createElement('div'); overlay.className = 'cinema-overlay'; overlay.id = 'cinema-modal';
@@ -1323,7 +1317,7 @@ if pagina == "Evolução nos estudos":
 
     html_motivacional = (
         '<div style="text-align: center; margin-bottom: 25px;">'
-        '<p style="color: #C6E58B; font-style: italic; font-size: 16px;">"Se você não gosta do seu destino, não o aceite. Em vez disso, tenha a coragem para transformá-lo naquilo que você quer que ele seja." <br>'
+        '<p style="color: #83DCFF; font-style: italic; font-size: 16px;">"Se você não gosta do seu destino, não o aceite. Em vez disso, tenha a coragem para transformá-lo naquilo que você quer que ele seja." <br>'
         '<span style="font-weight: bold; color: #FFF;">— Naruto Uzumaki</span></p></div>'
     )
     st.markdown(html_motivacional, unsafe_allow_html=True)

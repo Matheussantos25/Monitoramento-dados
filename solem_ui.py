@@ -5,9 +5,9 @@ import streamlit as st
 import plotly.io as pio
 import plotly.graph_objects as go
 from solem_progress import calculate_progress
-from solem_journal_ui import character_panel, monthly_journal
+from solem_journal_ui import monthly_journal
 
-PAGES = ["Visão geral", "Treino", "Evolução física", "Alimentação", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos", "Configurações"]
+PAGES = ["Visão geral", "Treino", "Evolução física", "Saúde", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos", "Configurações"]
 
 
 def apply_theme():
@@ -44,10 +44,10 @@ def shell(df, on_logout=None):
     with st.container(key="system_navigation"):
         with st.popover(f"☰  Menu  /  {page}"):
             for group, destinations in (
-                ("JORNADA", PAGES[:7]),
-                ("BIBLIOTECA", PAGES[7:12]),
-                ("PLANEJAMENTO", PAGES[12:14]),
-                ("CONTA", PAGES[14:]),
+                ("JORNADA", PAGES[:6]),
+                ("BIBLIOTECA", PAGES[6:11]),
+                ("PLANEJAMENTO", PAGES[11:13]),
+                ("CONTA", PAGES[13:]),
             ):
                 st.caption(group)
                 for destination in destinations:
@@ -82,7 +82,6 @@ def overview(p, records=None):
         <div class="system-status__foot"><span>◈ {p['streak']} dias de sequência</span><span>+{p['today_xp']} XP hoje</span></div>
     </section>''')
     if records is not None:
-        character_panel(records, p)
         monthly_journal(records, today)
 
     st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>TEMPO DE ESTUDO</span><strong>{int(p['study_minutes']//60)}<small>h </small>{int(p['study_minutes']%60):02}<small>min</small></strong></div><div><span>QUESTÕES RESOLVIDAS</span><strong>{p['questions']}<small> nesta semana</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP conquistados</small></strong></div></section>''')
@@ -93,7 +92,7 @@ def overview(p, records=None):
         for category, title, description, xp, destination, glyph in [
             ("treino", "Coloque o corpo em movimento", "Registre uma atividade do seu treino.", 30, "Treino", "↗"),
             ("estudo", "Abra espaço para o foco", "Salve uma sessão de estudo ou revisão.", 30, "Estudar", "▤"),
-            ("alimentação", "Cuide da sua rotina", "Preencha seu diário alimentar.", 10, "Alimentação", "◉"),
+            # O diário privado não entra na pontuação baseada na tabela compartilhada.
         ]:
             done = category in p["today_categories"]
             with st.container(key=f"mission_{category}"):
@@ -102,7 +101,8 @@ def overview(p, records=None):
                     st.html(f'<div class="mission"><span class="mission-icon {"done" if done else ""}" aria-hidden="true">{"✓" if done else glyph}</span><div><h3>{title}</h3><p>{description}</p></div><span class="mission-xp">{"Concluído" if done else f"+{xp} XP"}</span></div>')
                 with b:
                     st.button("Ver registro" if done else "Começar →", key=f"go_{category}", on_click=navigate, args=(destination,), use_container_width=True)
-        st.caption("Corpo e mente no mesmo dia: +15 XP. Descansar também faz parte do caminho.")
+        st.button("Abrir diário de saúde", key="go_health_private", on_click=navigate, args=("Saúde",), use_container_width=True)
+        st.caption("Corpo e mente no mesmo dia: +15 XP. O diário privado ainda não soma XP; descansar também faz parte do caminho.")
     with rhythm:
         st.html('<div class="section-title"><h2>Seu ritmo</h2><span>Esta semana</span></div>')
         cells = ""

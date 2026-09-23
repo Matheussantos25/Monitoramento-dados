@@ -1,0 +1,227 @@
+{
+  "EXERCICIOS_PRESETADOS": {
+    "Abdominal": [
+      "Abdominal Levantada",
+      "Prancha"
+    ],
+    "Bíceps": [
+      "Barra Fixa (Supinada)"
+    ],
+    "Cardio": [
+      "Bike",
+      "Caminhada",
+      "Corrida",
+      "Pular Corda",
+      "Pular Normal",
+      "Subida Escada (Andares)"
+    ],
+    "Costas": [
+      "Barra Fixa (Pronada)",
+      "Puxada Alta",
+      "Remada Baixa",
+      "Remada em Pé na Polia",
+      "Remada em Pé na Polia com barra"
+    ],
+    "Peitoral": [
+      "Flexão"
+    ],
+    "Pernas": [
+      "Agachamento"
+    ],
+    "Rosto": [
+      "Massagem Facial",
+      "Mewing com borracha"
+    ],
+    "Skills / Calistenia": [
+      "Handstand (Parada de Mãos)",
+      "L-Sit"
+    ]
+  },
+  "ALIMENTOS_SAUDAVEIS": [
+    "Banana",
+    "Uva",
+    "Maçã",
+    "Laranja",
+    "Melão",
+    "Melancia",
+    "Mirtilo",
+    "Ovo",
+    "Frango",
+    "Aveia",
+    "Whey"
+  ],
+  "ALIMENTOS_BESTEIROL": [
+    "Refrigerante",
+    "Hambúrguer",
+    "Pizza",
+    "Lasanha",
+    "Churros",
+    "Pastel",
+    "Coxinha",
+    "Sorvete",
+    "Batata Frita",
+    "Sonho de Valsa",
+    "Biscoito Recheado",
+    "Chocotone"
+  ],
+  "DISCIPLINAS_ESTUDO": [
+    "Atualidades e IA",
+    "Banco de Dados (SQL/NoSQL/Big Data)",
+    "Ciência de Dados (ML/DL/PLN/Visão)",
+    "Legislação (LAI/Marco Civil/LGPD)",
+    "Linguagens (Python/R/Spark/SAS)",
+    "Língua Inglesa",
+    "Língua Portuguesa",
+    "Matemática e Estatística Aplicada",
+    "Raciocínio Lógico",
+    "TCC",
+    "Outro"
+  ],
+  "DECKS_ANKI": [
+    "Atualidades",
+    "Conhecimentos Específicos",
+    "Erros Simulados com IA",
+    "Inglês",
+    "Legislação",
+    "Língua Portuguesa",
+    "Raciocínio Lógico"
+  ],
+  "FONTES_QUESTOES": [
+    "FGV",
+    "Gerado por IA",
+    "IA (Estilo FGV)",
+    "IA (FGV adaptado C/E)",
+    "CEBRASPE",
+    "VUNESP",
+    "FCC",
+    "QConcursos / TEC",
+    "V OU F",
+    "Anki",
+    "Outra"
+  ],
+  "TOPICOS_EDITAL": {
+    "Matemática e Estatística Aplicada": [
+      "I.1 Cálculo: funções, limites, derivadas, derivadas parciais, máximos e mínimos, integrais",
+      "I.2 Álgebra linear: vetores, matrizes, produto escalar/vetorial, matriz identidade/inversa/transposta, transformações lineares, normas L1/L2, autovalores e autovetores",
+      "II.1 Probabilidade: modelo, probabilidade condicional, independência, variáveis aleatórias, esperança/variância/covariância, distribuições contínuas e discretas, distribuições multidimensionais",
+      "II.2 Estatística descritiva: Teorema do Limite Central, teste de hipótese e intervalo de confiança, máxima verossimilhança, inferência bayesiana, correlação de Pearson, boxplot e outliers"
+    ],
+    "Ciência de Dados (ML/DL/PLN/Visão)": [
+      "1 Aprendizado supervisionado: regressão, classificação, métricas, overfitting/underfitting, regularização, validação cruzada, viés-variância, regressão linear/logística, árvores/random forest, SVM, K-NN",
+      "2 Aprendizado não supervisionado: PCA, K-Means, mistura de Gaussianas, regras de associação",
+      "3 Redes neurais artificiais: arquitetura, funções de ativação, gradiente/SGD/backpropagation, regularização L1/L2, CNN",
+      "4 Machine Learning aplicado: visão computacional com CNN, classificação/detecção de imagens, noções de PLN",
+      "5 ETL",
+      "6 Manipulação, tratamento e visualização de dados",
+      "7.1 Análise de dados (Pandas, NumPy, Jupyter, R)",
+      "7.2 Aprendizado de máquina: classificação, regressão, agrupamento, redução de dimensionalidade, associação, sistemas de recomendação",
+      "8 Processamento de linguagem natural (PLN)",
+      "9 Visão computacional",
+      "10 Deep learning",
+      "11 Mineração de dados",
+      "12 Ferramenta SAS"
+    ],
+    "Linguagens (Python/R/Spark/SAS)": [
+      "1 Python e bibliotecas: NumPy, Matplotlib, Seaborn, Streamlit, Pandas, SciPy, TensorFlow, Keras, PyTorch",
+      "2 R e suas bibliotecas",
+      "3 Apache Hadoop e Apache Spark"
+    ],
+    "Banco de Dados (SQL/NoSQL/Big Data)": [
+      "1 Modelagem de dados (conceitual, lógica e física)",
+      "2 Abordagem relacional",
+      "3 Normalização das estruturas de dados",
+      "4 Integridade referencial",
+      "5 Metadados",
+      "6 Modelagem dimensional",
+      "7 Linguagem de consulta estruturada (SQL)",
+      "8 Linguagem de definição de dados (DDL)",
+      "9 Linguagem de manipulação de dados (DML)",
+      "10 SGBD",
+      "11 Propriedades de banco de dados",
+      "12 Banco de dados NoSQL",
+      "13 Banco de dados em memória",
+      "14 Data lakes e soluções para big data"
+    ],
+    "Língua Portuguesa": [
+      "1 Compreensão e interpretação de textos",
+      "2 Tipos e gêneros textuais",
+      "3 Ortografia oficial",
+      "4.1 Coesão: referenciação, substituição, repetição, conectores",
+      "4.2 Emprego de tempos e modos verbais",
+      "5.1 Classes de palavras",
+      "5.2 Coordenação entre orações e termos",
+      "5.3 Subordinação entre orações e termos",
+      "5.4 Sinais de pontuação",
+      "5.5 Concordância verbal e nominal",
+      "5.6 Regência verbal e nominal",
+      "5.7 Emprego do sinal indicativo de crase",
+      "5.8 Colocação dos pronomes átonos",
+      "6.1 Significação das palavras",
+      "6.2 Substituição de palavras/trechos de texto",
+      "6.3 Reorganização da structure de orações e períodos",
+      "6.4 Reescrita de textos (gêneros e formalidade)"
+    ],
+    "Língua Inglesa": [
+      "1 Compreensão de textos em língua inglesa e itens gramaticais relevantes"
+    ],
+    "Raciocínio Lógico": [
+      "1 Estruturas lógicas",
+      "2 Lógica de argumentação: analogias, inferências, deduções e conclusões",
+      "3.1 Proposições simples e compostas",
+      "3.2 Tabelas-verdade",
+      "3.3 Equivalências",
+      "3.4 Diagramas lógicos",
+      "4 Lógica de primeira ordem",
+      "5 Problemas aritméticos, geométricos e matriciais"
+    ],
+    "Atualidades e IA": [
+      "1 Tópicos atuais: segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, sustentabilidade e ecologia",
+      "2 IA: fundamentos, aplicações e aprendizado de máquina; modelos generativos e de linguagem",
+      "2.1 Ética, governança e privacidade em IA"
+    ],
+    "Legislação (LAI/Marco Civil/LGPD)": [
+      "1 Lei nº 12.527/2011 (LAI) — Cap. I, II, III, IV e V; Dec. nº 7.724 e nº 7.845",
+      "2 Lei nº 12.737/2012 (Delitos Informáticos) — Art. 2º",
+      "3 Lei nº 12.965/2014 (Marco Civil da Internet) — Cap. II Seção I e Cap. III Seções I e II",
+      "4 Lei nº 13.709/2018 (LGPD) — Cap. I, II, III, IV, VII e VIII"
+    ],
+    "TCC": [
+      "Definição do tema",
+      "Revisão bibliográfica",
+      "Metodologia",
+      "Desenvolvimento",
+      "Redação final",
+      "Defesa"
+    ],
+    "Outro": [
+      "Geral"
+    ]
+  },
+  "ROTA_ESTRATEGICA": [
+    "Banco de Dados (SQL/NoSQL/Big Data)",
+    "Raciocínio Lógico",
+    "Ciência de Dados (ML/DL/PLN/Visão)",
+    "Legislação (LAI/Marco Civil/LGPD)",
+    "Atualidades e IA",
+    "Linguagens (Python/R/Spark/SAS)",
+    "Língua Inglesa"
+  ],
+  "PESOS_DISCIPLINA": {
+    "Ciência de Dados (ML/DL/PLN/Visão)": 30,
+    "Matemática e Estatística Aplicada": 20,
+    "Banco de Dados (SQL/NoSQL/Big Data)": 15,
+    "Linguagens (Python/R/Spark/SAS)": 10,
+    "Língua Portuguesa": 8,
+    "Raciocínio Lógico": 6,
+    "Legislação (LAI/Marco Civil/LGPD)": 6,
+    "Atualidades e IA": 3,
+    "Língua Inglesa": 2
+  },
+  "PERIODOS_DASHBOARD": [
+    "Todo o Histórico",
+    "Hoje",
+    "Últimos 7 Dias",
+    "Últimos 30 Dias",
+    "Este Ano"
+  ]
+}

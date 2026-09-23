@@ -11,7 +11,7 @@ python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-Mantenha `SUPABASE_URL` e `SUPABASE_KEY` em `.streamlit/secrets.toml` localmente, ou em **Settings → Secrets** no Streamlit Community Cloud. Nunca adicione esse arquivo ao Git. A tabela `treinos` e seus campos continuam os mesmos; nenhuma migração é necessária.
+Mantenha `SUPABASE_URL` e a chave pública (`SUPABASE_PUBLISHABLE_KEY`) em `.streamlit/secrets.toml` localmente, ou em **Settings → Secrets** no Streamlit Community Cloud. Nunca adicione esse arquivo ao Git. Para ativar o diário privado de Saúde e as fotos, execute uma vez as migrações [20260923_health_diary.sql](supabase/migrations/20260923_health_diary.sql) e [20260923_health_photos.sql](supabase/migrations/20260923_health_photos.sql) no mesmo projeto Supabase.
 
 ## Experimentar sem banco
 
@@ -30,11 +30,17 @@ SOLEM_DEMO=1 python -m streamlit run app.py
 
 Não configure `SOLEM_DEMO=1` no app de produção. Para voltar ao banco no PowerShell, execute `Remove-Item Env:SOLEM_DEMO` antes de reiniciar.
 
+## Saúde privada e dados legados
+
+A aba Saúde permite várias refeições e registros de água por dia, mas apenas um peso e um sono por dia. Água é volume do recipiente × quantidade; os horários vêm preenchidos com a hora atual e podem ser editados. Fotos de rosto/corpo são opcionais, ficam num bucket privado por usuário e são recodificadas para remover EXIF antes do envio. A comparação usa datas escolhidas pelo usuário. Não há análise automática de rosto ou músculos.
+
+**Atenção:** o projeto Supabase existente tem uma policy `treinos` de acesso público total (`public`, `ALL`, `true`). Os novos dados de saúde **não** são gravados nela; ficam em `solem_health_entries` sob RLS por usuário. O histórico antigo de alimentação/peso em `treinos` não é migrado sem atribuição segura de proprietário. Treinos/estudos e a pontuação legada continuam compartilhados; revisar a proteção da tabela `treinos` é o próximo passo de privacidade. O diário privado novo ainda não adiciona XP.
+
 ## Gamificação
 
 - Treino registrado: 30 XP por dia.
 - Estudo registrado: 30 XP por dia.
-- Alimentação registrada: 10 XP por dia, independentemente do alimento.
+- Alimentação registrada no histórico legado `treinos`: 10 XP por dia, independentemente do alimento. O novo diário privado ainda não soma XP.
 - Treino e estudo no mesmo dia: bônus de 15 XP.
 - Cada nível exige 250 XP. O máximo diário é 85 XP.
 
@@ -51,6 +57,10 @@ A semana vai de segunda a domingo. As datas seguem o mesmo horário brasileiro (
 - `.streamlit/config.toml`: tema nativo para widgets, menus e formulários.
 - `demo_data.py`: dados e armazenamento temporários da demonstração.
 
+## Android nativo
+
+O cliente Android nativo fica em [`android-app/`](android-app/). Ele usa o mesmo projeto Supabase, sem WebView. Treinos e estudos continuam em `treinos`; o diário de Saúde usa a nova tabela privada. Leia o [mapeamento da integração](android-app/ANALYSIS.md) e o [guia de configuração e APK](android-app/README.md). As credenciais do Android ficam em `android-app/local.properties`, fora do Git; nunca copie uma chave `service_role` para o APK.
+
 Os vídeos, prompts, cronômetros, importação de simulados e configurações existentes continuam no projeto. As áreas são renderizadas sob demanda a partir da navegação principal. As metas existentes de 200 repetições e 150 questões foram preservadas nos painéis e apresentadas em barras compactas.
 
 ## Testes
@@ -59,7 +69,7 @@ Os vídeos, prompts, cronômetros, importação de simulados e configurações e
 python -m unittest discover -s tests -v
 ```
 
-São 12 testes: regras de XP, duplicação, datas, sequência, limites semanais, duração exata, revisão Anki, níveis e valores inválidos; navegação nas nove páginas com histórico preenchido e vazio; atalho para treino, salvamento e recálculo de XP. Testes de interface usam somente a demonstração, nunca o banco real.
+Os testes cobrem progresso, navegação, cálculos de água/sono/treino e remoção de metadados de fotos. Testes de interface usam somente a demonstração, nunca o banco real.
 
 ## Atualizar o Streamlit Community Cloud
 

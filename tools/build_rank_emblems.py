@@ -5,7 +5,7 @@ from xml.etree import ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 PALETTES = [('#796D69','#D0BCB0','#352F34'),('#B07655','#F0C49B','#493139'),
  ('#819AA8','#E4F2FA','#354B60'),('#C29648','#FFF0AA','#5D4028'),
- ('#3FADBA','#ADF8EF','#174B66'),('#44AD81','#B4FFD9','#1B4B43'),
+ ('#3FADBA','#ADF8EF','#174B66'),('#4C86C6','#C7E7FF','#1B3D65'),
  ('#658CE5','#C8F2FF','#34366E'),('#B66CDB','#FFD6FF','#572A71')]
 
 def paths(tier):
