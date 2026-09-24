@@ -21,6 +21,14 @@ for node in tree.body:
             if isinstance(target, ast.Name) and target.id in names:
                 catalog[target.id] = ast.literal_eval(node.value)
 assert set(catalog) == names
+health_tree = ast.parse((repo / "solem_health.py").read_text(encoding="utf-8"))
+profile_names = {"WORKOUT_FIELD_PROFILES", "WORKOUT_EXERCISE_PROFILES"}
+for node in health_tree.body:
+    if isinstance(node, ast.Assign):
+        for target in node.targets:
+            if isinstance(target, ast.Name) and target.id in profile_names:
+                catalog[target.id] = ast.literal_eval(node.value)
+assert profile_names <= set(catalog)
 
 def save(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -61,4 +69,4 @@ for schema in ("solem_simulado_v1", "solem_simulado_ce_v1"):
 resources = android / "app/src/test/resources"
 save(resources / "catalog.json", catalog)
 save(resources / "import-parity.json", fixtures)
-print("Exported 10 catalogs, original prompts/videos and 2 Python import parity fixtures.")
+print("Exported web catalogs and workout profiles, original prompts/videos and 2 Python import parity fixtures.")

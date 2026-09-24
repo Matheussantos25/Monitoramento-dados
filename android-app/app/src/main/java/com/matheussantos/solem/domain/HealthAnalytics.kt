@@ -4,6 +4,9 @@ import com.matheussantos.solem.data.model.TrainingRecord
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.util.Locale
 
 private val mainGroups = listOf("Peitoral", "Costas", "Pernas", "Abdominal")
 
@@ -28,17 +31,20 @@ data class TrainingSnapshot(val last: TrainingRecord, val record: TrainingRecord
 data class TrainingMeasureSnapshot(val unit: String, val last: Double, val record: Double,
     val days: Int, val meanPerDay: Double, val lastDay: String)
 
-fun trainingMeasureSnapshot(rows: List<TrainingRecord>, exercise: String): TrainingMeasureSnapshot? {
+fun formatOneDecimal(value: Double): String =
+    DecimalFormat("0.#", DecimalFormatSymbols(Locale.forLanguageTag("pt-BR"))).format(value)
+
+fun trainingMeasureSnapshot(rows: List<TrainingRecord>, exercise: String, fields: List<String>): TrainingMeasureSnapshot? {
     val matches = rows.filter { it.isWorkout() && it.exercicio == exercise &&
         runCatching { LocalDate.parse(it.data.take(10)) }.isSuccess }
     if (matches.isEmpty()) return null
-    val cardio = exercise in listOf("Caminhada", "Corrida", "Bike")
-    val candidates: List<Pair<String, (TrainingRecord) -> Double>> = if (cardio) listOf(
-        "km" to { it.distanceKm }, "min" to { it.durationMinutes.toDouble() }
-    ) else listOf(
-        "rep" to { it.repeticoes.toDouble() }, "seg" to { it.number("isometria_segundos") },
-        "min" to { it.durationMinutes.toDouble() }, "km" to { it.distanceKm }
-    )
+    val candidates: List<Pair<String, (TrainingRecord) -> Double>> = when {
+        "isometria_segundos" in fields -> listOf("seg" to { it.number("isometria_segundos") }, "rep" to { it.repeticoes.toDouble() })
+        "distancia_km" in fields -> listOf("km" to { it.distanceKm }, "min" to { it.durationMinutes.toDouble() })
+        fields == listOf("duracao_min") -> listOf("min" to { it.durationMinutes.toDouble() })
+        else -> listOf("rep" to { it.repeticoes.toDouble() }, "min" to { it.durationMinutes.toDouble() },
+            "seg" to { it.number("isometria_segundos") }, "km" to { it.distanceKm })
+    }
     val (unit, measure) = candidates.firstOrNull { (_, value) -> matches.any { value(it) > 0 } } ?: candidates.first()
     val last = matches.maxWith(compareBy<TrainingRecord> { it.data }.thenBy { it.horario })
     val byDay = matches.groupBy { it.data.take(10) }

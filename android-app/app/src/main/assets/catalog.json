@@ -223,5 +223,58 @@
     "Últimos 7 Dias",
     "Últimos 30 Dias",
     "Este Ano"
-  ]
+  ],
+  "WORKOUT_FIELD_PROFILES": {
+    "cardio": [
+      "duracao_min",
+      "distancia_km"
+    ],
+    "counted_cardio": [
+      "repeticoes",
+      "duracao_min"
+    ],
+    "isometric": [
+      "repeticoes",
+      "isometria_segundos"
+    ],
+    "timed": [
+      "duracao_min"
+    ],
+    "counted": [
+      "repeticoes"
+    ],
+    "bodyweight": [
+      "series",
+      "repeticoes",
+      "descanso_seg"
+    ],
+    "resistance": [
+      "series",
+      "repeticoes",
+      "carga_kg",
+      "descanso_seg"
+    ]
+  },
+  "WORKOUT_EXERCISE_PROFILES": {
+    "Caminhada": "cardio",
+    "Corrida": "cardio",
+    "Bike": "cardio",
+    "Pular Corda": "counted_cardio",
+    "Pular Normal": "counted_cardio",
+    "Subida Escada (Andares)": "counted_cardio",
+    "Prancha": "isometric",
+    "L-Sit": "isometric",
+    "Handstand (Parada de Mãos)": "isometric",
+    "Massagem Facial": "timed",
+    "Mewing com borracha": "counted",
+    "Abdominal Levantada": "bodyweight",
+    "Barra Fixa (Supinada)": "bodyweight",
+    "Barra Fixa (Pronada)": "bodyweight",
+    "Flexão": "bodyweight",
+    "Agachamento": "bodyweight",
+    "Puxada Alta": "resistance",
+    "Remada Baixa": "resistance",
+    "Remada em Pé na Polia": "resistance",
+    "Remada em Pé na Polia com barra": "resistance"
+  }
 }

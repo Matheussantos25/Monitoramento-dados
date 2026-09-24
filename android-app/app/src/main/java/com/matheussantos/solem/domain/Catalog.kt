@@ -15,4 +15,8 @@ class Catalog(private val root: JsonObject) {
     val route = list("ROTA_ESTRATEGICA")
     val periods = list("PERIODOS_DASHBOARD")
     fun group(exercise: String) = groups.entries.firstOrNull { exercise in it.value }?.key ?: "Outro"
+    fun workoutFields(exercise: String): List<String> {
+        val profile = root.getValue("WORKOUT_EXERCISE_PROFILES").jsonObject[exercise]?.jsonPrimitive?.content ?: "resistance"
+        return root.getValue("WORKOUT_FIELD_PROFILES").jsonObject.getValue(profile).jsonArray.map { it.jsonPrimitive.content }
+    }
 }

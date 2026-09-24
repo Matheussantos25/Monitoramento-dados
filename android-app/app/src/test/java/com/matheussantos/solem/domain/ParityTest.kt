@@ -27,6 +27,9 @@ class ParityTest {
     }
     @Test fun presetsAndRotationUseWebValues() {
         assertEquals("Bíceps", catalog.group("Barra Fixa (Supinada)"))
+        assertEquals(listOf("repeticoes", "isometria_segundos"), catalog.workoutFields("Prancha"))
+        assertEquals(listOf("duracao_min", "distancia_km"), catalog.workoutFields("Caminhada"))
+        assertEquals(listOf("series", "repeticoes", "descanso_seg"), catalog.workoutFields("Flexão"))
         assertEquals(catalog.route.first(), nextSubject(emptyList(), catalog))
         val row = TrainingRecord(1, "2026-09-06", "12:00:00", "Estudos", catalog.route.last())
         assertEquals(catalog.route.first(), nextSubject(listOf(row), catalog))

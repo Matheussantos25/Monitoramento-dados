@@ -5,7 +5,8 @@ import pytest
 from PIL import Image
 
 from solem_health import (base_record, daily_water_ml, private_weight_history, sleep_minutes,
-                          training_category_stats, training_measure_stats, training_recommendation, training_stats)
+                          training_category_stats, training_measure_stats, training_recommendation, training_stats,
+                          workout_fields, format_one_decimal)
 from solem_photos_ui import normalized_jpeg
 
 
@@ -48,6 +49,22 @@ def test_training_measure_is_specific_to_exercise_and_cardio_unit():
     assert (flexao["unit"], flexao["record"], flexao["average_per_day"]) == ("rep", 40, 35)
     assert (caminhada["unit"], caminhada["record"], caminhada["average_per_day"]) == ("km", 3.5, 3)
     assert caminhada["last_day"] == date(2026, 9, 23)
+
+
+def test_workout_fields_fit_exercise_and_average_has_at_most_one_decimal():
+    from solem_health import WORKOUT_EXERCISE_PROFILES
+    assert len(WORKOUT_EXERCISE_PROFILES) == 20
+    assert workout_fields("Prancha") == ("repeticoes", "isometria_segundos")
+    assert workout_fields("Caminhada") == ("duracao_min", "distancia_km")
+    assert workout_fields("Flexão") == ("series", "repeticoes", "descanso_seg")
+    assert format_one_decimal(12) == "12"
+    assert format_one_decimal(12.34) == "12.3"
+    rows = [base_record("2026-09-20", "08:00:00", "Abdominal", "Prancha", repeticoes=2,
+                        extras={"isometria_segundos": 45}),
+            base_record("2026-09-21", "08:00:00", "Abdominal", "Prancha", repeticoes=3,
+                        extras={"isometria_segundos": 50})]
+    stats = training_measure_stats(rows, "Prancha")
+    assert (stats["unit"], stats["record"], stats["average_per_day"]) == ("seg", 50, 47.5)
 
 
 def test_weight_chart_only_uses_private_weight_entries():

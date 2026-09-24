@@ -64,28 +64,39 @@ import java.time.ZoneOffset
                     TimerPanel(fixedSeconds = 1200)
                     Field("Rounds completos", rounds, true) { rounds = it }
                 } else {
-                    Choice("Exercício", exercise, catalog.exercises + listOfNotNull(existing?.exercicio)) { exercise = it }
-                    val stats = trainingMeasureSnapshot(rows, exercise)
+                    Choice("Exercício", exercise, catalog.exercises + listOfNotNull(existing?.exercicio)) {
+                        if (exercise != it) {
+                            exercise = it
+                            series = "1"; reps = "0"; load = "0"; duration = "0"
+                            distance = "0"; rest = "0"; iso = "0"
+                        }
+                    }
+                    val workoutFields = catalog.workoutFields(exercise)
+                    val stats = trainingMeasureSnapshot(rows, exercise, workoutFields)
                     if (existing == null && stats != null) {
                         Panel("SEU HISTÓRICO · $exercise") {
                             fun measured(value: Double) = if (stats.unit == "km") "%.2f km".format(value)
                                 else "%.1f %s".format(value, stats.unit)
                             Text("Último treino: ${measured(stats.last)} · ${stats.lastDay}")
                             Text("Recorde: ${measured(stats.record)} em um registro")
-                            Text("Média do exercício: ${measured(stats.meanPerDay)} por dia treinado · ${stats.days} dias")
+                            Text("Média do exercício: ${formatOneDecimal(stats.meanPerDay)} ${stats.unit} por dia treinado · ${stats.days} dias")
                             categorySnapshot(rows, catalog.group(exercise))?.let { category ->
                                 if (stats.unit == "rep") Text("Categoria ${catalog.group(exercise)}: %.1f rep por dia · %d dias".format(category.meanRepsPerDay,category.days))
                             }
                             Text("Aumente o esforço apenas com boa técnica e recuperação.", color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    Field("Séries / tentativas", series, true) { series = it }
-                    Field("Repetições totais", reps, true) { reps = it }
-                    Field("Carga (kg)", load, true) { load = it }
-                    Field("Isometria (segundos)", iso, true) { iso = it }
-                    Field("Descanso (segundos)", rest, true) { rest = it }
-                    Field("Cardio (minutos)", duration, true) { duration = it }
-                    Field("Distância (km)", distance, true) { distance = it }
+                    if ("series" in workoutFields) Field("Séries", series, true) { series = it }
+                    if ("repeticoes" in workoutFields) Field(when (exercise) {
+                        "Subida Escada (Andares)" -> "Andares percorridos"
+                        "Prancha", "L-Sit", "Handstand (Parada de Mãos)" -> "Tentativas / repetições"
+                        else -> "Repetições totais"
+                    }, reps, true) { reps = it }
+                    if ("carga_kg" in workoutFields) Field("Carga (kg)", load, true) { load = it }
+                    if ("isometria_segundos" in workoutFields) Field("Tempo sustentado (seg)", iso, true) { iso = it }
+                    if ("descanso_seg" in workoutFields) Field("Descanso entre séries (seg)", rest, true) { rest = it }
+                    if ("duracao_min" in workoutFields) Field("Duração (min)", duration, true) { duration = it }
+                    if ("distancia_km" in workoutFields) Field("Distância (km)", distance, true) { distance = it }
                     if (exercise in listOf("Caminhada", "Corrida")) GpsDistanceTracker { km -> distance = "%.3f".format(java.util.Locale.US, km) }
                 }
                 Choice("Estado mental", mood, listOf("Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado")) { mood = it }
@@ -168,9 +179,20 @@ import java.time.ZoneOffset
                                 durationMinutes = if (isVideo) 0 else int(duration), extras = JsonObject(extras))
                         }
                         else -> {
-                            put("isometria_segundos", int(iso)); put("isometria_tentativas", int(series)); extras["humor"] = JsonPrimitive(mood)
-                            base.copy(data = date, horario = time, group = catalog.group(exercise), exercicio = exercise, series = int(series),
-                                repeticoes = int(reps), loadKg = decimal(load), restSeconds = int(rest), durationMinutes = int(duration), distanceKm = decimal(distance), extras = JsonObject(extras))
+                            val workoutFields = catalog.workoutFields(exercise)
+                            val isoSeconds = if ("isometria_segundos" in workoutFields) int(iso) else 0
+                            val repetitions = if ("repeticoes" in workoutFields) int(reps) else 0
+                            put("isometria_segundos", isoSeconds)
+                            put("isometria_tentativas", if ("isometria_segundos" in workoutFields) repetitions else 0)
+                            extras["humor"] = JsonPrimitive(mood)
+                            base.copy(data = date, horario = time, group = catalog.group(exercise), exercicio = exercise,
+                                series = if ("series" in workoutFields) int(series) else 0,
+                                repeticoes = repetitions,
+                                loadKg = if ("carga_kg" in workoutFields) decimal(load) else 0.0,
+                                restSeconds = if ("descanso_seg" in workoutFields) int(rest) else 0,
+                                durationMinutes = if ("duracao_min" in workoutFields) int(duration) else 0,
+                                distanceKm = if ("distancia_km" in workoutFields) decimal(distance) else 0.0,
+                                extras = JsonObject(extras))
                         }
                     }
                     save(existing?.id, value, done)

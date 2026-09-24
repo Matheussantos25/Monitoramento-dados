@@ -59,6 +59,34 @@ class AppTests(unittest.TestCase):
         values = {metric.label: metric.value for metric in self.app.metric}
         self.assertTrue(values["Recorde registrado"].endswith("rep"))
 
+    def test_workout_fields_change_with_selected_exercise(self):
+        self.app.radio(key="solem_page").set_value("Treino").run()
+        self.app.selectbox(key="treino_exercicio").set_value("Prancha").run()
+        self.assertFalse(self.app.exception)
+        labels = {widget.label for widget in self.app.number_input}
+        self.assertIn("Tentativas / repetições", labels)
+        self.assertIn("Tempo sustentado (seg)", labels)
+        self.assertNotIn("Duração (min)", labels)
+        self.assertNotIn("Distância (km)", labels)
+        next(w for w in self.app.number_input if w.label == "Tentativas / repetições").set_value(5)
+        next(w for w in self.app.number_input if w.label == "Tempo sustentado (seg)").set_value(45)
+        self.app.selectbox(key="treino_exercicio").set_value("Caminhada").run()
+        self.assertFalse(self.app.exception)
+        labels = {widget.label for widget in self.app.number_input}
+        self.assertIn("Duração (min)", labels)
+        self.assertIn("Distância (km)", labels)
+        self.assertNotIn("Carga (kg)", labels)
+        self.assertNotIn("Repetições (Total)", labels)
+        self.app.number_input(key="treino_distancia").set_value(2.5)
+        next(w for w in self.app.number_input if w.label == "Duração (min)").set_value(30)
+        next(b for b in self.app.button if b.label == "Salvar treino").click().run()
+        self.assertFalse(self.app.exception)
+        saved = self.app.session_state["solem_demo_records"][-1]
+        self.assertEqual(saved["exercicio"], "Caminhada")
+        self.assertEqual(saved["repeticoes"], 0)
+        self.assertEqual(saved["dados_extras"]["isometria_segundos"], 0)
+        self.assertEqual(saved["distancia_km"], 2.5)
+
     def test_workout_history_reads_beyond_first_supabase_page(self):
         self.app.session_state["solem_demo_records"] = [
             {"id": index, "data": "2026-09-20", "horario": "08:00:00", "grupo_muscular": "Peitoral",

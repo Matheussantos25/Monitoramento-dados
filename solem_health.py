@@ -15,6 +15,41 @@ EXERCISE_GROUPS = {
     "Pernas": "pernas", "Abdominal": "core", "Skills / Calistenia": "habilidade",
 }
 
+# Single source for the web form and the Android catalog. These are existing
+# columns in treinos (isometria_segundos lives in dados_extras).
+WORKOUT_FIELD_PROFILES = {
+    "cardio": ("duracao_min", "distancia_km"),
+    "counted_cardio": ("repeticoes", "duracao_min"),
+    "isometric": ("repeticoes", "isometria_segundos"),
+    "timed": ("duracao_min",),
+    "counted": ("repeticoes",),
+    "bodyweight": ("series", "repeticoes", "descanso_seg"),
+    "resistance": ("series", "repeticoes", "carga_kg", "descanso_seg"),
+}
+WORKOUT_EXERCISE_PROFILES = {
+    "Caminhada": "cardio", "Corrida": "cardio", "Bike": "cardio",
+    "Pular Corda": "counted_cardio", "Pular Normal": "counted_cardio",
+    "Subida Escada (Andares)": "counted_cardio",
+    "Prancha": "isometric", "L-Sit": "isometric",
+    "Handstand (Parada de Mãos)": "isometric",
+    "Massagem Facial": "timed", "Mewing com borracha": "counted",
+    "Abdominal Levantada": "bodyweight", "Barra Fixa (Supinada)": "bodyweight",
+    "Barra Fixa (Pronada)": "bodyweight", "Flexão": "bodyweight",
+    "Agachamento": "bodyweight",
+    "Puxada Alta": "resistance", "Remada Baixa": "resistance",
+    "Remada em Pé na Polia": "resistance",
+    "Remada em Pé na Polia com barra": "resistance",
+}
+
+
+def workout_fields(exercise):
+    profile = WORKOUT_EXERCISE_PROFILES.get(exercise, "resistance")
+    return WORKOUT_FIELD_PROFILES[profile]
+
+
+def format_one_decimal(value):
+    return f"{value:.1f}".rstrip("0").rstrip(".")
+
 
 def now_local():
     return datetime.now(ZoneInfo("America/Sao_Paulo"))
@@ -79,10 +114,16 @@ def training_measure_stats(records, exercise):
             record_date(row.get("data")) is not None]
     if not rows:
         return None
-    cardio = exercise in ("Caminhada", "Corrida", "Bike")
-    candidates = (("distancia_km", "km"), ("duracao_min", "min")) if cardio else (
-        ("repeticoes", "rep"), ("isometria_segundos", "seg"),
-        ("duracao_min", "min"), ("distancia_km", "km"))
+    profile = WORKOUT_EXERCISE_PROFILES.get(exercise)
+    if profile == "cardio":
+        candidates = (("distancia_km", "km"), ("duracao_min", "min"))
+    elif profile == "isometric":
+        candidates = (("isometria_segundos", "seg"), ("repeticoes", "rep"))
+    elif profile == "timed":
+        candidates = (("duracao_min", "min"),)
+    else:
+        candidates = (("repeticoes", "rep"), ("duracao_min", "min"),
+                      ("isometria_segundos", "seg"), ("distancia_km", "km"))
     def measured(row, field):
         return number(extras_of(row.get("dados_extras")).get(field)) if field == "isometria_segundos" else number(row.get(field))
     field, unit = next(((field, unit) for field, unit in candidates

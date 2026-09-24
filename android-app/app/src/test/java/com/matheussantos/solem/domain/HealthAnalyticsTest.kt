@@ -43,13 +43,25 @@ class HealthAnalyticsTest {
         val rows = listOf(row(1, "2026-09-21", "Peitoral", "Flexão", reps=20),
             row(2, "2026-09-22", "Cardio", "Caminhada").copy(distanceKm=2.5),
             row(3, "2026-09-23", "Cardio", "Caminhada").copy(distanceKm=3.5))
-        val flexao = trainingMeasureSnapshot(rows, "Flexão")!!
-        val caminhada = trainingMeasureSnapshot(rows, "Caminhada")!!
+        val flexao = trainingMeasureSnapshot(rows, "Flexão", listOf("series", "repeticoes", "descanso_seg"))!!
+        val caminhada = trainingMeasureSnapshot(rows, "Caminhada", listOf("duracao_min", "distancia_km"))!!
         assertEquals("rep", flexao.unit)
         assertEquals(20.0, flexao.record, 0.001)
         assertEquals("km", caminhada.unit)
         assertEquals(3.5, caminhada.record, 0.001)
         assertEquals(3.0, caminhada.meanPerDay, 0.001)
+    }
+
+    @Test fun isometricMeasureAndAverageFormatting() {
+        val rows = listOf(row(1, "2026-09-21", "Abdominal", "Prancha", reps=2)
+            .copy(extras=buildJsonObject { put("isometria_segundos", 45) }),
+            row(2, "2026-09-22", "Abdominal", "Prancha", reps=3)
+                .copy(extras=buildJsonObject { put("isometria_segundos", 50) }))
+        val summary = trainingMeasureSnapshot(rows, "Prancha", listOf("repeticoes", "isometria_segundos"))!!
+        assertEquals("seg", summary.unit)
+        assertEquals(47.5, summary.meanPerDay, 0.001)
+        assertEquals("12", formatOneDecimal(12.0))
+        assertEquals("12,3", formatOneDecimal(12.34))
     }
 
     @Test fun recommendationAvoidsRecentlyTrainedGroups() {

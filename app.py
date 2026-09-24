@@ -12,7 +12,8 @@ import hashlib
 from pathlib import Path
 import streamlit.components.v1 as components
 from solem_ui import apply_theme, shell, overview, section_intro, goal_panel
-from solem_health import training_measure_stats, training_category_stats, training_recommendation, now_local
+from solem_health import (training_measure_stats, training_category_stats, training_recommendation,
+                          workout_fields, format_one_decimal, now_local)
 from solem_gps import gps_distance_tracker
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
@@ -727,7 +728,7 @@ if pagina == "Treino":
             a, b, c = st.columns(3)
             a.metric("Último treino", fmt(stats["last"]), help=str(stats["last_day"]))
             b.metric("Recorde registrado", fmt(stats["record"]), help="Maior valor em um registro deste exercício.")
-            c.metric("Média por dia treinado", fmt(stats["average_per_day"]), help=f"{stats['days']} dias com este exercício.")
+            c.metric("Média por dia treinado", f"{format_one_decimal(stats['average_per_day'])} {unit}", help=f"{stats['days']} dias com este exercício.")
             group = next((g for g, items in EXERCICIOS_PRESETADOS.items() if exercicio_input in items), "Outro")
             category_stats = training_category_stats(df_raw.to_dict("records"), group)
             if category_stats and unit == "rep":
@@ -741,8 +742,6 @@ if pagina == "Treino":
                 if event_id != st.session_state.get("gps_event_id"):
                     st.session_state["gps_event_id"] = event_id
                     st.session_state["treino_distancia"] = max(0.0, round(float(gps_result.get("km", 0)), 3))
-        else:
-            st.caption("GPS opcional disponível ao selecionar Caminhada ou Corrida. A distância também pode ser informada manualmente.")
         with st.form("registro_treino", clear_on_submit=True):
             st.markdown("<h3 style='margin-bottom: 20px; color: #83DCFF;'>Registrar atividade</h3>", unsafe_allow_html=True)
             c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
@@ -753,30 +752,46 @@ if pagina == "Treino":
             horario = f"{hora}:{minuto}:00"
             st.markdown("---")
             st.markdown("#### Detalhes do exercício")
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                series = st.number_input("Séries / Tentativas", min_value=0, value=1, step=1)
-                reps = st.number_input("Repetições (Total)", min_value=0, step=1)
-                carga = st.number_input("Carga (kg)", min_value=0.0)
-            with c2:
-                isometria_segundos = st.number_input("Isometria: Tempo Sustentado (seg)", min_value=0, step=1)
-                intervalo = st.number_input("Intervalo de Descanso (seg)", min_value=0, step=15)
-            with c3:
-                duracao = st.number_input("Cardio: Duração (min)", min_value=0)
-                distancia = st.number_input("Cardio: Distância (km)", min_value=0.0, step=0.01, key="treino_distancia")
-                
-            isometria_tentativas = series  
+            fields = workout_fields(exercicio_input)
+            labels = {
+                "series": "Séries", "repeticoes": "Repetições (Total)",
+                "carga_kg": "Carga (kg)", "descanso_seg": "Descanso entre séries (seg)",
+                "isometria_segundos": "Tempo sustentado (seg)",
+                "duracao_min": "Duração (min)", "distancia_km": "Distância (km)",
+            }
+            if exercicio_input == "Subida Escada (Andares)":
+                labels["repeticoes"] = "Andares percorridos"
+            if exercicio_input in ("Prancha", "L-Sit", "Handstand (Parada de Mãos)"):
+                labels["repeticoes"] = "Tentativas / repetições"
+            values = {}
+            columns = st.columns(min(2, len(fields)))
+            for index, field in enumerate(fields):
+                with columns[index % len(columns)]:
+                    key = "treino_distancia" if field == "distancia_km" else f"treino_{field}_{exercicio_input}"
+                    if field in ("carga_kg", "distancia_km"):
+                        values[field] = st.number_input(labels[field], min_value=0.0, value=0.0,
+                                                        step=0.01 if field == "distancia_km" else 0.5, key=key)
+                    else:
+                        values[field] = st.number_input(labels[field], min_value=0,
+                                                        value=1 if field == "series" else 0,
+                                                        step=15 if field == "descanso_seg" else 1, key=key)
+            isometria_tentativas = values.get("series", values.get("repeticoes", 0)) if "isometria_segundos" in fields else 0
             st.markdown("---")
             humor = st.selectbox("Estado Mental no Treino", ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"])
             
             if st.form_submit_button("Salvar treino", use_container_width=True):
                 grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if exercicio_input in l), "Outro")
-                mochila_json = {"humor": humor, "isometria_tentativas": isometria_tentativas, "isometria_segundos": isometria_segundos}
+                mochila_json = {"humor": humor, "isometria_tentativas": isometria_tentativas,
+                                "isometria_segundos": values.get("isometria_segundos", 0)}
                 dados = {
                     "data": str(data_treino), "horario": str(horario), "grupo_muscular": grupo,
-                    "exercicio": exercicio_input, "series": int(series), "repeticoes": int(reps),
-                    "carga_kg": float(carga), "descanso_seg": int(intervalo), "duracao_min": int(duracao),
-                    "distancia_km": float(distancia), "alimentacao_saudavel": "", "alimentacao_besteirol": "",
+                    "exercicio": exercicio_input, "series": int(values.get("series", 0)),
+                    "repeticoes": int(values.get("repeticoes", 0)),
+                    "carga_kg": float(values.get("carga_kg", 0)),
+                    "descanso_seg": int(values.get("descanso_seg", 0)),
+                    "duracao_min": int(values.get("duracao_min", 0)),
+                    "distancia_km": float(values.get("distancia_km", 0)),
+                    "alimentacao_saudavel": "", "alimentacao_besteirol": "",
                     "peso_corporal": 0.0, "dados_extras": mochila_json 
                 }
                 supabase.table("treinos").insert(dados).execute()
