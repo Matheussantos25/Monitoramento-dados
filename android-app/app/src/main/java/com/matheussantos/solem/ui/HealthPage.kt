@@ -24,7 +24,6 @@ import java.time.LocalTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-private val meals = listOf("Café da manhã", "Lanche da manhã", "Almoço", "Lanche da tarde", "Jantar", "Ceia", "Outra")
 private val clockFormat = DateTimeFormatter.ofPattern("HH:mm:ss")
 private fun currentTime(): String = LocalTime.now(ZoneOffset.ofHours(-3)).format(clockFormat)
 private fun foods(row: HealthEntry, key: String): String = (row.details[key] as? JsonArray)
@@ -36,6 +35,7 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
     var selected by rememberSaveable { mutableIntStateOf(0) }
     var dayText by rememberSaveable { mutableStateOf(today().toString()) }
     var deleting by remember { mutableStateOf<HealthEntry?>(null) }
+    var editingId by remember { mutableStateOf<String?>(null) }
     val day = runCatching { LocalDate.parse(dayText) }.getOrNull()
     val rows = if (day == null) emptyList() else state.healthEntries.filter { it.day == day.toString() }
     val dayMeals = rows.filter { it.kind == "meal" }
@@ -73,8 +73,12 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                 if (dayMeals.isEmpty()) Text("Nenhuma refeição registrada neste dia.")
                 dayMeals.sortedBy { it.loggedAt }.forEach { row ->
                     Panel("${row.text("tipo_refeicao")} · ${row.loggedAt.take(5)}") {
-                        Text("Saudáveis: ${foods(row, "saudaveis").ifBlank { "—" }}")
+                        Text("Habituais: ${foods(row, "saudaveis").ifBlank { "—" }}")
                         Text("Ocasionais: ${foods(row, "ocasionais").ifBlank { "—" }}")
+                        TextButton(onClick = { editingId = if (editingId == row.id) null else row.id }) {
+                            Text(if (editingId == row.id) "Fechar edição" else "Editar refeição")
+                        }
+                        if (editingId == row.id) MealForm(day, catalog, state.busy, vm, row)
                         TextButton(onClick = { deleting = row }) { Text("Remover refeição") }
                     }
                 }
@@ -84,6 +88,10 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                 rows.filter { it.kind == "water" }.sortedBy { it.loggedAt }.forEach { row ->
                     Panel("${row.loggedAt.take(5)} · ${row.text("recipiente")}") {
                         Text("${row.text("quantidade")} × ${row.text("volume_ml")} ml")
+                        TextButton(onClick = { editingId = if (editingId == row.id) null else row.id }) {
+                            Text(if (editingId == row.id) "Fechar edição" else "Editar água")
+                        }
+                        if (editingId == row.id) WaterForm(day, water, state.busy, vm, row)
                         TextButton(onClick = { deleting = row }) { Text("Remover registro") }
                     }
                 }
@@ -104,18 +112,19 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
     }
 }
 
-@Composable private fun MealForm(day: LocalDate, catalog: Catalog, busy: Boolean, vm: WorkspaceViewModel) {
-    var kind by rememberSaveable { mutableStateOf("Almoço") }
-    var time by rememberSaveable { mutableStateOf(currentTime()) }
-    var healthy by rememberSaveable { mutableStateOf("") }
-    var occasional by rememberSaveable { mutableStateOf("") }
+@Composable private fun MealForm(day: LocalDate, catalog: Catalog, busy: Boolean, vm: WorkspaceViewModel,
+                                 previous: HealthEntry? = null) {
+    var kind by rememberSaveable(previous?.id) { mutableStateOf(previous?.text("tipo_refeicao")?.ifBlank { "Almoço" } ?: "Almoço") }
+    var time by rememberSaveable(previous?.id) { mutableStateOf(previous?.loggedAt ?: currentTime()) }
+    var healthy by rememberSaveable(previous?.id) { mutableStateOf(previous?.let { foods(it, "saudaveis") } ?: "") }
+    var occasional by rememberSaveable(previous?.id) { mutableStateOf(previous?.let { foods(it, "ocasionais") } ?: "") }
     var error by remember { mutableStateOf<String?>(null) }
-    Choice("Tipo de refeição", kind, meals) { kind = it }
+    Choice("Tipo de refeição", kind, (catalog.mealTypes + kind).distinct()) { kind = it }
     Field("Horário (HH:MM:SS)", time) { time = it }
-    MultiChoice("Alimentos saudáveis / habituais", splitFoods(healthy), catalog.list("ALIMENTOS_SAUDAVEIS").sorted()) {
+    MultiChoice("Alimentos habituais", splitFoods(healthy), catalog.mealFoods(kind, splitFoods(healthy))) {
         healthy = it.joinToString(", ")
     }
-    Field("Outros saudáveis, separados por vírgula", healthy) { healthy = it }
+    Field("Outros habituais, separados por vírgula", healthy) { healthy = it }
     MultiChoice("Besteiras / ocasionais", splitFoods(occasional), catalog.list("ALIMENTOS_BESTEIROL").sorted()) {
         occasional = it.joinToString(", ")
     }
@@ -131,18 +140,19 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                 put("ocasionais", buildJsonArray { splitFoods(occasional).forEach { add(JsonPrimitive(it)) } })
             }
             error = null
-            vm.saveHealth(day.toString(), checked, "meal", data)
+            vm.saveHealth(day.toString(), checked, "meal", data, previous?.id)
         } catch (_: Exception) { error = "Confira o horário da refeição." }
-    }, enabled = !busy) { Text("Salvar refeição privada") }
+    }, enabled = !busy) { Text(if (previous == null) "Salvar refeição privada" else "Salvar edição da refeição") }
 }
 
-@Composable private fun WaterForm(day: LocalDate, total: Int, busy: Boolean, vm: WorkspaceViewModel) {
-    var container by rememberSaveable { mutableStateOf("Garrafa") }
-    var volume by rememberSaveable { mutableStateOf("750") }
-    var count by rememberSaveable { mutableStateOf("1") }
-    var time by rememberSaveable { mutableStateOf(currentTime()) }
+@Composable private fun WaterForm(day: LocalDate, total: Int, busy: Boolean, vm: WorkspaceViewModel,
+                                  previous: HealthEntry? = null) {
+    var container by rememberSaveable(previous?.id) { mutableStateOf(previous?.text("recipiente")?.ifBlank { "Garrafa" } ?: "Garrafa") }
+    var volume by rememberSaveable(previous?.id) { mutableStateOf(previous?.text("volume_ml")?.ifBlank { "750" } ?: "750") }
+    var count by rememberSaveable(previous?.id) { mutableStateOf(previous?.text("quantidade")?.ifBlank { "1" } ?: "1") }
+    var time by rememberSaveable(previous?.id) { mutableStateOf(previous?.loggedAt ?: currentTime()) }
     var error by remember { mutableStateOf<String?>(null) }
-    Choice("Recipiente", container, listOf("Garrafa", "Copo")) { container = it }
+    Choice("Recipiente", container, (listOf("Garrafa", "Copo") + container).distinct()) { container = it }
     Field("Volume por recipiente (ml)", volume, true) { volume = it }
     Field("Quantidade consumida", count, true) { count = it }
     Field("Horário (HH:MM:SS)", time) { time = it }
@@ -158,9 +168,9 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
             error = null
             vm.saveHealth(day.toString(), checked, "water", buildJsonObject {
                 put("recipiente", container); put("volume_ml", size); put("quantidade", amount)
-            })
+            }, previous?.id)
         }
-    }, enabled = !busy) { Text("Adicionar água") }
+    }, enabled = !busy) { Text(if (previous == null) "Adicionar água" else "Salvar edição da água") }
 }
 
 @Composable private fun DailyWeight(day: LocalDate, previous: HealthEntry?, busy: Boolean, vm: WorkspaceViewModel) {
@@ -174,7 +184,7 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
         if (kg == null || !kg.isFinite() || kg !in 1.0..500.0) error = "Informe um peso entre 1 e 500 kg."
         else { error = null; vm.saveHealth(day.toString(), "00:00:00", "weight",
             buildJsonObject { put("kg", kg) }, previous?.id) }
-    }, enabled = !busy) { Text(if (previous == null) "Salvar peso" else "Atualizar peso") }
+    }, enabled = !busy) { Text(if (previous == null) "Salvar peso" else "Salvar edição do peso") }
 }
 
 @Composable private fun DailySleep(day: LocalDate, previous: HealthEntry?, busy: Boolean, vm: WorkspaceViewModel) {
@@ -193,7 +203,7 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                 put("dormir", bed); put("acordar", wake); put("duracao_min", minutes)
             }, previous?.id)
         } catch (_: Exception) { error = "Confira os horários; duração máxima de 16 horas." }
-    }, enabled = !busy) { Text(if (previous == null) "Salvar sono" else "Atualizar sono") }
+    }, enabled = !busy) { Text(if (previous == null) "Salvar sono" else "Salvar edição do sono") }
     Text("Duração calculada dos horários, sem monitoramento automático.",
         color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

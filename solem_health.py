@@ -8,7 +8,20 @@ from zoneinfo import ZoneInfo
 
 from solem_progress import extras_of, number, record_date
 
-MEAL_TYPES = ("Café da manhã", "Lanche da manhã", "Almoço", "Lanche da tarde", "Jantar", "Ceia", "Outra")
+MEAL_TYPES = ("Café da manhã", "Almoço", "Lanche da tarde", "Jantar", "Outra")
+MEAL_FOODS = {
+    "Café da manhã": ("Pão", "Pão integral", "Banana", "Ovo", "Ovos", "Ovos mexidos", "Aveia", "Iogurte", "Leite", "Queijo", "Café", "Mamão", "Cuscuz"),
+    "Almoço": ("Arroz", "Feijão", "Carne", "Frango", "Purê", "Macarrão", "Salada", "Legumes", "Peixe", "Batata", "Ovo"),
+    "Lanche da tarde": ("Pão", "Pão integral", "Banana", "Ovo", "Ovos", "Iogurte", "Aveia", "Leite", "Queijo", "Maçã", "Whey", "Castanhas", "Cuscuz"),
+    "Jantar": ("Cuscuz com leite", "Inhame", "Arroz", "Feijão", "Frango", "Carne", "Sopa", "Legumes", "Salada", "Ovo", "Macarrão", "Peixe"),
+}
+
+
+def meal_food_options(meal_type, catalog, selected=()):
+    """Focus the picker on the meal while retaining already saved choices."""
+    if meal_type not in MEAL_FOODS:
+        return sorted(set(catalog) | set(selected), key=str.casefold)
+    return sorted((set(catalog) & set(MEAL_FOODS[meal_type])) | set(selected), key=str.casefold)
 CALISTHENICS = ("Peitoral", "Costas", "Pernas", "Abdominal")
 EXERCISE_GROUPS = {
     "Peitoral": "empurrar", "Costas": "puxar", "Bíceps": "puxar",

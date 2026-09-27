@@ -2,13 +2,15 @@
 from datetime import datetime
 import streamlit as st
 import plotly.graph_objects as go
-from solem_health import MEAL_TYPES, now_local, private_weight_history, sleep_minutes
+from solem_health import MEAL_TYPES, meal_food_options, now_local, private_weight_history, sleep_minutes
 from solem_health_private import delete_entry, list_entries, save_entry
 from solem_ui import section_intro
 
 def _time(value, fallback):
-    try: return datetime.strptime(str(value), "%H:%M").time()
-    except ValueError: return datetime.strptime(fallback, "%H:%M").time()
+    for pattern in ("%H:%M", "%H:%M:%S"):
+        try: return datetime.strptime(str(value), pattern).time()
+        except ValueError: pass
+    return datetime.strptime(fallback, "%H:%M").time()
 
 def _save(client, day, time, kind, details, message, old=None, demo=False):
     entry = {"day": str(day), "logged_at": str(time), "kind": kind, "details": details}
@@ -50,13 +52,13 @@ def health_page(client, healthy_options, occasional_options, demo=False):
 
     with food_tab:
         st.caption("Adicione quantas refeições precisar no mesmo dia. A classificação é apenas para facilitar o registro.")
+        meal_type = st.selectbox("Tipo de refeição", MEAL_TYPES, key="new_meal_type")
         with st.form("health_meal", clear_on_submit=True):
-            meal_type = st.selectbox("Tipo de refeição", MEAL_TYPES)
             meal_time = st.time_input("Horário da refeição", value=now_local().time().replace(second=0, microsecond=0))
             a, b = st.columns(2)
             with a:
-                healthy = st.multiselect("Alimentos saudáveis / habituais", healthy_options)
-                healthy_extra = st.text_input("Outro alimento saudável", max_chars=120)
+                healthy = st.multiselect("Alimentos habituais", meal_food_options(meal_type, healthy_options))
+                healthy_extra = st.text_input("Outro alimento habitual", max_chars=120)
             with b:
                 occasional = st.multiselect("Besteiras / alimentos ocasionais", occasional_options)
                 occasional_extra = st.text_input("Outro alimento ocasional", max_chars=120)
@@ -74,6 +76,35 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                 st.markdown(f"**{details.get('tipo_refeicao', 'Refeição')} · {str(row['logged_at'])[:5]}**")
                 st.caption("Saudáveis: " + (", ".join(details.get("saudaveis", [])) or "—"))
                 st.caption("Ocasionais: " + (", ".join(details.get("ocasionais", [])) or "—"))
+                with st.expander("Editar refeição"):
+                    previous_type = details.get("tipo_refeicao", "Outra")
+                    types = MEAL_TYPES if previous_type in MEAL_TYPES else (*MEAL_TYPES, previous_type)
+                    edit_type = st.selectbox("Tipo de refeição", types, index=types.index(previous_type),
+                                             key=f"meal_type_{row['id']}")
+                    with st.form(f"edit_meal_{row['id']}"):
+                        edit_time = st.time_input("Horário da refeição", value=_time(row["logged_at"], "12:00"),
+                                                  key=f"meal_time_{row['id']}")
+                        a, b = st.columns(2)
+                        with a:
+                            old_good = details.get("saudaveis", [])
+                            edit_good = st.multiselect("Alimentos habituais",
+                                meal_food_options(edit_type, healthy_options, old_good), default=old_good,
+                                key=f"meal_good_{row['id']}")
+                            new_good = st.text_input("Outro alimento habitual", max_chars=120)
+                        with b:
+                            old_other = details.get("ocasionais", [])
+                            edit_other = st.multiselect("Alimentos ocasionais",
+                                sorted(set(occasional_options) | set(old_other)), default=old_other,
+                                key=f"meal_other_{row['id']}")
+                            new_other = st.text_input("Outro alimento ocasional", max_chars=120)
+                        edit_submitted = st.form_submit_button("Salvar edição", use_container_width=True)
+                    if edit_submitted:
+                        good = edit_good + ([new_good.strip()] if new_good.strip() else [])
+                        other = edit_other + ([new_other.strip()] if new_other.strip() else [])
+                        if not good and not other: st.error("Selecione ou descreva ao menos um alimento.")
+                        else: _save(client, day, edit_time.strftime("%H:%M:%S"), "meal",
+                                    {"tipo_refeicao": edit_type, "saudaveis": good, "ocasionais": other},
+                                    "Refeição atualizada.", old=row, demo=demo)
                 if st.button("Remover refeição", key=f"meal_delete_{row['id']}"): _delete(client, row["id"], demo)
 
     with water_tab:
@@ -89,18 +120,36 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                             {"recipiente": container, "volume_ml": int(volume), "quantidade": int(amount)}, "Água registrada.", demo=demo)
         for row in sorted(water_rows, key=lambda item: str(item["logged_at"])):
             info = row["details"]
-            a, b = st.columns([4, 1])
-            a.caption(f"{str(row['logged_at'])[:5]} · {info['quantidade']} × {info['volume_ml']} ml ({info['recipiente']})")
-            if b.button("Remover", key=f"water_delete_{row['id']}"): _delete(client, row["id"], demo)
+            with st.container(border=True):
+                st.caption(f"{str(row['logged_at'])[:5]} · {info['quantidade']} × {info['volume_ml']} ml ({info['recipiente']})")
+                with st.expander("Editar água"):
+                    with st.form(f"edit_water_{row['id']}"):
+                        vessels = ["Garrafa", "Copo"]
+                        old_vessel = info.get("recipiente", "Garrafa")
+                        if old_vessel not in vessels: vessels.append(old_vessel)
+                        edit_vessel = st.selectbox("Recipiente", vessels, index=vessels.index(old_vessel),
+                                                   key=f"water_vessel_{row['id']}")
+                        edit_volume = st.number_input("Volume por recipiente (ml)", min_value=50, max_value=5000,
+                                                      value=int(info.get("volume_ml", 750)), step=50,
+                                                      key=f"water_volume_{row['id']}")
+                        edit_amount = st.number_input("Quantidade consumida", min_value=1, max_value=50,
+                                                      value=int(info.get("quantidade", 1)), key=f"water_amount_{row['id']}")
+                        edit_time = st.time_input("Horário do registro", value=_time(row["logged_at"], "12:00"),
+                                                  key=f"water_time_{row['id']}")
+                        edit_submitted = st.form_submit_button("Salvar edição", use_container_width=True)
+                    if edit_submitted: _save(client, day, edit_time.strftime("%H:%M:%S"), "water",
+                                             {"recipiente": edit_vessel, "volume_ml": int(edit_volume),
+                                              "quantidade": int(edit_amount)}, "Água atualizada.", old=row, demo=demo)
+                if st.button("Remover", key=f"water_delete_{row['id']}"): _delete(client, row["id"], demo)
         st.caption(f"Total do dia: {water:,} ml registrados manualmente.".replace(",", "."))
 
     with weight_tab:
-        st.caption("Uma medida por dia; novo salvamento atualiza a anterior.")
+        st.caption("Uma medida por dia. O valor salvo aparece abaixo para você editar e atualizar.")
         with st.form("health_weight"):
             kg = st.number_input("Peso corporal (kg)", min_value=1.0, max_value=500.0,
                                  value=float(weight["details"]["kg"]) if weight else None, step=0.1,
                                  placeholder="Informe seu peso")
-            submitted = st.form_submit_button("Atualizar peso" if weight else "Salvar peso", use_container_width=True)
+            submitted = st.form_submit_button("Salvar edição do peso" if weight else "Salvar peso", use_container_width=True)
         if submitted:
             if kg is None: st.error("Informe seu peso antes de salvar.")
             else: _save(client, day, "00:00:00", "weight", {"kg": float(kg)},
@@ -126,7 +175,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
         with st.form("health_sleep"):
             bed = st.time_input("Horário em que dormiu", value=_time(previous.get("dormir"), "23:00"), key="sleep_bed")
             wake = st.time_input("Horário em que acordou", value=_time(previous.get("acordar"), "07:00"), key="sleep_wake")
-            submitted = st.form_submit_button("Atualizar sono" if sleep else "Salvar sono", use_container_width=True)
+            submitted = st.form_submit_button("Salvar edição do sono" if sleep else "Salvar sono", use_container_width=True)
         if submitted:
             try: minutes = sleep_minutes(bed.strftime("%H:%M"), wake.strftime("%H:%M"))
             except ValueError as error: st.error(str(error))

@@ -96,7 +96,9 @@ def overview(p, records=None, private_entries=None):
                 with column, st.container(key=f"checkup_{goal['id']}"):
                     value = goal["value"]
                     label = "Indisponível" if value is None else "Concluído" if goal["done"] else "Em andamento"
-                    amount = "—" if value is None else f"{int(value):,}".replace(",", ".")
+                    amount = "—" if value is None else (
+                        f"{value:.2f}".rstrip("0").rstrip(".") if goal["unit"] == "km"
+                        else f"{int(value):,}".replace(",", "."))
                     target = f"{goal['target']:,}".replace(",", ".")
                     pct = min(100, value / goal["target"] * 100) if value is not None else 0
                     st.html(f'''<div class="checkup-card"><span class="checkup-card__top">{escape(goal['label'])}<small>{label}</small></span>

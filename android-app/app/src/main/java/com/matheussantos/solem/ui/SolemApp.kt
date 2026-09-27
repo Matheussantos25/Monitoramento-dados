@@ -137,6 +137,18 @@ fun kind(row: TrainingRecord) = when(row.group) {
                 OutlinedButton({ navigate(5) }) { Text("Estudar") }
             }
         }
+        val todayWorkouts = rows.filter { it.data.take(10) == today().toString() && it.isWorkout() }
+        Panel("CHECK-UP DE HOJE") {
+            Goal("Mewing com borracha", todayWorkouts.filter { it.exercicio == "Mewing com borracha" }
+                .sumOf { it.repeticoes.toDouble() }, 400, "rep")
+            Goal("Flexões", todayWorkouts.filter { it.exercicio == "Flexão" }
+                .sumOf { it.repeticoes.toDouble() }, 50, "rep")
+            Goal("Agachamentos", todayWorkouts.filter { it.exercicio == "Agachamento" }
+                .sumOf { it.repeticoes.toDouble() }, 50, "rep")
+            Goal("Caminhada ou corrida", todayWorkouts.filter { it.exercicio == "Caminhada" || it.exercicio == "Corrida" }
+                .sumOf { it.distanceKm }, 5, "km", 2)
+            OutlinedButton({ navigate(1) }) { Text("Registrar treino") }
+        }
         val start = today().minusDays((today().dayOfWeek.value - 1).toLong())
         val week = rows.filter { it.data >= start.toString() && it.data <= today().toString() }
         Panel("Esta semana") {

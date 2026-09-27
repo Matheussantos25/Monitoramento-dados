@@ -35,6 +35,13 @@ class ParityTest {
         assertEquals(catalog.route.first(), nextSubject(listOf(row), catalog))
         assertTrue(catalog.topics.values.flatten().size > 50)
     }
+    @Test fun mealSuggestionsFollowWebCatalogAndPreserveSavedCustomFood() {
+        assertFalse(catalog.mealTypes.contains("Ceia"))
+        assertFalse(catalog.mealTypes.contains("Lanche da manhã"))
+        assertTrue(catalog.mealFoods("Almoço").containsAll(listOf("Arroz", "Feijão", "Frango")))
+        assertFalse(catalog.mealFoods("Café da manhã").contains("Arroz"))
+        assertTrue(catalog.mealFoods("Jantar", listOf("Receita própria")).contains("Receita própria"))
+    }
     @Test fun exactSecondsAndUnknownMetadataSurviveEditing() {
         val extras = buildJsonObject { put("tempo_segundos_exato", 90); put("future_field", "preserve"); put("q_anuladas", 1) }
         val row = TrainingRecord(1, "2026-09-06", "12:00:00", "Estudos", "Disciplina", durationMinutes=2, extras=extras)

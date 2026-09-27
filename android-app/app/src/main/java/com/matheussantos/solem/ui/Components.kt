@@ -58,7 +58,8 @@ import androidx.compose.foundation.text.KeyboardOptions
         }
     }, confirmButton = { TextButton(onClick = { show = false }) { Text("Concluir") } })
 }
-@Composable fun Goal(label: String, value: Double, target: Int) {
-    Text("$label: " + "%.0f / %d".format(value, target))
+@Composable fun Goal(label: String, value: Double, target: Int, unit: String = "", decimals: Int = 0) {
+    val amount = if (decimals > 0) "%1$.${decimals}f".format(value) else "%.0f".format(value)
+    Text("$label: $amount / $target${if (unit.isBlank()) "" else " $unit"}")
     LinearProgressIndicator(progress = { (value / target).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
 }

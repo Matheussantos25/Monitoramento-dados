@@ -59,6 +59,30 @@ class AppTests(unittest.TestCase):
         self.assertFalse(self.app.exception)
         self.assertEqual(len(old_overview.call_args.args), 2)
 
+    def test_health_saved_meal_and_water_can_be_edited(self):
+        from solem_health import now_local
+        day = str(now_local().date())
+        self.app.session_state["demo_health_entries"] = [
+            {"id": "meal-test", "day": day, "logged_at": "12:30:00", "kind": "meal",
+             "details": {"tipo_refeicao": "Almoço", "saudaveis": ["Arroz"], "ocasionais": []}},
+            {"id": "water-test", "day": day, "logged_at": "10:00:00", "kind": "water",
+             "details": {"recipiente": "Garrafa", "volume_ml": 750, "quantidade": 1}},
+        ]
+        self.app.radio(key="solem_page").set_value("Saúde").run()
+        self.assertFalse(self.app.exception)
+        self.assertEqual(self.app.selectbox(key="new_meal_type").value, "Café da manhã")
+        self.app.selectbox(key="new_meal_type").set_value("Almoço").run()
+        self.assertIn("Feijão", next(w for w in self.app.multiselect
+                                     if w.label == "Alimentos habituais" and w.key is None).options)
+        self.app.multiselect(key="meal_good_meal-test").set_value(["Arroz", "Feijão"]).run()
+        next(b for b in self.app.button if b.label == "Salvar edição").click().run()
+        self.assertFalse(self.app.exception)
+        self.assertEqual(self.app.session_state["demo_health_entries"][0]["details"]["saudaveis"], ["Arroz", "Feijão"])
+        self.app.number_input(key="water_amount_water-test").set_value(2).run()
+        [b for b in self.app.button if b.label == "Salvar edição"][1].click().run()
+        self.assertFalse(self.app.exception)
+        self.assertEqual(self.app.session_state["demo_health_entries"][1]["details"]["quantidade"], 2)
+
     def test_workout_history_updates_when_exercise_changes(self):
         self.app.session_state["solem_demo_records"].extend([
             {"id": 1001, "data": "2026-09-20", "horario": "08:00:00", "grupo_muscular": "Cardio",

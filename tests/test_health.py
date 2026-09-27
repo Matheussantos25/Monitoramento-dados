@@ -6,8 +6,17 @@ from PIL import Image
 
 from solem_health import (base_record, daily_water_ml, private_weight_history, sleep_minutes,
                           training_category_stats, training_measure_stats, training_recommendation, training_stats,
-                          workout_fields, format_one_decimal)
+                          workout_fields, format_one_decimal, MEAL_TYPES, meal_food_options)
 from solem_photos_ui import normalized_jpeg
+
+
+def test_meal_picker_focuses_on_meal_and_keeps_saved_values():
+    catalog = ["Arroz", "Frango", "Banana", "Pão", "Cuscuz com leite"]
+    assert "Lanche da manhã" not in MEAL_TYPES
+    assert "Ceia" not in MEAL_TYPES
+    assert meal_food_options("Almoço", catalog) == ["Arroz", "Frango"]
+    assert meal_food_options("Jantar", catalog, ["Alimento personalizado"]) == [
+        "Alimento personalizado", "Arroz", "Cuscuz com leite", "Frango"]
 
 
 def test_water_accumulates_only_valid_entries():

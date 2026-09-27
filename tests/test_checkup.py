@@ -14,8 +14,11 @@ def row(group, exercise, **values):
 
 
 def test_checkup_recomputes_from_existing_entries_and_ignores_other_days():
-    records = [row("Peitoral", "Flexão", repeticoes=120),
-               row("Pernas", "Agachamento", repeticoes=80),
+    records = [row("Peitoral", "Flexão", repeticoes=50),
+               row("Pernas", "Agachamento", repeticoes=50),
+               row("Rosto", "Mewing com borracha", repeticoes=400),
+               row("Cardio", "Caminhada", distancia_km=2.5),
+               row("Cardio", "Corrida", distancia_km=2.5),
                row("Estudos", "Língua Portuguesa", repeticoes=100, duracao_min=35),
                row("Estudos", "Matemática", repeticoes=50, duracao_min=25),
                row("Estudos", "Anki", repeticoes=300, duracao_min=10,
@@ -25,7 +28,8 @@ def test_checkup_recomputes_from_existing_entries_and_ignores_other_days():
              {"day": "2026-09-26", "kind": "water", "details": {"volume_ml": 2000, "quantidade": 2}}]
     goals = {goal["id"]: goal for goal in daily_checkup(records, water, DAY)}
     assert {name: goal["value"] for name, goal in goals.items()} == {
-        "water": 3000, "reps": 200, "questions": 150, "study": 70}
+        "water": 3000, "mewing": 400, "flexao": 50, "agachamento": 50,
+        "cardio": 5, "questions": 150, "study": 70}
     assert all(goal["done"] for goal in goals.values())
 
 
@@ -33,7 +37,18 @@ def test_private_diary_failure_is_not_reported_as_zero_water():
     goals = {goal["id"]: goal for goal in daily_checkup([], None, DAY)}
     assert goals["water"]["value"] is None
     assert not goals["water"]["done"]
-    assert goals["reps"]["value"] == 0
+    assert goals["mewing"]["value"] == 0
+
+
+def test_checkup_does_not_count_unrelated_reps_or_cardio_duration_as_distance():
+    rows = [row("Peitoral", "Barra Fixa (Pronada)", repeticoes=300),
+            row("Cardio", "Caminhada", duracao_min=60, distancia_km=1.25),
+            row("Cardio", "Corrida", distancia_km=0.75)]
+    goals = {goal["id"]: goal for goal in daily_checkup(rows, [], DAY)}
+    assert goals["flexao"]["value"] == 0
+    assert goals["mewing"]["value"] == 0
+    assert goals["cardio"]["value"] == 2.0
+    assert not goals["cardio"]["done"]
 
 
 def test_calendar_day_lists_workout_study_and_private_health_details():

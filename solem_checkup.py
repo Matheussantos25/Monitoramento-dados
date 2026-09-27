@@ -7,15 +7,21 @@ from solem_progress import category_of, extras_of, number, record_date
 
 
 def daily_checkup(records, private_entries, day):
-    reps = questions = 0
+    questions = 0
     study_minutes = 0.0
+    exercise_totals = {"Mewing com borracha": 0, "Flexão": 0, "Agachamento": 0}
+    cardio_km = 0.0
     for row in records:
         if record_date(row.get("data")) != day:
             continue
         category = category_of(row)
         extra = extras_of(row.get("dados_extras"))
         if category == "treino":
-            reps += int(number(row.get("repeticoes")))
+            exercise = row.get("exercicio")
+            if exercise in exercise_totals:
+                exercise_totals[exercise] += int(number(row.get("repeticoes")))
+            if exercise in ("Caminhada", "Corrida"):
+                cardio_km += max(0, number(row.get("distancia_km")))
         elif category == "estudo":
             exact = extra.get("tempo_segundos_exato")
             study_minutes += (number(exact) / 60 if exact is not None
@@ -38,8 +44,14 @@ def daily_checkup(records, private_entries, day):
     goals = (
         {"id": "water", "label": "Água", "value": water_ml, "target": 3000,
          "unit": "ml", "page": "Saúde"},
-        {"id": "reps", "label": "Repetições", "value": reps, "target": 200,
-         "unit": "rep", "page": "Treino"},
+        {"id": "mewing", "label": "Mewing com borracha", "value": exercise_totals["Mewing com borracha"],
+         "target": 400, "unit": "rep", "page": "Treino"},
+        {"id": "flexao", "label": "Flexões", "value": exercise_totals["Flexão"],
+         "target": 50, "unit": "rep", "page": "Treino"},
+        {"id": "agachamento", "label": "Agachamentos", "value": exercise_totals["Agachamento"],
+         "target": 50, "unit": "rep", "page": "Treino"},
+        {"id": "cardio", "label": "Caminhada ou corrida", "value": round(cardio_km, 2),
+         "target": 5, "unit": "km", "page": "Treino"},
         {"id": "questions", "label": "Questões", "value": questions, "target": 150,
          "unit": "questões", "page": "Estudar"},
         {"id": "study", "label": "Tempo de estudo", "value": int(study_minutes),

@@ -22,7 +22,7 @@ for node in tree.body:
                 catalog[target.id] = ast.literal_eval(node.value)
 assert set(catalog) == names
 health_tree = ast.parse((repo / "solem_health.py").read_text(encoding="utf-8"))
-profile_names = {"WORKOUT_FIELD_PROFILES", "WORKOUT_EXERCISE_PROFILES"}
+profile_names = {"WORKOUT_FIELD_PROFILES", "WORKOUT_EXERCISE_PROFILES", "MEAL_FOODS", "MEAL_TYPES"}
 for node in health_tree.body:
     if isinstance(node, ast.Assign):
         for target in node.targets:
