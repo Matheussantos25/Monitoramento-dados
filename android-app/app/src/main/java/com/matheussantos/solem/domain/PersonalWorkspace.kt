@@ -3,7 +3,7 @@ package com.matheussantos.solem.domain
 import com.matheussantos.solem.data.model.PersonalItem
 import java.time.LocalDate
 
-val workspaceKinds = linkedMapOf("Anotações" to "note", "Resumos" to "summary", "Mapas mentais" to "mindmap", "PDFs" to "pdf", "Cronograma" to "plan", "Investimentos" to "investment")
+val workspaceKinds = linkedMapOf("Anotações" to "note", "Resumos" to "summary", "Mapas mentais" to "mindmap", "PDFs" to "pdf", "Cronograma" to "plan", "Financeiro" to "investment", "Salário" to "salary", "Assinaturas" to "subscription")
 const val MAX_PDF_BYTES = 10 * 1024 * 1024
 data class MindNode(val label: String, val parent: Int?, val depth: Int)
 fun mindNodes(body: String): List<MindNode> {
@@ -33,10 +33,14 @@ fun validatePdf(bytes: ByteArray) {
 fun validatePersonalItem(item: PersonalItem) {
     require(item.kind in workspaceKinds.values && item.title.trim().length in 1..160 && item.body.length <= 50000) { "Informe título de até 160 caracteres e conteúdo de até 50 mil caracteres." }
     if (item.kind == "mindmap") mindNodes(item.body)
-    if (item.kind in listOf("plan", "investment")) {
+    if (item.kind in listOf("plan", "investment", "salary", "subscription")) {
         val day = runCatching { LocalDate.parse(item.eventDate) }.getOrNull()
         require(day != null && day.year in 1900..2200) { "Informe uma data válida: AAAA-MM-DD." }
     }
     if (item.kind == "plan") require(item.durationMinutes in 1..1440 && Regex("([01]\\d|2[0-3]):[0-5]\\d").matches(item.eventTime)) { "Informe horário HH:MM e duração entre 1 e 1440 minutos." }
     if (item.kind == "investment") require(item.investedCents in 0..999999999999L && item.valueCents in 0..999999999999L) { "Valor inválido." }
+    if (item.kind in listOf("salary", "subscription")) {
+        require(item.valueCents in 1..999999999999L) { "Informe um valor maior que zero." }
+        if (item.kind == "subscription") require(item.billingCycle in listOf("monthly", "annual")) { "Escolha cobrança mensal ou anual." }
+    }
 }

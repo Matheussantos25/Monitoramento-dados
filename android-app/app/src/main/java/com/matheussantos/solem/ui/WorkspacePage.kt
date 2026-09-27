@@ -20,6 +20,76 @@ import com.matheussantos.solem.domain.*
 import com.matheussantos.solem.viewmodel.WorkspaceViewModel
 import java.util.UUID
 import java.time.YearMonth
+import java.time.LocalDate
+
+@Composable private fun FinanceContent(vm: WorkspaceViewModel, items: List<PersonalItem>, busy: Boolean, section: String) {
+    val salaries = items.filter { it.kind == "salary" && !it.archived }.sortedByDescending { it.eventDate.orEmpty() }
+    val subscriptions = items.filter { it.kind == "subscription" && !it.archived }.sortedBy { it.title.lowercase() }
+    val monthly = subscriptions.sumOf { it.valueCents / if (it.billingCycle == "annual") 12.0 else 1.0 }
+    var showSalary by remember { mutableStateOf(false) }
+    Panel("FINANCEIRO · DADOS PRIVADOS") {
+        Text("Salário atual: " + if (showSalary && salaries.isNotEmpty()) "R$ %.2f".format(salaries.first().valueCents / 100.0) else "••••••")
+        TextButton({ showSalary = !showSalary }) { Text(if (showSalary) "Ocultar salário" else "Mostrar salário") }
+        if (showSalary && salaries.isNotEmpty()) Text("Desde ${salaries.first().eventDate}")
+        Text("Assinaturas: R$ %.2f/mês · %d ativas".format(monthly / 100.0, subscriptions.size))
+        Text("Valores manuais; planos anuais divididos por 12 para comparação.", style=MaterialTheme.typography.bodySmall)
+    }
+    when(section) {
+        "Resumo" -> Text("Escolha Salário, Assinaturas ou Investimentos. Seus dados são sincronizados na conta privada.")
+        "Salário" -> {
+            var amount by remember { mutableStateOf("") }
+            var started by remember { mutableStateOf(today().toString()) }
+            var error by remember { mutableStateOf<String?>(null) }
+            Text("Cada alteração cria um registro com a data em que passou a valer.")
+            Field("Salário (R$, sem separador de milhar)", amount, true) { amount = it }
+            Field("Desde (AAAA-MM-DD)", started) { started = it }
+            error?.let { Text(it, color=MaterialTheme.colorScheme.error) }
+            Button({
+                try {
+                    val value = PersonalItem(UUID.randomUUID().toString(), "salary", "Salário", "", started, valueCents=moneyCents(amount))
+                    validatePersonalItem(value)
+                    error = null
+                    vm.save(value, null) { amount = "" }
+                } catch(e: Exception) { error = e.message ?: "Confira valor e data." }
+            }, enabled=!busy) { Text("Registrar salário") }
+            salaries.forEach { Text("${it.eventDate} · " + if (showSalary) "R$ %.2f".format(it.valueCents / 100.0) else "valor oculto") }
+        }
+        "Assinaturas" -> {
+            var selected by remember { mutableStateOf<String?>(null) }
+            val old = subscriptions.firstOrNull { it.id == selected }
+            Text("Claude, GPT, Netflix, YouTube Premium ou qualquer outro serviço. Arquive ao cancelar.")
+            Row { TextButton({ selected = null }) { Text("＋ Nova") } }
+            subscriptions.forEach { entry ->
+                Row {
+                    TextButton({ selected = entry.id }) { Text(entry.title) }
+                    Text("R$ %.2f / %s".format(entry.valueCents / 100.0, if (entry.billingCycle == "annual") "ano" else "mês"))
+                }
+            }
+            key(selected, old?.revision) {
+                var title by remember { mutableStateOf(old?.title.orEmpty()) }
+                var amount by remember { mutableStateOf(old?.valueCents?.div(100.0)?.toString().orEmpty()) }
+                var started by remember { mutableStateOf(old?.eventDate ?: today().toString()) }
+                var cycle by remember { mutableStateOf(old?.billingCycle?.ifBlank { "monthly" } ?: "monthly") }
+                var error by remember { mutableStateOf<String?>(null) }
+                Field("Serviço", title) { title = it.take(160) }
+                Field("Custo por cobrança (R$)", amount, true) { amount = it }
+                Choice("Frequência", cycle, listOf("monthly", "annual")) { cycle = it }
+                Field("Data de início (AAAA-MM-DD)", started) { started = it }
+                error?.let { Text(it, color=MaterialTheme.colorScheme.error) }
+                Button({
+                    try {
+                        val value = PersonalItem(old?.id ?: UUID.randomUUID().toString(), "subscription", title.trim(), "", started,
+                            valueCents=moneyCents(amount), billingCycle=cycle)
+                        validatePersonalItem(value)
+                        error = null
+                        vm.save(value, old) { selected = null }
+                    } catch(e: Exception) { error = e.message ?: "Confira os campos." }
+                }, enabled=!busy) { Text("Salvar assinatura") }
+                if (old != null) TextButton({ vm.archive(old); selected = null }, enabled=!busy) { Text("Arquivar assinatura cancelada") }
+            }
+        }
+    }
+}
 
 @Composable fun WorkspacePage(vm: WorkspaceViewModel = viewModel(), module: String? = null) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -63,6 +133,14 @@ import java.time.YearMonth
             }
             Field("Buscar título ou conteúdo",search) {search=it}
             Row { Checkbox(archived,{archived=it;editing=null;creating=false}); Text("Mostrar arquivados") }
+            if (module == "Financeiro") {
+                var financeSection by remember { mutableStateOf("Resumo") }
+                Choice("Seção financeira", financeSection, listOf("Resumo", "Salário", "Assinaturas", "Investimentos")) {
+                    financeSection = it; editing = null; creating = false
+                }
+                FinanceContent(vm, state.items, state.busy, financeSection)
+                if (financeSection != "Investimentos") return@Page
+            }
             val kind = workspaceKinds.getValue(module)
             if(kind=="plan") {
                 Field("Mês (AAAA-MM)",month) {month=it}

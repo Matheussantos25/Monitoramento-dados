@@ -1,6 +1,6 @@
 # Solem Android — 0.9
 
-Visão geral sem ficha/avatar. Navegação azul; a aba Saúde reúne diário de refeições, água, peso, sono e fotos opcionais. O treino exibe histórico/recordes, sugestão conservadora por grupo e distância GPS opcional para caminhada/corrida com a tela aberta.
+Visão geral sem ficha/avatar. Navegação azul; a aba Saúde reúne diário de refeições, água, peso, sono e fotos opcionais. O treino exibe histórico/recordes, sugestão conservadora por grupo e distância GPS opcional para caminhada/corrida inclusive com a tela bloqueada, enquanto a notificação de medição estiver ativa. A aba Financeiro reúne salário (oculto até revelar), assinaturas e os investimentos existentes.
 
 Aplicativo nativo Kotlin / Compose / Material 3. Usa o mesmo projeto Supabase do Streamlit. Treinos/estudos continuam na tabela legada `treinos`; novos dados de saúde usam `solem_health_entries` por usuário e fotos usam `solem_photos` com bucket privado. Execute as migrações antes de usar Saúde/Fotos.
 
@@ -43,7 +43,7 @@ SUPABASE_PUBLISHABLE_KEY=SUA_CHAVE_PUBLICAVEL_OU_ANON
 
 Nunca use `service_role` ou uma chave `sb_secret_`. A chave cliente pode ser extraída do APK; a autorização continua sendo responsabilidade das policies do Supabase. O app exige login pelo Supabase Auth antes da navegação. Erros de sessão/rede são apresentados sem expor credenciais.
 
-No SQL Editor do **mesmo** projeto, execute uma vez `../supabase/migrations/20260923_health_diary.sql` e `../supabase/migrations/20260923_health_photos.sql`. As duas migrações foram aplicadas ao projeto `frxgrkgljsepykhutskq` em 23/09/2026. O bucket de fotos é privado; a foto é recodificada em JPEG sem EXIF (inclusive GPS). Não há reconhecimento facial ou avaliação automatizada de músculos. O GPS de caminhada/corrida é opt-in, só enquanto a tela está aberta e salva apenas distância em km.
+No SQL Editor do **mesmo** projeto, execute uma vez `../supabase/migrations/20260923_health_diary.sql`, `../supabase/migrations/20260923_health_photos.sql` e `../supabase/migrations/20260927_finance.sql`. As migrações foram aplicadas ao projeto `frxgrkgljsepykhutskq`. O bucket de fotos é privado; a foto é recodificada em JPEG sem EXIF (inclusive GPS). Não há reconhecimento facial ou avaliação automatizada de músculos. O GPS de caminhada/corrida é opt-in: inicia com o app aberto, continua com a tela bloqueada via serviço em primeiro plano e notificação persistente. Pare antes de salvar. O serviço não grava coordenadas ou trajeto; só a distância em km é usada no registro.
 
 A tabela legada `treinos` tem policy pública `ALL true` apesar de RLS habilitada. **Não registre novos dados pessoais nela.** A aba Saúde nova usa apenas a tabela privada. Histórico antigo de alimentação/peso não é migrado automaticamente porque não há dono atribuível com segurança. Treinos/estudos e XP legado ainda dependem da tabela compartilhada; uma migração de propriedade é recomendada antes de uso multiusuário.
 

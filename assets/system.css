@@ -43,6 +43,16 @@ header[data-testid="stHeader"]{height:3rem;min-height:3rem;background:#090f1bee}
 .week-day.future>div{color:var(--muted)}
 .unlocked .badge-art,.goal-label{background:#193c52;color:var(--accent)}
 .month-cell.practiced{background:#193047;border-color:#305778}.month-cell.both{background:#1b4051;border-color:#4d9fba}
+.checkup-title{margin:1.7rem 0 .1rem}.checkup-title h2{font-size:1.35rem;letter-spacing:-.03em}
+.checkup-title>span{font-size:.73rem;color:var(--accent);font-variant-numeric:tabular-nums}
+[class*="st-key-checkup_"]{padding:1rem 1.1rem .7rem;background:#111f32;border:1px solid #344e6c;border-radius:12px;margin:.25rem 0 .6rem;box-shadow:inset 0 1px #b9eaff12}
+.checkup-card__top{display:flex;align-items:center;justify-content:space-between;gap:.7rem;color:#dfefff;font-size:.72rem;font-weight:700;letter-spacing:.02em}
+.checkup-card__top small{color:var(--accent);font-size:.63rem;font-weight:600;white-space:nowrap}
+.checkup-card strong{display:block;margin:.75rem 0 .45rem;color:#fff;font-size:1.65rem;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.checkup-card strong span{color:var(--muted);font-size:.75rem;font-weight:500;letter-spacing:0}
+.checkup-card progress{height:6px;margin:.3rem 0 .5rem;background:#2d4360}
+[class*="st-key-checkup_"] .stButton>button{background:transparent;border-color:#456583;min-height:35px;font-size:.72rem;color:#bfeaff}
+[class*="st-key-checkup_"] .stButton>button:hover{background:#203b57;border-color:var(--accent);color:#fff}
 .stFormSubmitButton>button{color:#091926}.stButton>button:hover,.stFormSubmitButton>button:hover{background:#9ce7ff;border-color:#9ce7ff;color:#071622}
 .st-key-document_canvas textarea{background:#0f1a2b}
 .progress-photo{margin:0;background:#111b2b;border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -61,5 +71,6 @@ header[data-testid="stHeader"]{height:3rem;min-height:3rem;background:#090f1bee}
   .system-status__main strong{font-size:3.8rem}
   .system-status__main p{padding-left:0;border-left:0;font-size:.86rem}
   .system-status__foot{font-size:.66rem}
+  .checkup-title{align-items:flex-start;flex-direction:column;gap:.25rem}
 }
 @media(prefers-reduced-motion:no-preference){.system-status{animation:systemEnter .55s ease-out both}.system-status progress::-webkit-progress-value{transition:width .7s ease-out}@keyframes systemEnter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}}

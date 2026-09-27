@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { color-scheme: dark; font-family: "Segoe UI", system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #eef6ff; background: transparent; }
+    .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 7px; }
+    .weekday { color: #afc1d4; font-size: 12px; text-align: center; padding: 8px; }
+    .outside { min-height: 82px; }
+    .day { appearance: none; position: relative; display: flex; flex-direction: column;
+      align-items: flex-start; gap: 12px; width: 100%; min-height: 88px; padding: 12px;
+      border: 1px solid #30435f; border-radius: 9px; text-align: left;
+      color: #eef6ff; background: #111b2b; font: inherit; cursor: pointer;
+      transition: transform .22s ease, border-color .22s ease, background .22s ease, box-shadow .22s ease; }
+    .day:hover { transform: translateY(-2px); border-color: #83dcff; background: #1c3049; }
+    .day:active { transform: scale(.97); }
+    .day:focus-visible, .close:focus-visible { outline: 2px solid #83dcff; outline-offset: 2px; }
+    .day.practiced { background: #193047; border-color: #305778; }
+    .day.both { background: #1b4051; border-color: #4d9fba; }
+    .day.health { background: #17293e; border-color: #38536b; }
+    .day.today { box-shadow: inset 0 0 0 1px #83dcff; }
+    .day.selected { border-color: #a6e7ff; box-shadow: inset 0 0 0 1px #a6e7ff, 0 0 18px #83dcff22; }
+    .day.future { opacity: .64; }
+    .day b { font-size: 14px; font-variant-numeric: tabular-nums; }
+    .day small { display: block; color: #afc1d4; font-size: 10px; line-height: 1.25; }
+    .badges { position: absolute; top: 10px; right: 9px; display: flex; gap: 3px; }
+    .badges span { color: #83dcff; font-size: 10px; font-weight: 800; }
+    .focus { display: none; margin: 18px 0 4px; padding: clamp(18px, 3vw, 30px);
+      border: 1px solid #527491; border-radius: 16px;
+      background: radial-gradient(circle at 85% 0, #294466 0, transparent 40%), #122238;
+      box-shadow: 0 22px 56px #03081088, inset 0 1px #b9eaff22; transform-origin: 50% 0; }
+    .focus.open { display: block; animation: focusIn .42s cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes focusIn { from { opacity: 0; transform: translateY(-16px) scale(.86); filter: blur(5px); }
+      to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
+    .focus-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+    .eyebrow { color: #83dcff; font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    .focus h3 { margin: 8px 0 5px; font-size: clamp(22px, 3vw, 30px); letter-spacing: -.04em; }
+    .focus p { margin: 0; color: #afc1d4; font-size: 12px; line-height: 1.5; }
+    .close { flex: 0 0 auto; min-width: 38px; min-height: 38px; border: 1px solid #55728e;
+      border-radius: 9px; color: #eef6ff; background: #1b3049; font-size: 19px; cursor: pointer; }
+    .close:hover { background: #294665; }
+    .events { display: grid; gap: 8px; margin-top: 20px; }
+    .event { display: grid; grid-template-columns: 45px 88px minmax(0, 1fr); gap: 10px;
+      align-items: start; padding: 11px 0; border-top: 1px solid #30435f; }
+    .event time, .event .kind { color: #83dcff; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .event .kind { color: #afc1d4; }
+    .event strong { display: block; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+    .event small { color: #afc1d4; display: block; font-size: 11px; margin-top: 4px; overflow-wrap: anywhere; }
+    @media (max-width: 650px) { .grid { gap: 4px; } .weekday { padding: 6px 0; font-size: 10px; }
+      .outside { min-height: 65px; } .day { padding: 7px; min-height: 65px; gap: 7px; }
+      .day b { font-size: 12px; } .day small { font-size: 9px; }
+      .badges { top: 8px; right: 5px; } .badges span { font-size: 8px; }
+      .event { grid-template-columns: 38px minmax(0, 1fr); gap: 4px 10px; }
+      .event .kind { grid-column: 2; grid-row: 1; }
+      .event .body { grid-column: 2; } }
+    @media (prefers-reduced-motion: reduce) { .day { transition: none; } .focus.open { animation: none; } }
+  </style>
+</head>
+<body>
+  <div id="grid" class="grid" role="group" aria-label="Calendário mensal"></div>
+  <section id="focus" class="focus" aria-live="polite" aria-label="Atividades do dia"></section>
+  <script>
+    "use strict";
+    const grid = document.getElementById("grid");
+    const focus = document.getElementById("focus");
+    const weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+    const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+    let selected = null;
+    let selectedButton = null;
+    function send(type, data = {}) { window.parent.postMessage({isStreamlitMessage: true, type, ...data}, "*"); }
+    function frameHeight() { send("streamlit:setFrameHeight", {height: document.documentElement.scrollHeight}); }
+    function node(tag, className, content) {
+      const item = document.createElement(tag);
+      if (className) item.className = className;
+      if (content !== undefined) item.textContent = String(content);
+      return item;
+    }
+    function closeFocus() {
+      focus.classList.remove("open");
+      focus.replaceChildren();
+      if (selectedButton) { selectedButton.classList.remove("selected"); selectedButton.focus(); }
+      selectedButton = null;
+      selected = null;
+      frameHeight();
+    }
+    function openFocus(day, button, data) {
+      if (selectedButton) selectedButton.classList.remove("selected");
+      selected = day.date;
+      selectedButton = button;
+      button.classList.add("selected");
+      const head = node("div", "focus-head");
+      const text = node("div");
+      text.append(node("span", "eyebrow", "Registro do dia"));
+      const [year, month, date] = day.date.split("-").map(Number);
+      const title = node("h3", "", `${date} de ${months[month - 1]} de ${year}`);
+      title.tabIndex = -1;
+      text.append(title, node("p", "", day.events.length
+        ? `${day.events.length} ${day.events.length === 1 ? "atividade registrada" : "atividades registradas"}`
+        : "Nenhuma atividade registrada neste dia."));
+      const close = node("button", "close", "×");
+      close.type = "button";
+      close.setAttribute("aria-label", "Fechar detalhes do dia");
+      close.addEventListener("click", closeFocus);
+      head.append(text, close);
+      const events = node("div", "events");
+      for (const event of day.events) {
+        const row = node("article", "event");
+        row.append(node("time", "", event.time || "—"), node("span", "kind", event.kind));
+        const body = node("div", "body");
+        body.append(node("strong", "", event.title));
+        if (event.detail) body.append(node("small", "", event.detail));
+        row.append(body);
+        events.append(row);
+      }
+      focus.replaceChildren(head, events);
+      focus.classList.remove("open");
+      void focus.offsetWidth;
+      focus.classList.add("open");
+      title.focus({preventScroll: true});
+      frameHeight();
+    }
+    function render(data) {
+      if (!data || !Array.isArray(data.days)) return;
+      const first = (new Date(data.year, data.month - 1, 1).getDay() + 6) % 7;
+      const entries = [];
+      for (const name of weekdays) entries.push(node("div", "weekday", name));
+      for (let i = 0; i < first; i++) {
+        const spacer = node("div", "outside");
+        spacer.setAttribute("aria-hidden", "true");
+        entries.push(spacer);
+      }
+      for (const day of data.days) {
+        const button = node("button", "day", undefined);
+        button.type = "button";
+        button.classList.add(day.study && day.workout ? "both" : day.study || day.workout ? "practiced" : day.health ? "health" : "rest");
+        if (day.date === data.today) button.classList.add("today");
+        if (day.date > data.today) button.classList.add("future");
+        button.append(node("b", "", Number(day.date.slice(-2))));
+        const badges = node("span", "badges");
+        if (day.study) badges.append(node("span", "", "E"));
+        if (day.workout) badges.append(node("span", "", "T"));
+        if (day.health) badges.append(node("span", "", "+"));
+        button.append(badges);
+        const caption = day.study ? `${Math.round(day.study_minutes)} min estudo` :
+          day.workout ? "Treino" : day.health ? "Saúde" : day.date > data.today ? "Futuro" : "Descanso";
+        button.append(node("small", "", caption));
+        button.setAttribute("aria-label", `${day.date.slice(8,10)}/${day.date.slice(5,7)}/${day.date.slice(0,4)}: ${caption}. Abrir detalhes`);
+        button.addEventListener("click", () => openFocus(day, button, data));
+        entries.push(button);
+      }
+      grid.replaceChildren(...entries);
+      grid.setAttribute("aria-label", `Calendário de ${months[data.month - 1]} de ${data.year}`);
+      if (selected) {
+        const selectedDay = data.days.find(day => day.date === selected);
+        const button = entries.find(item => item.classList && item.classList.contains("day") && item.getAttribute("aria-label")?.startsWith(`${selected.slice(8,10)}/${selected.slice(5,7)}`));
+        if (selectedDay && button) openFocus(selectedDay, button, data);
+        else closeFocus();
+      }
+      frameHeight();
+    }
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && selected) closeFocus(); });
+    window.addEventListener("message", event => {
+      if (event.data?.type === "streamlit:render") render(event.data.args);
+    });
+    new ResizeObserver(frameHeight).observe(document.body);
+    send("streamlit:componentReady", {apiVersion: 1});
+    frameHeight();
+  </script>
+</body>
+</html>

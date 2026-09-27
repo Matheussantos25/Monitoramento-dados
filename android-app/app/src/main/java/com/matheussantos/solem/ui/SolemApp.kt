@@ -24,7 +24,7 @@ import com.matheussantos.solem.ui.state.TrainingUiState
 import com.matheussantos.solem.viewmodel.TrainingViewModel
 import com.matheussantos.solem.viewmodel.WorkspaceViewModel
 
-val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Configurações", "Calendário", "Elos", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos")
+val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Configurações", "Calendário", "Elos", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro")
 
 @Composable fun SolemApp(workspaceVm: WorkspaceViewModel = viewModel()) {
     val auth by workspaceVm.state.collectAsStateWithLifecycle()

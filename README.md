@@ -13,6 +13,8 @@ python -m streamlit run app.py
 
 Mantenha `SUPABASE_URL` e a chave pública (`SUPABASE_PUBLISHABLE_KEY`) em `.streamlit/secrets.toml` localmente, ou em **Settings → Secrets** no Streamlit Community Cloud. Nunca adicione esse arquivo ao Git. Para ativar o diário privado de Saúde e as fotos, execute uma vez as migrações [20260923_health_diary.sql](supabase/migrations/20260923_health_diary.sql) e [20260923_health_photos.sql](supabase/migrations/20260923_health_photos.sql) no mesmo projeto Supabase.
 
+Para a aba **Financeiro**, execute também [20260927_finance.sql](supabase/migrations/20260927_finance.sql) no mesmo projeto, uma única vez. Ela amplia a coleção privada `solem_items` com salário e assinaturas, sem apagar os investimentos e sem alterar suas políticas RLS. No projeto de produção, a migração foi aplicada em 27/09/2026.
+
 ## Experimentar sem banco
 
 A demonstração usa somente dados fictícios e guarda alterações na sessão do navegador. Ela nunca conecta ao Supabase. Ative explicitamente a variável `SOLEM_DEMO=1`:
@@ -35,6 +37,10 @@ Não configure `SOLEM_DEMO=1` no app de produção. Para voltar ao banco no Powe
 A aba Saúde permite várias refeições e registros de água por dia, mas apenas um peso e um sono por dia. Água é volume do recipiente × quantidade; os horários vêm preenchidos com a hora atual e podem ser editados. Fotos de rosto/corpo são opcionais, ficam num bucket privado por usuário e são recodificadas para remover EXIF antes do envio. A comparação usa datas escolhidas pelo usuário. Não há análise automática de rosto ou músculos.
 
 Em **Treino**, a escolha do exercício atualiza imediatamente último registro, recorde e média; caminhada/corrida usam km registrados em vez de repetições. O botão **Iniciar GPS** aparece só nesses dois exercícios. No navegador, exige HTTPS e permissão explícita, mede apenas com a página aberta/visível e transfere ao formulário apenas a distância ao tocar em **Parar GPS**; se indisponível, digite km manualmente. Em **Evolução física**, o período e os exercícios filtram tanto os cards quanto os gráficos. O gráfico de peso foi movido para **Saúde → Peso** e mostra só o diário privado da conta; registros legados de peso não são migrados automaticamente.
+
+No Android, a caminhada/corrida pode continuar a medir com a tela bloqueada por meio de um serviço de localização em primeiro plano e uma notificação persistente. Inicie o GPS com o app visível e pare antes de salvar; se o sistema encerrar o serviço, confira a distância antes do registro. O site móvel não consegue garantir GPS contínuo com a página oculta/bloqueada por limitações do navegador. Nenhuma coordenada ou rota é enviada ao Supabase; somente os quilômetros do treino são salvos.
+
+**Financeiro** mostra salário apenas após tocar em **Mostrar salário**, com data de início e histórico de alterações. Assinaturas têm serviço, custo, frequência mensal/anual e data de início; o custo mensal comparativo divide planos anuais por 12. Os investimentos manuais continuam disponíveis na mesma aba. Não há sincronização bancária nem cotação automática.
 
 **Atenção:** o projeto Supabase existente tem uma policy `treinos` de acesso público total (`public`, `ALL`, `true`). Os novos dados de saúde **não** são gravados nela; ficam em `solem_health_entries` sob RLS por usuário. O histórico antigo de alimentação/peso em `treinos` não é migrado sem atribuição segura de proprietário. Treinos/estudos e a pontuação legada continuam compartilhados; revisar a proteção da tabela `treinos` é o próximo passo de privacidade. O diário privado novo ainda não adiciona XP.
 

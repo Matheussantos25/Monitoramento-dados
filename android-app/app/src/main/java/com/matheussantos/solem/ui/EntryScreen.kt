@@ -138,6 +138,9 @@ import java.time.ZoneOffset
         if (success) Text("Registro salvo. Você pode consultar o histórico.")
         Button(onClick = {
             try {
+                require(!(type == "Treino" && exercise in listOf("Caminhada", "Corrida") && WalkLocationService.state.value.active)) {
+                    "Pare o GPS antes de salvar para registrar a distância final."
+                }
                 LocalDate.parse(date); LocalTime.parse(time)
                 fun int(s: String): Int = s.toIntOrNull()?.takeIf { it >= 0 } ?: error("Informe números inteiros não negativos.")
                 fun decimal(s: String): Double = s.replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 } ?: error("Informe números não negativos válidos.")

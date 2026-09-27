@@ -6,7 +6,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
-KINDS = {'Anotações':'note', 'Resumos':'summary', 'Mapas mentais':'mindmap', 'PDFs':'pdf', 'Cronograma':'plan', 'Investimentos':'investment'}
+KINDS = {'Anotações':'note', 'Resumos':'summary', 'Mapas mentais':'mindmap', 'PDFs':'pdf', 'Cronograma':'plan', 'Investimentos':'investment', 'Salário':'salary', 'Assinaturas':'subscription'}
 MAX_PDF = 10 * 1024 * 1024
 
 def public_key(key):
@@ -25,6 +25,9 @@ def cents(text):
     if value > 999999999999:
         raise ValueError('Valor acima do limite suportado.')
     return value
+
+def brl(amount_cents):
+    return 'R$ ' + f'{amount_cents / 100:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
 
 def mind_nodes(body):
     nodes, parents = [], []
@@ -53,7 +56,7 @@ def validate_item(item):
         raise ValueError('Informe título de até 160 caracteres e conteúdo de até 50 mil caracteres.')
     if item['kind'] == 'mindmap':
         mind_nodes(item['body'])
-    if item['kind'] in ('plan', 'investment'):
+    if item['kind'] in ('plan', 'investment', 'salary', 'subscription'):
         day = date.fromisoformat(item['event_date'])
         if not date(1900,1,1) <= day <= date(2200,12,31):
             raise ValueError('Data fora do intervalo suportado.')
@@ -62,6 +65,11 @@ def validate_item(item):
             raise ValueError('Informe horário HH:MM e duração entre 1 e 1440 minutos.')
     if item['kind'] == 'investment' and not all(0 <= item[k] <= 999999999999 for k in ('invested_cents','value_cents')):
         raise ValueError('Valor inválido.')
+    if item['kind'] in ('salary', 'subscription'):
+        if not 0 < item['value_cents'] <= 999999999999:
+            raise ValueError('Informe um valor maior que zero.')
+        if item['kind'] == 'subscription' and item.get('billing_cycle') not in ('monthly', 'annual'):
+            raise ValueError('Escolha cobrança mensal ou anual.')
 
 class Workspace:
     def __init__(self, client):

@@ -14,6 +14,7 @@ import kotlinx.serialization.SerialName
     val done: Boolean = false,
     @SerialName("invested_cents") val investedCents: Long = 0,
     @SerialName("value_cents") val valueCents: Long = 0,
+    @SerialName("billing_cycle") val billingCycle: String = "",
     @SerialName("file_path") val filePath: String? = null,
     val archived: Boolean = false,
     val revision: Int = 1

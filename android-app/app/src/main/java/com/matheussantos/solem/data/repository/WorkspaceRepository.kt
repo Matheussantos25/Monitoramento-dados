@@ -41,6 +41,7 @@ class WorkspaceRepository {
             put("event_date",item.eventDate?.let { JsonPrimitive(it) } ?: JsonNull)
             put("event_time",item.eventTime); put("duration_minutes",item.durationMinutes); put("done",item.done)
             put("invested_cents",item.investedCents); put("value_cents",item.valueCents)
+            if (item.kind in listOf("salary", "subscription")) put("billing_cycle",item.billingCycle)
         }
         val changed = if (old == null) client.from("solem_items").insert(payload) { select() }.decodeList<PersonalItem>()
         else client.from("solem_items").update(payload) { select(); filter { eq("id",old.id); eq("revision",old.revision) } }.decodeList<PersonalItem>()

@@ -1,11 +1,12 @@
 import unittest
 from unittest.mock import MagicMock
-from solem_workspace import cents, mind_nodes, validate_pdf, validate_item, public_key, Workspace
+from solem_workspace import cents, brl, mind_nodes, validate_pdf, validate_item, public_key, Workspace
 
 class WorkspaceTests(unittest.TestCase):
     def test_money_is_exact_and_rejects_ambiguous_input(self):
         self.assertEqual(cents('0,29'),29)
         self.assertEqual(cents('125.50'),12550)
+        self.assertEqual(brl(350000), 'R$ 3.500,00')
         for value in ('NaN','-1','1.000,00','1e5','1.234','10000000000'):
             with self.assertRaises(ValueError): cents(value)
 
@@ -37,6 +38,28 @@ class WorkspaceTests(unittest.TestCase):
         validate_item(base)
         for patch in (dict(event_time='25:00'),dict(duration_minutes=0),dict(event_date='2026-02-30')):
             with self.assertRaises(ValueError): validate_item(dict(base,**patch))
+
+    def test_private_finance_item_validation(self):
+        salary=dict(kind='salary', title='Salário', body='', event_date='2026-09-01', value_cents=350000, billing_cycle='')
+        validate_item(salary)
+        subscription=dict(kind='subscription', title='Netflix', body='', event_date='2026-09-01', value_cents=3990, billing_cycle='monthly')
+        validate_item(subscription)
+        for patch in (dict(value_cents=0), dict(event_date='2026-02-30'), dict(billing_cycle='weekly')):
+            with self.assertRaises(ValueError): validate_item(dict(subscription,**patch))
+
+    def test_finance_sections_render_without_secrets(self):
+        from streamlit.testing.v1 import AppTest
+        app=AppTest.from_string('''
+from solem_workspace_ui import render_finance
+class Repo: pass
+items=[dict(id='salary-1',kind='salary',title='Salario',body='',event_date='2026-09-01',value_cents=350000,billing_cycle='',archived=False,created_at='2026-09-01'),
+       dict(id='sub-1',kind='subscription',title='Netflix',body='',event_date='2026-09-02',value_cents=3990,billing_cycle='monthly',archived=False,created_at='2026-09-02')]
+render_finance(Repo(),items)
+''').run()
+        self.assertFalse(app.exception)
+        for section in ('Salário','Assinaturas','Investimentos'):
+            app.selectbox(key='finance_section').select(section).run()
+            self.assertFalse(app.exception, section)
 
     def test_ui_modules_render_without_live_secrets(self):
         from streamlit.testing.v1 import AppTest

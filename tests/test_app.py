@@ -40,6 +40,17 @@ class AppTests(unittest.TestCase):
         self.app.radio(key="solem_page").set_value("Visão geral").run()
         self.assertFalse(self.app.exception)
 
+    def test_overview_checkup_uses_private_water_and_links_to_source_tabs(self):
+        self.app.session_state["demo_health_entries"] = [{
+            "id": "water-test", "day": str(self.app.session_state["solem_demo_records"][-1]["data"]),
+            "logged_at": "09:00:00", "kind": "water",
+            "details": {"volume_ml": 750, "quantidade": 4}}]
+        self.app.run()
+        self.assertFalse(self.app.exception)
+        self.assertTrue(self.app.button(key="checkup_go_water"))
+        self.app.button(key="checkup_go_water").click().run()
+        self.assertEqual(self.app.radio(key="solem_page").value, "Saúde")
+
     def test_workout_history_updates_when_exercise_changes(self):
         self.app.session_state["solem_demo_records"].extend([
             {"id": 1001, "data": "2026-09-20", "horario": "08:00:00", "grupo_muscular": "Cardio",

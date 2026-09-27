@@ -6,8 +6,9 @@ import plotly.io as pio
 import plotly.graph_objects as go
 from solem_progress import calculate_progress
 from solem_journal_ui import monthly_journal
+from solem_checkup import daily_checkup
 
-PAGES = ["Visão geral", "Treino", "Evolução física", "Saúde", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos", "Configurações"]
+PAGES = ["Visão geral", "Treino", "Evolução física", "Saúde", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Configurações"]
 
 
 def apply_theme():
@@ -69,9 +70,9 @@ def goal_panel(title, current, target, unit):
     st.html(f'''<section class="goal-panel"><div><span class="eyebrow">{escape(title)}</span><h3>{current:,} <small>/ {target:,} {escape(unit)}</small></h3></div><span class="goal-label">{'Meta alcançada' if current >= target else 'Em progresso'}</span><progress value="{pct}" max="100" aria-label="{escape(title)}">{pct:.0f}%</progress></section>'''.replace(",", "."))
 
 
-def overview(p, records=None):
+def overview(p, records=None, private_entries=None):
     today = p["today"]
-    st.html('<div class="section-intro"><span class="eyebrow">SISTEMA / SUA JORNADA</span><h1>Seu progresso é real.</h1><p>Cada registro transforma constância em experiência.</p></div>')
+    st.html('<div class="section-intro"><span class="eyebrow">SISTEMA / SUA JORNADA</span><h1>Progresso Geral</h1><p>Cada registro transforma constância em experiência.</p></div>')
     level_pct = max(0, min(100, p['level_xp'] / 250 * 100))
     st.html(f'''<section class="system-status" aria-label="Status do personagem">
         <div class="system-status__top"><span>STATUS DO PERSONAGEM</span><span>JORNADA EM CURSO</span></div>
@@ -82,7 +83,28 @@ def overview(p, records=None):
         <div class="system-status__foot"><span>◈ {p['streak']} dias de sequência</span><span>+{p['today_xp']} XP hoje</span></div>
     </section>''')
     if records is not None:
-        monthly_journal(records, today)
+        goals = daily_checkup(records, private_entries, today)
+        available = [goal for goal in goals if goal["value"] is not None]
+        done_count = sum(goal["done"] for goal in available)
+        st.html(f'<div class="section-title checkup-title"><h2>Check-up de hoje</h2><span>{done_count} de {len(available)} metas acompanhadas</span></div>')
+        st.caption("Atualiza sozinho com seus registros. Metas pessoais do painel, não uma prescrição de saúde ou treino.")
+        for start in range(0, len(goals), 2):
+            columns = st.columns(2, gap="small")
+            for column, goal in zip(columns, goals[start:start + 2]):
+                with column, st.container(key=f"checkup_{goal['id']}"):
+                    value = goal["value"]
+                    label = "Indisponível" if value is None else "Concluído" if goal["done"] else "Em andamento"
+                    amount = "—" if value is None else f"{int(value):,}".replace(",", ".")
+                    target = f"{goal['target']:,}".replace(",", ".")
+                    pct = min(100, value / goal["target"] * 100) if value is not None else 0
+                    st.html(f'''<div class="checkup-card"><span class="checkup-card__top">{escape(goal['label'])}<small>{label}</small></span>
+                        <strong>{amount} <span>/ {target} {escape(goal['unit'])}</span></strong>
+                        <progress value="{pct:.1f}" max="100" aria-label="{escape(goal['label'])}: {pct:.0f}%">{pct:.0f}%</progress></div>''')
+                    st.button("Ver registro" if goal["done"] else "Registrar →", key=f"checkup_go_{goal['id']}",
+                              on_click=navigate, args=(goal["page"],), use_container_width=True)
+        if private_entries is None:
+            st.caption("A água depende do diário privado. Não foi possível consultá-lo nesta sessão; os demais indicadores continuam disponíveis.")
+        monthly_journal(records, today, private_entries)
 
     st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>TEMPO DE ESTUDO</span><strong>{int(p['study_minutes']//60)}<small>h </small>{int(p['study_minutes']%60):02}<small>min</small></strong></div><div><span>QUESTÕES RESOLVIDAS</span><strong>{p['questions']}<small> nesta semana</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP conquistados</small></strong></div></section>''')
 

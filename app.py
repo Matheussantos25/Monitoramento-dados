@@ -694,12 +694,17 @@ else:
 # --- INTERFACE MAIN ---
 pagina, progresso = shell(df_raw, on_logout=logout_private)
 
-if pagina in ("Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Investimentos"):
+if pagina in ("Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro"):
     from solem_workspace_ui import workspace_page
     workspace_page(pagina)
 
 if pagina == "Visão geral":
-    overview(progresso, df_raw.to_dict("records"))
+    from solem_health_private import list_entries
+    try:
+        overview_health_entries = list_entries(st.session_state.get("private_client"), demo=IS_DEMO)
+    except Exception:
+        overview_health_entries = None
+    overview(progresso, df_raw.to_dict("records"), overview_health_entries)
     from solem_ranks_ui import rank_panel
     rank_panel(df_raw.to_dict("records"), TOPICOS_EDITAL, progresso['today'])
 

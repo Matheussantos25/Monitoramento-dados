@@ -4,7 +4,7 @@ from uuid import uuid4
 from datetime import date, time
 import streamlit as st
 from supabase import create_client
-from solem_workspace import Workspace, KINDS, cents, mind_nodes, public_key
+from solem_workspace import Workspace, KINDS, cents, brl, mind_nodes, public_key
 
 def safe_error(error):
     if isinstance(error, ValueError):
@@ -87,7 +87,88 @@ def workspace_page(module):
         st.error(safe_error(error))
         st.button('Entrar novamente', on_click=logout_private)
         return
-    render_workspace(repo, items, module)
+    if module == 'Financeiro':
+        render_finance(repo, items)
+    else:
+        render_workspace(repo, items, module)
+
+
+def render_finance(repo, items):
+    """Salary and subscriptions share the same private RLS-backed collection as investments."""
+    salary = sorted((x for x in items if x['kind'] == 'salary' and not x['archived']),
+                    key=lambda x: (x.get('event_date') or '', x.get('created_at') or ''), reverse=True)
+    subscriptions = sorted((x for x in items if x['kind'] == 'subscription' and not x['archived']),
+                           key=lambda x: x['title'].casefold())
+    monthly = sum(x['value_cents'] / (12 if x.get('billing_cycle') == 'annual' else 1) for x in subscriptions)
+    st.subheader('Seu dinheiro, com contexto')
+    st.caption('Valores informados manualmente, privados na sua conta. Não há conexão bancária nem cotação automática.')
+    show = st.session_state.get('finance_show_salary', False)
+    a, b = st.columns(2)
+    with a:
+        st.metric('Salário atual', brl(salary[0]['value_cents']) if salary and show else '••••••')
+        st.button('Ocultar salário' if show else 'Mostrar salário', key='finance_reveal',
+                  on_click=lambda: st.session_state.update(finance_show_salary=not show))
+        if salary and show:
+            st.caption(f"Desde {date.fromisoformat(salary[0]['event_date']):%d/%m/%Y}")
+    with b:
+        st.metric('Assinaturas / mês', brl(monthly))
+        st.caption(f'{len(subscriptions)} assinatura(s) ativa(s); planos anuais divididos por 12 apenas para comparação.')
+
+    section = st.selectbox('Organizar', ['Salário', 'Assinaturas', 'Investimentos'], key='finance_section')
+    if section == 'Investimentos':
+        render_workspace(repo, items, 'Investimentos')
+        return
+    if section == 'Salário':
+        st.caption('Cada alteração de salário cria um registro com a data em que passou a valer. O mais recente é o salário atual.')
+        with st.form('finance_salary_form', clear_on_submit=True):
+            amount = st.text_input('Salário atual (R$, sem separador de milhar)', placeholder='3500,00')
+            started = st.date_input('Desde quando recebe este salário?', value=date.today())
+            submitted = st.form_submit_button('Registrar salário')
+        if submitted:
+            try:
+                item = dict(kind='salary', title='Salário', body='', event_date=started.isoformat(),
+                            event_time='', duration_minutes=0, done=False, invested_cents=0,
+                            value_cents=cents(amount), billing_cycle='')
+                repo.save(item, new_id=str(uuid4()))
+                st.session_state.ws_feedback = 'Salário registrado na sua conta privada.'
+                st.rerun()
+            except Exception as error:
+                st.error(safe_error(error))
+        for entry in salary:
+            st.write(f"{entry['event_date']} · {brl(entry['value_cents'])}" if show else f"{entry['event_date']} · valor oculto")
+    else:
+        st.caption('Inclua Claude, GPT, Netflix, YouTube Premium ou qualquer serviço. Arquive quando cancelar.')
+        selected = st.selectbox('Editar assinatura', ['Nova'] + [x['id'] for x in subscriptions],
+                                format_func=lambda x: '＋ Nova assinatura' if x == 'Nova' else next(v['title'] for v in subscriptions if v['id'] == x),
+                                key='finance_subscription_selection')
+        old = next((x for x in subscriptions if x['id'] == selected), None)
+        with st.form(f'finance_subscription_{selected}'):
+            title = st.text_input('Serviço', value=old['title'] if old else '', max_chars=160)
+            amount = st.text_input('Custo por cobrança (R$)', value=f"{old['value_cents']/100:.2f}" if old else '')
+            cycle = st.selectbox('Frequência', ['monthly', 'annual'],
+                                 index=1 if old and old.get('billing_cycle') == 'annual' else 0,
+                                 format_func=lambda x: 'Mensal' if x == 'monthly' else 'Anual')
+            started = st.date_input('Data de início', value=date.fromisoformat(old['event_date']) if old else date.today())
+            submit = st.form_submit_button('Salvar assinatura')
+        if submit:
+            try:
+                item = dict(kind='subscription', title=title.strip(), body='', event_date=started.isoformat(),
+                            event_time='', duration_minutes=0, done=False, invested_cents=0,
+                            value_cents=cents(amount), billing_cycle=cycle)
+                repo.save(item, old=old, new_id=None if old else str(uuid4()))
+                st.session_state.ws_feedback = 'Assinatura salva na sua conta privada.'
+                st.rerun()
+            except Exception as error:
+                st.error(safe_error(error))
+        if old and st.button('Arquivar assinatura cancelada', key=f'finance_archive_{old["id"]}'):
+            try:
+                repo.archive(old, True)
+                st.session_state.ws_feedback = 'Assinatura arquivada.'
+                st.rerun()
+            except Exception as error:
+                st.error(safe_error(error))
+        for entry in subscriptions:
+            st.write(f"{entry['title']} · {brl(entry['value_cents'])} / {'ano' if entry.get('billing_cycle') == 'annual' else 'mês'} · desde {entry['event_date']}")
 
 def render_workspace(repo, items, module=None):
     message = st.session_state.pop('ws_feedback', None)
