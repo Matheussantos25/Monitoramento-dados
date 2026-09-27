@@ -71,6 +71,8 @@ def goal_panel(title, current, target, unit):
 
 
 def overview(p, records=None, private_entries=None):
+    if private_entries is None:
+        private_entries = st.session_state.get("overview_health_entries")
     today = p["today"]
     st.html('<div class="section-intro"><span class="eyebrow">SISTEMA / SUA JORNADA</span><h1>Progresso Geral</h1><p>Cada registro transforma constância em experiência.</p></div>')
     level_pct = max(0, min(100, p['level_xp'] / 250 * 100))
@@ -104,7 +106,7 @@ def overview(p, records=None, private_entries=None):
                               on_click=navigate, args=(goal["page"],), use_container_width=True)
         if private_entries is None:
             st.caption("A água depende do diário privado. Não foi possível consultá-lo nesta sessão; os demais indicadores continuam disponíveis.")
-        monthly_journal(records, today, private_entries)
+        monthly_journal(records, today)
 
     st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>TEMPO DE ESTUDO</span><strong>{int(p['study_minutes']//60)}<small>h </small>{int(p['study_minutes']%60):02}<small>min</small></strong></div><div><span>QUESTÕES RESOLVIDAS</span><strong>{p['questions']}<small> nesta semana</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP conquistados</small></strong></div></section>''')
 

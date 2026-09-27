@@ -704,7 +704,10 @@ if pagina == "Visão geral":
         overview_health_entries = list_entries(st.session_state.get("private_client"), demo=IS_DEMO)
     except Exception:
         overview_health_entries = None
-    overview(progresso, df_raw.to_dict("records"), overview_health_entries)
+    # Keep the imported UI's two-argument interface stable during Streamlit
+    # Cloud hot reloads, which can retain an older module in sys.modules.
+    st.session_state["overview_health_entries"] = overview_health_entries
+    overview(progresso, df_raw.to_dict("records"))
     from solem_ranks_ui import rank_panel
     rank_panel(df_raw.to_dict("records"), TOPICOS_EDITAL, progresso['today'])
 

@@ -19,6 +19,8 @@ def character_panel(records, progress):
 
 
 def monthly_journal(records, today, private_entries=None):
+    if private_entries is None:
+        private_entries = st.session_state.get("overview_health_entries")
     st.subheader('Diário de consistência')
     st.caption('Um mês de cada vez. Estudos e treinos reais, sem penalizar seus dias de descanso.')
     a,b = st.columns([1,2])

@@ -51,6 +51,14 @@ class AppTests(unittest.TestCase):
         self.app.button(key="checkup_go_water").click().run()
         self.assertEqual(self.app.radio(key="solem_page").value, "Saúde")
 
+    def test_overview_call_survives_stale_ui_module_during_hot_reload(self):
+        # Streamlit Cloud can keep a previously imported two-argument function
+        # in memory after app.py changes; the call site must remain compatible.
+        with patch("solem_ui.overview", side_effect=lambda progress, records=None: None) as old_overview:
+            self.app.run()
+        self.assertFalse(self.app.exception)
+        self.assertEqual(len(old_overview.call_args.args), 2)
+
     def test_workout_history_updates_when_exercise_changes(self):
         self.app.session_state["solem_demo_records"].extend([
             {"id": 1001, "data": "2026-09-20", "horario": "08:00:00", "grupo_muscular": "Cardio",
