@@ -22,7 +22,10 @@ class TrainingViewModel : ViewModel() {
         if (SupabaseProvider.isConfigured) viewModelScope.launch {
             try { repo.observeAll().collect { refresh() } }
             catch (e: CancellationException) { throw e }
-            catch (_: Exception) { notice.value = "Atualização automática indisponível. Use Atualizar." }
+            catch (_: Exception) {
+                // Realtime is optional for the legacy table. Poll while this ViewModel lives.
+                while (isActive) { delay(90_000); refresh() }
+            }
         }
     }
     fun refresh() {

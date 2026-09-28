@@ -3,10 +3,12 @@ package com.matheussantos.solem.data.repository
 import com.matheussantos.solem.data.SupabaseProvider
 import com.matheussantos.solem.data.model.TrainingMutation
 import com.matheussantos.solem.data.model.TrainingRecord
+import com.matheussantos.solem.data.model.decodeTrainingRecord
 import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.realtime.selectAsFlow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.json.JsonObject
 
 class TrainingRepository {
     private val table = "treinos"
@@ -26,8 +28,8 @@ class TrainingRepository {
             val page = client.from(table).select {
                 order("id", io.github.jan.supabase.postgrest.query.Order.ASCENDING)
                 range(start, start + 499)
-            }.decodeList<TrainingRecord>()
-            rows.addAll(page)
+            }.decodeList<JsonObject>()
+            rows.addAll(page.map(::decodeTrainingRecord))
             if (page.size < 500) return rows
             start += 500
         }

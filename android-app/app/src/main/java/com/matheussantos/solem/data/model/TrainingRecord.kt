@@ -3,6 +3,8 @@ package com.matheussantos.solem.data.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
 
 /** Mirrors public.treinos as used by app.py. No schema is invented here. */
 @Serializable
@@ -43,3 +45,7 @@ data class TrainingMutation(
 )
 
 fun TrainingRecord.asMutation() = TrainingMutation(data, horario, group, exercicio, series, repeticoes, loadKg, restSeconds, durationMinutes, distanceKm, healthyFood, junkFood, bodyWeight, extras)
+
+// Legacy rows can contain explicit SQL NULLs in fields that now have defaults.
+private val legacyTrainingJson = Json { ignoreUnknownKeys = true; coerceInputValues = true }
+fun decodeTrainingRecord(row: JsonObject): TrainingRecord = legacyTrainingJson.decodeFromJsonElement(row)

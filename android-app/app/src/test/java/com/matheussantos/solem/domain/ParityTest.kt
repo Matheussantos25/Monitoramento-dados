@@ -10,6 +10,21 @@ import java.time.LocalDate
 class ParityTest {
     private fun resource(name: String) = javaClass.classLoader!!.getResourceAsStream(name)!!.bufferedReader().use { it.readText() }
     private val catalog get() = Catalog(Json.parseToJsonElement(resource("catalog.json")).jsonObject)
+    @Test fun legacyWorkoutNullsUseSafeDefaults() {
+        val legacy = Json.parseToJsonElement("""{
+            "id":42,"data":"2026-09-27","horario":"12:00:00",
+            "grupo_muscular":"Peitoral","exercicio":"Flexão",
+            "series":null,"repeticoes":30,"carga_kg":null,"descanso_seg":null,
+            "distancia_km":null,"alimentacao_saudavel":null,
+            "alimentacao_besteirol":null,"created_at":"2026-09-27T15:00:00Z"
+        }""").jsonObject
+        val row = decodeTrainingRecord(legacy)
+        assertEquals(42L, row.id)
+        assertEquals(30, row.repeticoes)
+        assertEquals(0, row.series)
+        assertEquals(0.0, row.distanceKm, 0.0)
+        assertEquals("", row.healthyFood)
+    }
     @Test fun importedRowsMatchCanonicalPythonForBothSchemas() {
         val json = Json { encodeDefaults = true }
         Json.parseToJsonElement(resource("import-parity.json")).jsonArray.forEach { element ->
