@@ -39,6 +39,10 @@ class AppTests(unittest.TestCase):
                     self.assertTrue(all(expected_group in option for option in selection.options))
                 self.assertTrue(any(x.label == "Salvar Alterações" or "Salvar Alterações" in x.label for x in self.app.button))
                 self.assertFalse(next(x for x in self.app.button if x.label == "Excluir registro permanentemente").disabled is False)
+        self.app.session_state["solem_demo_records"] = []
+        for page in ("Treino", "Estudar"):
+            self.app.radio(key="solem_page").set_value(page).run()
+            self.assertFalse(self.app.exception)
 
     def test_quick_action_and_save_recalculates_xp(self):
         from solem_progress import calculate_progress

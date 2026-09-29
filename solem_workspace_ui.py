@@ -178,8 +178,11 @@ def render_finance(repo, items):
                 key='finance_salary_selection')
             if show_trash:
                 if st.button('Restaurar salário', key='finance_restore_salary'):
-                    repo.archive(selected_salary, False)
-                    st.rerun()
+                    try:
+                        repo.archive(selected_salary, False)
+                        st.rerun()
+                    except Exception as error:
+                        st.error(safe_error(error))
             else:
                 with st.form(f"finance_salary_edit_{selected_salary['id']}"):
                     changed_amount = st.text_input('Editar valor (R$)', value=f"{selected_salary['value_cents']/100:.2f}")
@@ -194,8 +197,11 @@ def render_finance(repo, items):
                     except Exception as error:
                         st.error(safe_error(error))
                 if st.button('Excluir salário (enviar à lixeira)', key='finance_archive_salary'):
-                    repo.archive(selected_salary, True)
-                    st.rerun()
+                    try:
+                        repo.archive(selected_salary, True)
+                        st.rerun()
+                    except Exception as error:
+                        st.error(safe_error(error))
     else:
         st.caption('Inclua Claude, GPT, Netflix, YouTube Premium ou qualquer serviço. Arquive quando cancelar.')
         show_trash = st.toggle('Mostrar assinaturas na lixeira', key='finance_subscription_trash')
@@ -206,8 +212,11 @@ def render_finance(repo, items):
         old = next((x for x in subscription_choices if x['id'] == selected), None)
         if old and show_trash:
             if st.button('Restaurar assinatura', key=f'finance_restore_{old["id"]}'):
-                repo.archive(old, False)
-                st.rerun()
+                try:
+                    repo.archive(old, False)
+                    st.rerun()
+                except Exception as error:
+                    st.error(safe_error(error))
             return
         with st.form(f'finance_subscription_{selected}'):
             title = st.text_input('Serviço', value=old['title'] if old else '', max_chars=160)

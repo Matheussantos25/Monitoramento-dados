@@ -1581,9 +1581,9 @@ if pagina in ("Configurações", "Treino", "Estudar") and (pagina == "Configura�
     else:
         st.markdown("### Editar ou excluir registros")
     df_manage = df_raw.copy()
-    if pagina == "Treino":
+    if pagina == "Treino" and not df_manage.empty:
         df_manage = df_manage[~df_manage['grupo_muscular'].isin(['Estudos', 'Nutrição', 'Métricas'])]
-    elif pagina == "Estudar":
+    elif pagina == "Estudar" and not df_manage.empty:
         df_manage = df_manage[df_manage['grupo_muscular'] == 'Estudos']
     if not df_manage.empty:
         st.markdown("### Gerenciar registros")
