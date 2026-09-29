@@ -93,6 +93,41 @@ def workspace_page(module):
         render_workspace(repo, items, module)
 
 
+def render_prompt_library(prompts, demo=False):
+    repo, items = None, []
+    if not demo:
+        client = require_login()
+        repo = Workspace(client)
+        try:
+            client.auth.get_user()
+            items = repo.list()
+        except Exception as error:
+            st.error(safe_error(error))
+            return
+    st.subheader('Prompts prontos')
+    st.caption('Os originais são somente leitura. Crie uma cópia pessoal para editar sem alterar o modelo.')
+    if prompts:
+        selected = st.selectbox('Selecione o prompt original', list(prompts), key='seletor_prompt_estudo')
+        with st.expander('Visualizar e copiar texto', expanded=False):
+            st.code(prompts[selected], language=None, wrap_lines=True, height=360)
+        if repo and st.button('Criar cópia pessoal', key='copy_builtin_prompt'):
+            try:
+                item = dict(kind='prompt', title=selected[:160], body=prompts[selected],
+                            event_date=None, event_time='', duration_minutes=0, done=False,
+                            invested_cents=0, value_cents=0, billing_cycle='')
+                saved = repo.save(item, new_id=str(uuid4()))
+                st.session_state.ws_next_selected = saved['id']
+                st.session_state.ws_feedback = 'Cópia criada. Você pode editar sem alterar o original.'
+                st.rerun()
+            except Exception as error:
+                st.error(safe_error(error))
+    else:
+        st.info('Nenhum prompt original foi encontrado.')
+    if repo:
+        st.subheader('Suas cópias privadas')
+        render_workspace(repo, items, 'Prompts')
+
+
 def render_finance(repo, items):
     """Salary and subscriptions share the same private RLS-backed collection as investments."""
     salary = sorted((x for x in items if x['kind'] == 'salary' and not x['archived']),
@@ -134,14 +169,46 @@ def render_finance(repo, items):
                 st.rerun()
             except Exception as error:
                 st.error(safe_error(error))
-        for entry in salary:
-            st.write(f"{entry['event_date']} · {brl(entry['value_cents'])}" if show else f"{entry['event_date']} · valor oculto")
+        salary_all = sorted((x for x in items if x['kind'] == 'salary'), key=lambda x: x.get('event_date') or '', reverse=True)
+        show_trash = st.toggle('Mostrar salários na lixeira', key='finance_salary_trash')
+        choices = [x for x in salary_all if x['archived'] == show_trash]
+        if choices:
+            selected_salary = st.selectbox('Selecionar salário para editar ou excluir', choices,
+                format_func=lambda x: f"{x['event_date']} · {brl(x['value_cents']) if show else 'valor oculto'}",
+                key='finance_salary_selection')
+            if show_trash:
+                if st.button('Restaurar salário', key='finance_restore_salary'):
+                    repo.archive(selected_salary, False)
+                    st.rerun()
+            else:
+                with st.form(f"finance_salary_edit_{selected_salary['id']}"):
+                    changed_amount = st.text_input('Editar valor (R$)', value=f"{selected_salary['value_cents']/100:.2f}")
+                    changed_date = st.date_input('Editar data de início', value=date.fromisoformat(selected_salary['event_date']))
+                    change = st.form_submit_button('Salvar alterações do salário')
+                if change:
+                    try:
+                        repo.save(dict(kind='salary', title='Salário', body='', event_date=changed_date.isoformat(),
+                            event_time='', duration_minutes=0, done=False, invested_cents=0,
+                            value_cents=cents(changed_amount), billing_cycle=''), old=selected_salary)
+                        st.rerun()
+                    except Exception as error:
+                        st.error(safe_error(error))
+                if st.button('Excluir salário (enviar à lixeira)', key='finance_archive_salary'):
+                    repo.archive(selected_salary, True)
+                    st.rerun()
     else:
         st.caption('Inclua Claude, GPT, Netflix, YouTube Premium ou qualquer serviço. Arquive quando cancelar.')
-        selected = st.selectbox('Editar assinatura', ['Nova'] + [x['id'] for x in subscriptions],
-                                format_func=lambda x: '＋ Nova assinatura' if x == 'Nova' else next(v['title'] for v in subscriptions if v['id'] == x),
+        show_trash = st.toggle('Mostrar assinaturas na lixeira', key='finance_subscription_trash')
+        subscription_choices = [x for x in items if x['kind'] == 'subscription' and x['archived'] == show_trash]
+        selected = st.selectbox('Editar ou excluir assinatura', ['Nova'] + [x['id'] for x in subscription_choices],
+                                format_func=lambda x: '＋ Nova assinatura' if x == 'Nova' else next(v['title'] for v in subscription_choices if v['id'] == x),
                                 key='finance_subscription_selection')
-        old = next((x for x in subscriptions if x['id'] == selected), None)
+        old = next((x for x in subscription_choices if x['id'] == selected), None)
+        if old and show_trash:
+            if st.button('Restaurar assinatura', key=f'finance_restore_{old["id"]}'):
+                repo.archive(old, False)
+                st.rerun()
+            return
         with st.form(f'finance_subscription_{selected}'):
             title = st.text_input('Serviço', value=old['title'] if old else '', max_chars=160)
             amount = st.text_input('Custo por cobrança (R$)', value=f"{old['value_cents']/100:.2f}" if old else '')
@@ -160,10 +227,10 @@ def render_finance(repo, items):
                 st.rerun()
             except Exception as error:
                 st.error(safe_error(error))
-        if old and st.button('Arquivar assinatura cancelada', key=f'finance_archive_{old["id"]}'):
+        if old and st.button('Excluir assinatura (enviar à lixeira)', key=f'finance_archive_{old["id"]}'):
             try:
                 repo.archive(old, True)
-                st.session_state.ws_feedback = 'Assinatura arquivada.'
+                st.session_state.ws_feedback = 'Assinatura movida para a lixeira.'
                 st.rerun()
             except Exception as error:
                 st.error(safe_error(error))
@@ -182,7 +249,7 @@ def render_workspace(repo, items, module=None):
         st.markdown('##### Páginas')
         st.button('Atualizar', key='ws_refresh', use_container_width=True)
         search = st.text_input('Buscar por título ou conteúdo', key='ws_search', placeholder='Buscar nesta coleção…', label_visibility='collapsed')
-        archived = st.toggle('Mostrar arquivados', key='ws_archived')
+        archived = st.toggle('Mostrar lixeira', key='ws_archived')
         filtered = [x for x in items if x['kind'] == kind and x['archived'] == archived and search.casefold() in (x['title']+' '+x['body']).casefold()]
         if kind == 'plan':
             month = st.date_input('Mês do cronograma', value=date.today(), key='ws_month')
@@ -226,10 +293,10 @@ def render_document(repo, kind, archived, selected, old):
             except ValueError as error:
                 st.warning(str(error))
 
-        if st.button('Restaurar' if archived else 'Arquivar', key=f'ws_archive_{old["id"]}'):
+        if st.button('Restaurar' if archived else 'Excluir (enviar à lixeira)', key=f'ws_archive_{old["id"]}'):
             try:
                 repo.archive(old, not archived)
-                st.session_state.ws_feedback = 'Registro restaurado.' if archived else 'Registro arquivado. Você pode restaurá-lo pelo filtro de arquivados.'
+                st.session_state.ws_feedback = 'Registro restaurado.' if archived else 'Registro na lixeira. Você pode restaurá-lo pelo filtro da lixeira.'
                 st.rerun()
             except Exception as error:
                 st.error(safe_error(error))

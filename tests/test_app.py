@@ -26,6 +26,20 @@ class AppTests(unittest.TestCase):
                     self.app.radio(key="solem_page").set_value(page).run()
                     self.assertFalse(self.app.exception, [e.message for e in self.app.exception])
 
+    def test_training_and_study_show_scoped_edit_delete_controls(self):
+        for page, expected_group in (("Treino", "ESTUDO:"), ("Estudar", "ESTUDO:")):
+            with self.subTest(page=page):
+                self.app.radio(key="solem_page").set_value(page).run()
+                self.app.toggle(key=f"manage_{page}").set_value(True).run()
+                self.assertFalse(self.app.exception)
+                selection = next(x for x in self.app.selectbox if x.label.startswith("Selecione o Registro para Editar/Excluir"))
+                if page == "Treino":
+                    self.assertTrue(all(expected_group not in option for option in selection.options))
+                else:
+                    self.assertTrue(all(expected_group in option for option in selection.options))
+                self.assertTrue(any(x.label == "Salvar Alterações" or "Salvar Alterações" in x.label for x in self.app.button))
+                self.assertFalse(next(x for x in self.app.button if x.label == "Excluir registro permanentemente").disabled is False)
+
     def test_quick_action_and_save_recalculates_xp(self):
         from solem_progress import calculate_progress
         before = calculate_progress(self.app.session_state["solem_demo_records"])["xp"]

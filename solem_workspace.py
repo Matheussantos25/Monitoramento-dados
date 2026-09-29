@@ -6,7 +6,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
-KINDS = {'Anotações':'note', 'Resumos':'summary', 'Mapas mentais':'mindmap', 'PDFs':'pdf', 'Cronograma':'plan', 'Investimentos':'investment', 'Salário':'salary', 'Assinaturas':'subscription'}
+KINDS = {'Anotações':'note', 'Resumos':'summary', 'Mapas mentais':'mindmap', 'PDFs':'pdf', 'Cronograma':'plan', 'Investimentos':'investment', 'Salário':'salary', 'Assinaturas':'subscription', 'Prompts':'prompt'}
 MAX_PDF = 10 * 1024 * 1024
 
 def public_key(key):

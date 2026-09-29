@@ -47,6 +47,11 @@ class WorkspaceTests(unittest.TestCase):
         for patch in (dict(value_cents=0), dict(event_date='2026-02-30'), dict(billing_cycle='weekly')):
             with self.assertRaises(ValueError): validate_item(dict(subscription,**patch))
 
+    def test_personal_prompt_copy_validation(self):
+        validate_item(dict(kind='prompt', title='Meu simulado', body='Prompt editável'))
+        with self.assertRaises(ValueError):
+            validate_item(dict(kind='prompt', title='', body='Sem título'))
+
     def test_finance_sections_render_without_secrets(self):
         from streamlit.testing.v1 import AppTest
         app=AppTest.from_string('''
@@ -127,7 +132,7 @@ render_workspace(Repo(), st.session_state.fake_items)
         self.assertFalse(app.exception)
         self.assertEqual(app.session_state['fake_items'][0]['body'],'Conteúdo editado')
         self.assertEqual(app.session_state['fake_items'][0]['revision'],2)
-        next(x for x in app.button if x.label=='Arquivar').click().run()
+        next(x for x in app.button if x.label=='Excluir (enviar à lixeira)').click().run()
         self.assertFalse(app.exception)
         self.assertTrue(app.session_state['fake_items'][0]['archived'])
 

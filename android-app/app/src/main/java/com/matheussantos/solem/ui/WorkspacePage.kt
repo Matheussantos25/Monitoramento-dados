@@ -37,33 +37,55 @@ import java.time.LocalDate
     when(section) {
         "Resumo" -> Text("Escolha Salário, Assinaturas ou Investimentos. Seus dados são sincronizados na conta privada.")
         "Salário" -> {
-            var amount by remember { mutableStateOf("") }
-            var started by remember { mutableStateOf(today().toString()) }
+            var selected by remember { mutableStateOf<String?>(null) }
+            var showTrash by remember { mutableStateOf(false) }
+            val choices = items.filter { it.kind == "salary" && it.archived == showTrash }.sortedByDescending { it.eventDate.orEmpty() }
+            val old = choices.firstOrNull { it.id == selected }
+            Row { Checkbox(showTrash, {showTrash=it;selected=null}); Text("Mostrar salários na lixeira") }
+            choices.forEach { entry -> TextButton({ selected = entry.id }) {
+                Text("${entry.eventDate} · " + if (showSalary) "R$ %.2f".format(entry.valueCents / 100.0) else "valor oculto")
+            } }
+            if (showTrash) {
+                if (old != null) OutlinedButton({ vm.archive(old); selected=null }, enabled=!busy) { Text("Restaurar salário") }
+                return
+            }
+            TextButton({selected=null}) {Text("＋ Novo salário")}
+            key(selected, old?.revision) {
+            var amount by remember { mutableStateOf(old?.valueCents?.div(100.0)?.toString().orEmpty()) }
+            var started by remember { mutableStateOf(old?.eventDate ?: today().toString()) }
             var error by remember { mutableStateOf<String?>(null) }
-            Text("Cada alteração cria um registro com a data em que passou a valer.")
+            Text("Informe o valor e a data desde quando ele passou a valer.")
             Field("Salário (R$, sem separador de milhar)", amount, true) { amount = it }
             Field("Desde (AAAA-MM-DD)", started) { started = it }
             error?.let { Text(it, color=MaterialTheme.colorScheme.error) }
             Button({
                 try {
-                    val value = PersonalItem(UUID.randomUUID().toString(), "salary", "Salário", "", started, valueCents=moneyCents(amount))
+                    val value = PersonalItem(old?.id ?: UUID.randomUUID().toString(), "salary", "Salário", "", started, valueCents=moneyCents(amount))
                     validatePersonalItem(value)
                     error = null
-                    vm.save(value, null) { amount = "" }
+                    vm.save(value, old) { selected=null; amount="" }
                 } catch(e: Exception) { error = e.message ?: "Confira valor e data." }
-            }, enabled=!busy) { Text("Registrar salário") }
-            salaries.forEach { Text("${it.eventDate} · " + if (showSalary) "R$ %.2f".format(it.valueCents / 100.0) else "valor oculto") }
+            }, enabled=!busy) { Text(if (old == null) "Registrar salário" else "Salvar alterações") }
+            if (old != null) TextButton({vm.archive(old);selected=null},enabled=!busy) {Text("Excluir salário (lixeira)")}
+            }
         }
         "Assinaturas" -> {
             var selected by remember { mutableStateOf<String?>(null) }
-            val old = subscriptions.firstOrNull { it.id == selected }
-            Text("Claude, GPT, Netflix, YouTube Premium ou qualquer outro serviço. Arquive ao cancelar.")
+            var showTrash by remember { mutableStateOf(false) }
+            val choices = items.filter {it.kind == "subscription" && it.archived == showTrash}.sortedBy {it.title.lowercase()}
+            val old = choices.firstOrNull { it.id == selected }
+            Text("Claude, GPT, Netflix, YouTube Premium ou qualquer outro serviço.")
+            Row { Checkbox(showTrash,{showTrash=it;selected=null});Text("Mostrar assinaturas na lixeira") }
             Row { TextButton({ selected = null }) { Text("＋ Nova") } }
-            subscriptions.forEach { entry ->
+            choices.forEach { entry ->
                 Row {
                     TextButton({ selected = entry.id }) { Text(entry.title) }
                     Text("R$ %.2f / %s".format(entry.valueCents / 100.0, if (entry.billingCycle == "annual") "ano" else "mês"))
                 }
+            }
+            if (showTrash) {
+                if (old != null) OutlinedButton({vm.archive(old);selected=null},enabled=!busy) {Text("Restaurar assinatura")}
+                return
             }
             key(selected, old?.revision) {
                 var title by remember { mutableStateOf(old?.title.orEmpty()) }
@@ -85,7 +107,7 @@ import java.time.LocalDate
                         vm.save(value, old) { selected = null }
                     } catch(e: Exception) { error = e.message ?: "Confira os campos." }
                 }, enabled=!busy) { Text("Salvar assinatura") }
-                if (old != null) TextButton({ vm.archive(old); selected = null }, enabled=!busy) { Text("Arquivar assinatura cancelada") }
+                if (old != null) TextButton({ vm.archive(old); selected = null }, enabled=!busy) { Text("Excluir assinatura (lixeira)") }
             }
         }
     }
@@ -132,7 +154,7 @@ import java.time.LocalDate
                 TextButton(vm::refresh,enabled=!state.busy) { Text("Atualizar") }
             }
             Field("Buscar título ou conteúdo",search) {search=it}
-            Row { Checkbox(archived,{archived=it;editing=null;creating=false}); Text("Mostrar arquivados") }
+            Row { Checkbox(archived,{archived=it;editing=null;creating=false}); Text("Mostrar lixeira") }
             if (module == "Financeiro") {
                 var financeSection by remember { mutableStateOf("Resumo") }
                 Choice("Seção financeira", financeSection, listOf("Resumo", "Salário", "Assinaturas", "Investimentos")) {
@@ -176,8 +198,8 @@ import java.time.LocalDate
                         else -> if(item.body.isNotBlank()) Text(item.body.take(150),maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                     Row {
-                        if(!archived) TextButton({editing=item;creating=false},enabled=!state.busy) {Text("Abrir página")}
-                        TextButton({vm.archive(item);editing=null;creating=false},enabled=!state.busy) {Text(if(archived) "Restaurar" else "Arquivar")}
+                        if(!archived) TextButton({editing=item;creating=false},enabled=!state.busy) {Text("Editar")}
+                        TextButton({vm.archive(item);editing=null;creating=false},enabled=!state.busy) {Text(if(archived) "Restaurar" else "Excluir (lixeira)")}
                     }
                     if(kind=="pdf" && !archived) {
                         Text("Envie o arquivo após criar o registro. Se houve falha de rede, tente exportar antes de reenviar. Arquivos existentes não são sobrescritos.")

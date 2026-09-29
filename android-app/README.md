@@ -47,6 +47,8 @@ No SQL Editor do **mesmo** projeto, execute uma vez `../supabase/migrations/2026
 
 A tabela legada `treinos` tem policy pública `ALL true` apesar de RLS habilitada. **Não registre novos dados pessoais nela.** A aba Saúde nova usa apenas a tabela privada. Histórico antigo de alimentação/peso não é migrado automaticamente porque não há dono atribuível com segurança. Treinos/estudos e XP legado ainda dependem da tabela compartilhada; uma migração de propriedade é recomendada antes de uso multiusuário.
 
+As cópias privadas de prompts também requerem `../supabase/migrations/20260928_private_prompts.sql`, aplicada depois da migração financeira. Ela já foi aplicada ao projeto de produção em 28/09/2026. As páginas, PDFs e itens financeiros excluídos permanecem recuperáveis na lixeira; os treinos e estudos legados ainda têm exclusão permanente com confirmação.
+
 ## Compilar e instalar
 
 No PowerShell, dentro de `android-app`:

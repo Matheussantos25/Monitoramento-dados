@@ -83,14 +83,15 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
             }
             NavHost(nav, startDestination = "0") {
                 composable("0") { Overview(rows) { nav.navigate(it.toString()) } }
-                composable("1") { EntryScreen("Treino", catalog, rows, busy = busy, save = { id, value, done -> vm.save(id, value, done) }, batch = { value, done -> vm.insertBatch(value, done) }) }
+                composable("1") { Column { OutlinedButton({ nav.navigate("manage/treino") }, Modifier.padding(horizontal=20.dp)) { Text("Editar ou excluir treinos") }; EntryScreen("Treino", catalog, rows, busy = busy, save = { id, value, done -> vm.save(id, value, done) }, batch = { value, done -> vm.insertBatch(value, done) }) } }
                 composable("2") { PhysicalCharts(rows, catalog) }
                 composable("3") { HealthPage(catalog, workspaceVm) }
                 composable("4") { HealthPage(catalog, workspaceVm) }
-                composable("5") { StudyPage(rows, catalog, busy, vm) }
+                composable("5") { Column { OutlinedButton({ nav.navigate("manage/estudo") }, Modifier.padding(horizontal=20.dp)) { Text("Editar ou excluir sessões de estudo") }; StudyPage(rows, catalog, busy, vm) } }
                 composable("6") { StudyCharts(rows, catalog) }
-                composable("7") { PromptsPage() }
-                composable("8") { History(rows, busy, vm::delete) { nav.navigate("edit/" + it.id) } }
+                composable("7") { PromptsPage(workspaceVm) }
+                composable("8") { History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }) }
+                composable("manage/{category}") { entry -> History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }, if (entry.arguments?.getString("category") == "estudo") "Estudo" else "Treino") }
                 composable("9") { MonthlyJournal(rows) }
                 composable("10") { if (state is TrainingUiState.Ready || state is TrainingUiState.Empty) RanksPage(rows, catalog) }
                 (11..16).forEach { index -> composable(index.toString()) { WorkspacePage(workspaceVm,pages[index]) } }
@@ -166,15 +167,17 @@ fun kind(row: TrainingRecord) = when(row.group) {
         rows.take(5).forEach { row -> Panel(row.exercicio) { Text("${row.data} • ${kind(row)}") } }
     }
 }
-@Composable fun History(rows: List<TrainingRecord>, busy: Boolean, delete: (Long) -> Unit, edit: (TrainingRecord) -> Unit) {
+@Composable fun History(rows: List<TrainingRecord>, busy: Boolean, delete: (Long) -> Unit, edit: (TrainingRecord) -> Unit, fixedCategory: String? = null) {
     var search by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("Todos") }
     var confirm by remember { mutableStateOf<TrainingRecord?>(null) }
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Gerenciar histórico", style = MaterialTheme.typography.headlineMedium)
         Field("Buscar exercício, disciplina ou data", search) { search = it }
-        Choice("Categoria", category, listOf("Todos", "Treino", "Estudo", "Alimentação", "Peso", "Saúde")) { category = it }
-        val filtered = rows.filter { (category == "Todos" || kind(it) == category) && (it.exercicio + it.data).contains(search, true) }
+        if (fixedCategory == null) Choice("Categoria", category, listOf("Todos", "Treino", "Estudo", "Alimentação", "Peso", "Saúde")) { category = it }
+        else Text("Categoria: $fixedCategory")
+        val selectedCategory = fixedCategory ?: category
+        val filtered = rows.filter { (selectedCategory == "Todos" || kind(it) == selectedCategory) && (it.exercicio + it.data).contains(search, true) }
         Text("${filtered.size} registros")
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filtered, key = { it.id }) { row -> Panel(row.exercicio) {

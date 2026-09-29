@@ -3,7 +3,7 @@ package com.matheussantos.solem.domain
 import com.matheussantos.solem.data.model.PersonalItem
 import java.time.LocalDate
 
-val workspaceKinds = linkedMapOf("Anotações" to "note", "Resumos" to "summary", "Mapas mentais" to "mindmap", "PDFs" to "pdf", "Cronograma" to "plan", "Financeiro" to "investment", "Salário" to "salary", "Assinaturas" to "subscription")
+val workspaceKinds = linkedMapOf("Anotações" to "note", "Resumos" to "summary", "Mapas mentais" to "mindmap", "PDFs" to "pdf", "Cronograma" to "plan", "Financeiro" to "investment", "Salário" to "salary", "Assinaturas" to "subscription", "Prompts" to "prompt")
 const val MAX_PDF_BYTES = 10 * 1024 * 1024
 data class MindNode(val label: String, val parent: Int?, val depth: Int)
 fun mindNodes(body: String): List<MindNode> {

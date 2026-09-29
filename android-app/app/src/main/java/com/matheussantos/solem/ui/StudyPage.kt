@@ -21,6 +21,9 @@ import com.matheussantos.solem.data.model.TrainingRecord
 import com.matheussantos.solem.domain.*
 import com.matheussantos.solem.viewmodel.TrainingViewModel
 import com.matheussantos.solem.R
+import com.matheussantos.solem.viewmodel.WorkspaceViewModel
+import com.matheussantos.solem.data.model.PersonalItem
+import java.util.UUID
 import kotlinx.coroutines.delay
 
 @Composable fun TimerPanel(fixedSeconds: Int? = null) {
@@ -108,15 +111,29 @@ import kotlinx.coroutines.delay
         else ImportPanel(rows, catalog, busy) { values, done -> vm.insertBatch(values, done) }
     }
 }
-@Composable fun PromptsPage() {
+@Composable fun PromptsPage(vm: WorkspaceViewModel) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val names = remember { context.assets.list("prompts").orEmpty().sorted() }
     var selected by rememberSaveable { mutableStateOf(names.firstOrNull().orEmpty()) }
+    var showPersonal by rememberSaveable { mutableStateOf(false) }
     val content = remember(selected) { if (selected.isBlank()) "" else context.assets.open("prompts/$selected").bufferedReader().use { it.readText() } }
+    if (showPersonal) {
+        Column {
+            OutlinedButton({ showPersonal = false }, Modifier.padding(horizontal=20.dp)) { Text("Voltar aos modelos prontos") }
+            WorkspacePage(vm, "Prompts")
+        }
+        return
+    }
     Page("Biblioteca de prompts") {
+        OutlinedButton({ showPersonal = true }) { Text("Minhas cópias: editar, excluir ou restaurar") }
         Choice("Prompt", selected, names) { selected = it }
         Button({ clipboard.setText(AnnotatedString(content)) }, enabled = content.isNotEmpty()) { Text("Copiar prompt") }
+        Button({
+            val copy = PersonalItem(UUID.randomUUID().toString(), "prompt", selected.substringBeforeLast('.').take(160), content)
+            vm.save(copy, null) { showPersonal = true }
+        }, enabled = content.isNotEmpty()) { Text("Criar cópia pessoal editável") }
+        Text("Os modelos originais ficam intactos; suas cópias são privadas e recuperáveis da lixeira.")
         SelectionContainer { Text(content) }
     }
 }

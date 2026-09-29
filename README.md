@@ -15,6 +15,8 @@ Mantenha `SUPABASE_URL` e a chave pública (`SUPABASE_PUBLISHABLE_KEY`) em `.str
 
 Para a aba **Financeiro**, execute também [20260927_finance.sql](supabase/migrations/20260927_finance.sql) no mesmo projeto, uma única vez. Ela amplia a coleção privada `solem_items` com salário e assinaturas, sem apagar os investimentos e sem alterar suas políticas RLS. No projeto de produção, a migração foi aplicada em 27/09/2026.
 
+Para as **cópias pessoais de prompts**, execute [20260928_private_prompts.sql](supabase/migrations/20260928_private_prompts.sql) depois da migração financeira. Ela só permite o novo tipo `prompt` na mesma coleção privada; não altera RLS nem os arquivos originais. Aplicada ao projeto de produção em 28/09/2026. Itens privados excluídos vão para uma lixeira recuperável; treinos e estudos legados ainda usam exclusão permanente, com confirmação.
+
 ## Experimentar sem banco
 
 A demonstração usa somente dados fictícios e guarda alterações na sessão do navegador. Ela nunca conecta ao Supabase. Ative explicitamente a variável `SOLEM_DEMO=1`:

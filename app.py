@@ -1300,25 +1300,8 @@ if pagina == "Estudar":
 # ==========================================
 if pagina == "Prompts":
     section_intro('SUA BIBLIOTECA', 'Mais recursos para aprender.', 'Encontre os prompts para praticar, revisar e preparar seus simulados.')
-    st.markdown("### 📋 Prompts de estudo")
-    prompts_estudo = carregar_prompts_estudo()
-
-    if prompts_estudo:
-        prompt_selecionado = st.selectbox(
-            "Selecione o prompt",
-            options=list(prompts_estudo.keys()),
-            key="seletor_prompt_estudo"
-        )
-        with st.expander("Visualizar e copiar prompt", expanded=False):
-            st.caption("Clique no ícone de copiar no canto superior direito do bloco abaixo.")
-            st.code(
-                prompts_estudo[prompt_selecionado],
-                language=None,
-                wrap_lines=True,
-                height=360
-            )
-    else:
-        st.info("Nenhum prompt foi cadastrado na pasta prompts.")
+    from solem_workspace_ui import render_prompt_library
+    render_prompt_library(carregar_prompts_estudo(), demo=IS_DEMO)
 
 # ==========================================
 # ABA 7: DASHBOARD DE ESTUDOS
@@ -1592,11 +1575,19 @@ if pagina == "Evolução nos estudos":
 # ==========================================
 # ABA 8: GERENCIAR
 # ==========================================
-if pagina == "Configurações":
-    section_intro('SEUS REGISTROS', 'Organize seu histórico.', 'Consulte e ajuste as informações que fazem parte da sua jornada.')
-    if not df_raw.empty:
+if pagina in ("Configurações", "Treino", "Estudar") and (pagina == "Configurações" or st.toggle("Editar ou excluir registros desta aba", key=f"manage_{pagina}")):
+    if pagina == "Configurações":
+        section_intro('SEUS REGISTROS', 'Organize seu histórico.', 'Consulte e ajuste as informações que fazem parte da sua jornada.')
+    else:
+        st.markdown("### Editar ou excluir registros")
+    df_manage = df_raw.copy()
+    if pagina == "Treino":
+        df_manage = df_manage[~df_manage['grupo_muscular'].isin(['Estudos', 'Nutrição', 'Métricas'])]
+    elif pagina == "Estudar":
+        df_manage = df_manage[df_manage['grupo_muscular'] == 'Estudos']
+    if not df_manage.empty:
         st.markdown("### Gerenciar registros")
-        df_raw['data_formatada'] = pd.to_datetime(df_raw['data']).dt.strftime('%d/%m/%Y')
+        df_manage['data_formatada'] = pd.to_datetime(df_manage['data']).dt.strftime('%d/%m/%Y')
         
         def formatar_registro(row):
             if row['grupo_muscular'] == 'Nutrição': return "🍏 DIETA"
@@ -1604,12 +1595,12 @@ if pagina == "Configurações":
             elif row['grupo_muscular'] == 'Estudos': return f"📚 ESTUDO: {row['exercicio']} ({row['duracao_min']} min)"
             else: return f"🏋️ {row['exercicio']} ({row['repeticoes']} reps)"
 
-        opcoes_registros = df_raw.apply(lambda row: f"ID: {row['id']} | {row['data_formatada']} - {formatar_registro(row)}", axis=1).tolist()
+        opcoes_registros = df_manage.apply(lambda row: f"ID: {row['id']} | {row['data_formatada']} - {formatar_registro(row)}", axis=1).tolist()
         registro_selecionado = st.selectbox("Selecione o Registro para Editar/Excluir:", opcoes_registros)
         id_real = int(registro_selecionado.split("ID: ")[1].split(" |")[0])
         st.write("---")
         
-        row_data = df_raw[df_raw['id'] == id_real].iloc[0]
+        row_data = df_manage[df_manage['id'] == id_real].iloc[0]
         is_estudo = row_data['grupo_muscular'] == 'Estudos'
         is_nutricao = row_data['grupo_muscular'] == 'Nutrição'
         is_peso = row_data['grupo_muscular'] == 'Métricas'
@@ -1767,7 +1758,8 @@ if pagina == "Configurações":
         with st.container(border=True):
             st.markdown("#### Excluir registro")
             st.warning("A exclusão é permanente e recalcula o progresso associado a esta atividade.")
-            if st.button("Excluir registro permanentemente", type="primary", use_container_width=True):
+            confirmed = st.checkbox("Confirmo que quero excluir este registro permanentemente", key=f"confirm_legacy_{id_real}")
+            if st.button("Excluir registro permanentemente", disabled=not confirmed, type="primary", use_container_width=True):
                 supabase.table("treinos").delete().eq("id", id_real).execute()
                 st.session_state["solem_feedback"] = "Registro excluído. Seu histórico foi atualizado."
                 st.rerun()
