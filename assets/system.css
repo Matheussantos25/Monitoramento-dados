@@ -36,12 +36,12 @@ header[data-testid="stHeader"]{height:3rem;min-height:3rem;background:#090f1bee}
 .system-status__foot span:last-child{color:var(--accent);font-weight:700}
 .character-sheet{background:#131f30;border:1px solid #30435f;border-bottom:2px solid #688cba}
 .character-info .eyebrow,.character-attributes b{color:var(--accent)}
-.weekly-stats,.rhythm-panel,.achievement-grid{border-color:var(--line);background:#111b2b}
+.weekly-stats,.rhythm-panel{border-color:var(--line);background:#111b2b}
 [class*="st-key-mission_"]{background:linear-gradient(90deg,#15263b,#111b2b);border-color:#365371}
 .mission-icon{border-color:#497c9a}.mission-icon.done{background:#1c5260;border-color:#397e89}
 .week-day.active>div{color:#082035;box-shadow:0 0 12px #83dcff55}
 .week-day.future>div{color:var(--muted)}
-.unlocked .badge-art,.goal-label{background:#193c52;color:var(--accent)}
+.goal-label{background:#193c52;color:var(--accent)}
 .month-cell.practiced{background:#193047;border-color:#305778}.month-cell.both{background:#1b4051;border-color:#4d9fba}
 .checkup-title{margin:1.7rem 0 .1rem}.checkup-title h2{font-size:1.35rem;letter-spacing:-.03em}
 .checkup-title>span{font-size:.73rem;color:var(--accent);font-variant-numeric:tabular-nums}

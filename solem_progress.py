@@ -86,17 +86,8 @@ def calculate_progress(records, today=None):
         if extra.get("fonte_questoes") != "Anki":
             questions += number(extra.get("q_certas")) + number(extra.get("q_erradas"))
 
-    study_days = sum("estudo" in categories for categories in days.values())
-    workout_days = sum("treino" in categories for categories in days.values())
-    achievements = [
-        ("01", "Primeiro passo", "Registre sua primeira atividade", len(days), 1),
-        ("07", "Construindo o ritmo", "Acumule 7 dias com atividades", len(days), 7),
-        ("10", "Mente em movimento", "Estude em 10 dias diferentes", study_days, 10),
-        ("10", "Corpo em movimento", "Treine em 10 dias diferentes", workout_days, 10),
-        ("30", "Uma nova rotina", "Acumule 30 dias com atividades", len(days), 30),
-    ]
     return dict(today=today, days=days, xp=xp, level=xp // 250 + 1, level_xp=xp % 250,
                 streak=streak, week=week, week_days=sum(day in days for day in week),
                 week_workouts=week_workouts, study_minutes=study_minutes, questions=int(questions),
                 today_categories=days.get(today, set()), today_xp=daily_xp(days.get(today, set())),
-                achievements=achievements, recent=sorted(valid, key=lambda item: (item[0], str(item[2].get("horario", ""))), reverse=True)[:5])
+                recent=sorted(valid, key=lambda item: (item[0], str(item[2].get("horario", ""))), reverse=True)[:5])

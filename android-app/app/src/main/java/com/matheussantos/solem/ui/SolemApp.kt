@@ -157,11 +157,6 @@ fun kind(row: TrainingRecord) = when(row.group) {
             Text("%.1f minutos de estudo".format(week.filter { it.group == "Estudos" }.sumOf { it.studyMinutes() + it.number("tempo_video") }))
             Text("%.0f questões".format(week.filter { it.group == "Estudos" && it.extra("fonte_questoes") != "Anki" }.sumOf { it.number("q_certas") + it.number("q_erradas") }))
         }
-        Panel("Seus marcos") {
-            listOf(Triple("Primeiro passo", p.days, 1), Triple("Construindo o ritmo", p.days, 7),
-                Triple("Mente em movimento", p.studyDays, 10), Triple("Corpo em movimento", p.workoutDays, 10),
-                Triple("Uma nova rotina", p.days, 30)).forEach { (label, value, total) -> Goal(label, value.toDouble(), total) }
-        }
         Text("Registros recentes", style = MaterialTheme.typography.titleLarge)
         if (rows.isEmpty()) Text("Registre sua primeira atividade para começar.")
         rows.take(5).forEach { row -> Panel(row.exercicio) { Text("${row.data} • ${kind(row)}") } }

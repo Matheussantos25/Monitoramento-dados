@@ -137,17 +137,11 @@ def overview(p, records=None, private_entries=None):
             current = " today" if day == today else ""
             desc = "atividade registrada" if day in p["days"] else "dia futuro" if day > today else "sem atividade"
             cells += f'<div class="week-day {state}{current}"><span>{["S", "T", "Q", "Q", "S", "S", "D"][i]}</span><div aria-label="{day.strftime("%d/%m")}: {desc}">{"✓" if day in p["days"] else day.day}</div></div>'
-        st.html(f'<section class="rhythm-panel"><div class="week-grid">{cells}</div><div class="week-legend"><span><i></i> Atividade registrada</span><span>◌ Hoje</span></div><div class="rhythm-note"><strong>Todo recomeço conta.</strong><p>Seus pontos e conquistas permanecem no histórico, mesmo depois de uma pausa.</p></div></section>')
+        st.html(f'<section class="rhythm-panel"><div class="week-grid">{cells}</div><div class="week-legend"><span><i></i> Atividade registrada</span><span>◌ Hoje</span></div><div class="rhythm-note"><strong>Todo recomeço conta.</strong><p>Seus pontos permanecem no histórico, mesmo depois de uma pausa.</p></div></section>')
 
-    st.html('<div class="section-title achievements-title"><h2>Marcos da jornada</h2><span>Conquistas do seu histórico</span></div>')
-    badges = ""
-    for mark, title, description, value, target in p["achievements"]:
-        unlocked = value >= target
-        badges += f'<article class="achievement {"unlocked" if unlocked else "locked"}"><div class="badge-art">{mark}</div><h3>{title}</h3><p>{description}</p><span>{"✓ Conquistado" if unlocked else f"{value} de {target} dias"}</span></article>'
-    st.html(f'<section class="achievement-grid">{badges}</section>')
-    with st.expander("Como funcionam os pontos e as conquistas?"):
+    with st.expander("Como funcionam os pontos?"):
         st.write("Você recebe 30 XP por dia com treino, 30 XP por dia com estudo e 10 XP por dia com alimentação registrada. Treino e estudo no mesmo dia rendem mais 15 XP. Cada categoria pontua uma única vez ao dia, independentemente da quantidade de registros. Cada nível exige 250 XP.")
-        st.write("Registros vazios ou futuros não pontuam. Peso, carga e quantidade de comida não geram pontos. A sequência considera dias consecutivos com atividade e permanece ativa se o último foi ontem. Os marcos contam dias acumulados, sem exigir sequência. Editar ou excluir atividades recalcula o progresso a partir do histórico disponível.")
+        st.write("Registros vazios ou futuros não pontuam. Peso, carga e quantidade de comida não geram pontos. A sequência considera dias consecutivos com atividade e permanece ativa se o último foi ontem. Editar ou excluir atividades recalcula o progresso a partir do histórico disponível.")
     st.html('<div class="section-title"><h2>Atividades recentes</h2><span>O caminho que você já percorreu</span></div>')
     if not p["recent"]:
         st.info("Sua jornada começa com um registro. Escolha um dos passos acima para ver sua evolução aqui.")

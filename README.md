@@ -1,6 +1,6 @@
 # Solem · Corpo & Mente
 
-Aplicativo Streamlit para acompanhar treinos, alimentação, peso e estudos. A interface inclui uma visão geral com experiência (XP), níveis, sequência de dias ativos, marcos acumulados e atalhos para os registros.
+Aplicativo Streamlit para acompanhar treinos, alimentação, peso e estudos. A interface inclui uma visão geral com experiência (XP), níveis, sequência de dias ativos e atalhos para os registros.
 
 ## Executar com seu banco
 
