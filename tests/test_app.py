@@ -108,6 +108,34 @@ class AppTests(unittest.TestCase):
                 self.assertEqual(self.app.selectbox(key="treino_exercicio").value, exercise)
                 self.assertEqual(self.app.radio(key="treino_formato").value, "🏋️ Exercício Isolado (Convencional)")
 
+    def test_completed_checkup_overrides_previous_workout_and_consumes_destination(self):
+        from solem_health import now_local
+        self.app.session_state["solem_demo_records"].append({
+            "id": 1001, "data": str(now_local().date()), "horario": "08:00:00",
+            "grupo_muscular": "Pernas", "exercicio": "Agachamento",
+            "repeticoes": 60, "series": 1, "carga_kg": 0.0, "dados_extras": {}})
+        self.app.radio(key="solem_page").set_value("Treino").run()
+        self.app.selectbox(key="treino_exercicio").set_value("Abdominal Levantada").run()
+        self.app.radio(key="treino_formato").set_value(self.app.radio(key="treino_formato").options[1]).run()
+        self.app.radio(key="solem_page").set_value("Visão geral").run()
+        self.assertEqual(self.app.button(key="checkup_go_agachamento").label, "Ver registro")
+        self.app.button(key="checkup_go_agachamento").click().run()
+        self.assertFalse(self.app.exception)
+        self.assertEqual(self.app.selectbox(key="treino_exercicio").value, "Agachamento")
+        self.assertEqual(self.app.radio(key="treino_formato").value, "🏋️ Exercício Isolado (Convencional)")
+        self.assertNotIn("checkup_workout_request", self.app.session_state)
+        self.app.selectbox(key="treino_exercicio").set_value("Flexão").run()
+        self.assertEqual(self.app.selectbox(key="treino_exercicio").value, "Flexão")
+
+    def test_workout_applies_pending_checkup_even_with_stale_widget_values(self):
+        self.app.radio(key="solem_page").set_value("Treino").run()
+        self.app.session_state["treino_exercicio"] = "Abdominal Levantada"
+        self.app.session_state["checkup_workout_request"] = "Agachamento"
+        self.app.run()
+        self.assertFalse(self.app.exception)
+        self.assertEqual(self.app.selectbox(key="treino_exercicio").value, "Agachamento")
+        self.assertNotIn("checkup_workout_request", self.app.session_state)
+
     def test_overview_call_survives_stale_ui_module_during_hot_reload(self):
         # Streamlit Cloud can keep a previously imported two-argument function
         # in memory after app.py changes; the call site must remain compatible.

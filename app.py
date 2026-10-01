@@ -722,6 +722,12 @@ if pagina == "Saúde":
 # ABA 1: REGISTRO DE TREINO 
 # ==========================================
 if pagina == "Treino":
+    # Apply a Check-up destination on the receiving screen, before either
+    # widget is created. Consume it once so manual selections remain editable.
+    checkup_exercise = st.session_state.pop("checkup_workout_request", None)
+    if checkup_exercise in TODOS_EXERCICIOS:
+        st.session_state["treino_formato"] = "🏋️ Exercício Isolado (Convencional)"
+        st.session_state["treino_exercicio"] = checkup_exercise
     section_intro('CORPO EM MOVIMENTO', 'Seu treino começa aqui.', 'Registre o que você fez e acompanhe sua evolução, uma sessão por vez.')
     st.info(training_recommendation(df_raw.to_dict("records"), now_local().date())["message"] +
             " É uma sugestão baseada apenas no histórico, não um plano clínico ou prescrição.")

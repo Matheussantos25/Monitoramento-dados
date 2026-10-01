@@ -32,8 +32,9 @@ def navigate(page):
 def navigate_checkup(page, exercise=None):
     navigate(page)
     if exercise:
-        st.session_state["treino_formato"] = "🏋️ Exercício Isolado (Convencional)"
-        st.session_state["treino_exercicio"] = exercise
+        # Keep navigation intent outside widget state: the exercise selector
+        # does not exist on Overview and Streamlit can clean its old state.
+        st.session_state["checkup_workout_request"] = exercise
 
 
 def shell(df, on_logout=None):
