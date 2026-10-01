@@ -725,7 +725,7 @@ if pagina == "Treino":
     section_intro('CORPO EM MOVIMENTO', 'Seu treino começa aqui.', 'Registre o que você fez e acompanhe sua evolução, uma sessão por vez.')
     st.info(training_recommendation(df_raw.to_dict("records"), now_local().date())["message"] +
             " É uma sugestão baseada apenas no histórico, não um plano clínico ou prescrição.")
-    modo_insercao = st.radio("Selecione o formato do treino:", ["🏋️ Exercício Isolado (Convencional)", "🔥 Circuito AMRAP 20' (5 Barras / 10 Flexões / 15 Agachamentos)"], horizontal=True)
+    modo_insercao = st.radio("Selecione o formato do treino:", ["🏋️ Exercício Isolado (Convencional)", "🔥 Circuito AMRAP 20' (5 Barras / 10 Flexões / 15 Agachamentos)"], horizontal=True, key="treino_formato")
     if modo_insercao == "🏋️ Exercício Isolado (Convencional)":
         exercicios_disponiveis = sorted(set(TODOS_EXERCICIOS) | set(df_treinos.get("exercicio", pd.Series(dtype=str)).dropna()))
         exercicio_input = st.selectbox("Exercício", exercicios_disponiveis, key="treino_exercicio")
@@ -1575,7 +1575,7 @@ if pagina == "Evolução nos estudos":
 # ==========================================
 # ABA 8: GERENCIAR
 # ==========================================
-if pagina in ("Configurações", "Treino", "Estudar") and (pagina == "Configurações" or st.toggle("Editar ou excluir registros desta aba", key=f"manage_{pagina}")):
+if pagina in ("Configurações", "Treino", "Estudar"):
     if pagina == "Configurações":
         section_intro('SEUS REGISTROS', 'Organize seu histórico.', 'Consulte e ajuste as informações que fazem parte da sua jornada.')
     else:
@@ -1586,7 +1586,7 @@ if pagina in ("Configurações", "Treino", "Estudar") and (pagina == "Configura�
     elif pagina == "Estudar" and not df_manage.empty:
         df_manage = df_manage[df_manage['grupo_muscular'] == 'Estudos']
     if not df_manage.empty:
-        st.markdown("### Gerenciar registros")
+        st.markdown("### Seus registros individuais" if pagina != "Configurações" else "### Gerenciar registros")
         df_manage['data_formatada'] = pd.to_datetime(df_manage['data']).dt.strftime('%d/%m/%Y')
         
         def formatar_registro(row):
@@ -1595,9 +1595,54 @@ if pagina in ("Configurações", "Treino", "Estudar") and (pagina == "Configura�
             elif row['grupo_muscular'] == 'Estudos': return f"📚 ESTUDO: {row['exercicio']} ({row['duracao_min']} min)"
             else: return f"🏋️ {row['exercicio']} ({row['repeticoes']} reps)"
 
-        opcoes_registros = df_manage.apply(lambda row: f"ID: {row['id']} | {row['data_formatada']} - {formatar_registro(row)}", axis=1).tolist()
-        registro_selecionado = st.selectbox("Selecione o Registro para Editar/Excluir:", opcoes_registros)
-        id_real = int(registro_selecionado.split("ID: ")[1].split(" |")[0])
+        if pagina == "Configurações":
+            opcoes_registros = df_manage.apply(lambda row: f"ID: {row['id']} | {row['data_formatada']} - {formatar_registro(row)}", axis=1).tolist()
+            registro_selecionado = st.selectbox("Selecione o Registro para Editar/Excluir:", opcoes_registros)
+            id_real = int(registro_selecionado.split("ID: ")[1].split(" |")[0])
+        else:
+            ordered = df_manage.sort_values(["data", "horario", "id"], ascending=False)
+            page_count = (len(ordered) + 19) // 20
+            page_number = st.selectbox("Página do histórico", list(range(1, page_count + 1)), key=f"manage_page_{pagina}") if page_count > 1 else 1
+            st.caption("O total do Check-up soma o dia; cada cartão abaixo é uma sessão independente.")
+            for _, record in ordered.iloc[(page_number - 1) * 20:page_number * 20].iterrows():
+                record_id = int(record["id"])
+                with st.container(border=True):
+                    info, edit_action, delete_action = st.columns([5, 1, 1], vertical_alignment="center")
+                    with info:
+                        st.markdown(f"**{formatar_registro(record)}**")
+                        st.caption(f"{record['data_formatada']} às {str(record['horario'])[:5]} · Registro #{record_id}")
+                    with edit_action:
+                        if st.button("Editar", key=f"manage_edit_{pagina}_{record_id}"):
+                            st.session_state[f"manage_selected_{pagina}"] = record_id
+                            st.session_state.pop(f"manage_delete_{pagina}", None)
+                            st.rerun()
+                    with delete_action:
+                        if st.button("Excluir", key=f"manage_delete_button_{pagina}_{record_id}"):
+                            st.session_state[f"manage_delete_{pagina}"] = record_id
+                            st.rerun()
+            pending_id = st.session_state.get(f"manage_delete_{pagina}")
+            pending = df_manage[df_manage["id"] == pending_id]
+            if not pending.empty:
+                record = pending.iloc[0]
+                st.warning(f"Excluir somente o registro #{pending_id}: {record['exercicio']} em {record['data_formatada']} às {str(record['horario'])[:5]}? Esta ação é permanente.")
+                confirm, cancel = st.columns(2)
+                with confirm:
+                    if st.button("Confirmar exclusão deste registro", key=f"manage_confirm_{pagina}_{pending_id}", type="primary"):
+                        supabase.table("treinos").delete().eq("id", int(pending_id)).execute()
+                        st.session_state.pop(f"manage_delete_{pagina}", None)
+                        if st.session_state.get(f"manage_selected_{pagina}") == pending_id:
+                            st.session_state.pop(f"manage_selected_{pagina}", None)
+                        st.session_state["solem_feedback"] = "Sessão excluída; as outras sessões do dia foram preservadas."
+                        st.rerun()
+                with cancel:
+                    if st.button("Cancelar", key=f"manage_cancel_{pagina}_{pending_id}"):
+                        st.session_state.pop(f"manage_delete_{pagina}", None)
+                        st.rerun()
+                st.stop()
+            id_real = st.session_state.get(f"manage_selected_{pagina}")
+            if id_real not in df_manage["id"].tolist():
+                st.caption("Toque em Editar em uma sessão para abrir apenas aquele registro.")
+                st.stop()
         st.write("---")
         
         row_data = df_manage[df_manage['id'] == id_real].iloc[0]
@@ -1754,13 +1799,14 @@ if pagina in ("Configurações", "Treino", "Estudar") and (pagina == "Configura�
             st.session_state["solem_feedback"] = "Registro atualizado. Seu progresso foi recalculado."
             st.rerun()
 
-        st.write("---")
-        with st.container(border=True):
-            st.markdown("#### Excluir registro")
-            st.warning("A exclusão é permanente e recalcula o progresso associado a esta atividade.")
-            confirmed = st.checkbox("Confirmo que quero excluir este registro permanentemente", key=f"confirm_legacy_{id_real}")
-            if st.button("Excluir registro permanentemente", disabled=not confirmed, type="primary", use_container_width=True):
-                supabase.table("treinos").delete().eq("id", id_real).execute()
-                st.session_state["solem_feedback"] = "Registro excluído. Seu histórico foi atualizado."
-                st.rerun()
+        if pagina == "Configurações":
+            st.write("---")
+            with st.container(border=True):
+                st.markdown("#### Excluir registro")
+                st.warning("A exclusão é permanente e recalcula o progresso associado a esta atividade.")
+                confirmed = st.checkbox("Confirmo que quero excluir este registro permanentemente", key=f"confirm_legacy_{id_real}")
+                if st.button("Excluir registro permanentemente", disabled=not confirmed, type="primary", use_container_width=True):
+                    supabase.table("treinos").delete().eq("id", id_real).execute()
+                    st.session_state["solem_feedback"] = "Registro excluído. Seu histórico foi atualizado."
+                    st.rerun()
     else: st.info("Seu histórico ainda está vazio. Registre uma atividade para começar sua jornada.")

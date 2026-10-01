@@ -1,5 +1,6 @@
 package com.matheussantos.solem.ui
 
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -82,16 +83,40 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
                 else -> {}
             }
             NavHost(nav, startDestination = "0") {
-                composable("0") { Overview(rows) { nav.navigate(it.toString()) } }
-                composable("1") { Column { OutlinedButton({ nav.navigate("manage/treino") }, Modifier.padding(horizontal=20.dp)) { Text("Editar ou excluir treinos") }; EntryScreen("Treino", catalog, rows, busy = busy, save = { id, value, done -> vm.save(id, value, done) }, batch = { value, done -> vm.insertBatch(value, done) }) } }
+                composable("0") { Overview(rows, { nav.navigate(it.toString()) }, { exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}") }) }
+                composable("1") {
+                    var section by rememberSaveable { mutableStateOf("Registrar") }
+                    Column(Modifier.fillMaxSize()) {
+                        Row(Modifier.padding(horizontal=20.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            listOf("Registrar", "Registros").forEach { option -> FilterChip(selected=section==option, onClick={section=option}, label={Text(option)}) }
+                        }
+                        if (section == "Registrar") EntryScreen("Treino", catalog, rows, busy = busy,
+                            save = { id, value, done -> vm.save(id, value, done) }, batch = { value, done -> vm.insertBatch(value, done) })
+                        else History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }, "Treino", Modifier.weight(1f))
+                    }
+                }
                 composable("2") { PhysicalCharts(rows, catalog) }
                 composable("3") { HealthPage(catalog, workspaceVm) }
                 composable("4") { HealthPage(catalog, workspaceVm) }
-                composable("5") { Column { OutlinedButton({ nav.navigate("manage/estudo") }, Modifier.padding(horizontal=20.dp)) { Text("Editar ou excluir sessões de estudo") }; StudyPage(rows, catalog, busy, vm) } }
+                composable("5") {
+                    var section by rememberSaveable { mutableStateOf("Registrar") }
+                    Column(Modifier.fillMaxSize()) {
+                        Row(Modifier.padding(horizontal=20.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            listOf("Registrar", "Registros").forEach { option -> FilterChip(selected=section==option, onClick={section=option}, label={Text(option)}) }
+                        }
+                        if (section == "Registrar") StudyPage(rows, catalog, busy, vm)
+                        else History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }, "Estudo", Modifier.weight(1f))
+                    }
+                }
                 composable("6") { StudyCharts(rows, catalog) }
                 composable("7") { PromptsPage(workspaceVm) }
                 composable("8") { History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }) }
-                composable("manage/{category}") { entry -> History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }, if (entry.arguments?.getString("category") == "estudo") "Estudo" else "Treino") }
+                composable("new-workout/{exercise}") { entry ->
+                    EntryScreen("Treino", catalog, rows, busy=busy,
+                        save={ id, value, done -> vm.save(id, value, done) },
+                        batch={ value, done -> vm.insertBatch(value, done) },
+                        initialExercise=entry.arguments?.getString("exercise")?.let(Uri::decode))
+                }
                 composable("9") { MonthlyJournal(rows) }
                 composable("10") { if (state is TrainingUiState.Ready || state is TrainingUiState.Empty) RanksPage(rows, catalog) }
                 (11..16).forEach { index -> composable(index.toString()) { WorkspacePage(workspaceVm,pages[index]) } }
@@ -113,7 +138,7 @@ fun kind(row: TrainingRecord) = when(row.group) {
     "Métricas" -> if (row.exercicio == "Sono Diário") "Saúde" else "Peso"
     else -> "Treino"
 }
-@Composable fun Overview(rows: List<TrainingRecord>, navigate: (Int) -> Unit) {
+@Composable fun Overview(rows: List<TrainingRecord>, navigate: (Int) -> Unit, registerExercise: (String) -> Unit) {
     val p = calculateProgress(rows)
     Page("Seu espaço de evolução") {
         Panel("STATUS DO PERSONAGEM") {
@@ -142,13 +167,19 @@ fun kind(row: TrainingRecord) = when(row.group) {
         Panel("CHECK-UP DE HOJE") {
             Goal("Mewing com borracha", todayWorkouts.filter { it.exercicio == "Mewing com borracha" }
                 .sumOf { it.repeticoes.toDouble() }, 400, "rep")
+            TextButton({registerExercise("Mewing com borracha")}) {Text("Registrar Mewing com borracha")}
             Goal("Flexões", todayWorkouts.filter { it.exercicio == "Flexão" }
                 .sumOf { it.repeticoes.toDouble() }, 50, "rep")
+            TextButton({registerExercise("Flexão")}) {Text("Registrar Flexão")}
             Goal("Agachamentos", todayWorkouts.filter { it.exercicio == "Agachamento" }
                 .sumOf { it.repeticoes.toDouble() }, 50, "rep")
+            TextButton({registerExercise("Agachamento")}) {Text("Registrar Agachamento")}
             Goal("Caminhada ou corrida", todayWorkouts.filter { it.exercicio == "Caminhada" || it.exercicio == "Corrida" }
                 .sumOf { it.distanceKm }, 5, "km", 2)
-            OutlinedButton({ navigate(1) }) { Text("Registrar treino") }
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                TextButton({registerExercise("Caminhada")}) {Text("Caminhada")}
+                TextButton({registerExercise("Corrida")}) {Text("Corrida")}
+            }
         }
         val start = today().minusDays((today().dayOfWeek.value - 1).toLong())
         val week = rows.filter { it.data >= start.toString() && it.data <= today().toString() }
@@ -162,11 +193,11 @@ fun kind(row: TrainingRecord) = when(row.group) {
         rows.take(5).forEach { row -> Panel(row.exercicio) { Text("${row.data} • ${kind(row)}") } }
     }
 }
-@Composable fun History(rows: List<TrainingRecord>, busy: Boolean, delete: (Long) -> Unit, edit: (TrainingRecord) -> Unit, fixedCategory: String? = null) {
+@Composable fun History(rows: List<TrainingRecord>, busy: Boolean, delete: (Long) -> Unit, edit: (TrainingRecord) -> Unit, fixedCategory: String? = null, modifier: Modifier = Modifier) {
     var search by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("Todos") }
     var confirm by remember { mutableStateOf<TrainingRecord?>(null) }
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Gerenciar histórico", style = MaterialTheme.typography.headlineMedium)
         Field("Buscar exercício, disciplina ou data", search) { search = it }
         if (fixedCategory == null) Choice("Categoria", category, listOf("Todos", "Treino", "Estudo", "Alimentação", "Peso", "Saúde")) { category = it }
@@ -176,7 +207,14 @@ fun kind(row: TrainingRecord) = when(row.group) {
         Text("${filtered.size} registros")
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filtered, key = { it.id }) { row -> Panel(row.exercicio) {
-                Text("${row.data} • ${row.horario} • ${kind(row)}")
+                val detail = when {
+                    row.group == "Estudos" -> "${row.repeticoes} questões · ${row.durationMinutes} min"
+                    row.distanceKm > 0 -> "%.2f km".format(row.distanceKm)
+                    row.repeticoes > 0 -> "${row.repeticoes} repetições"
+                    row.durationMinutes > 0 -> "${row.durationMinutes} min"
+                    else -> "Atividade registrada"
+                }
+                Text("${row.data} às ${row.horario.take(5)} · $detail · Registro #${row.id}")
                 Row { TextButton({ edit(row) }, enabled = !busy) { Text("Editar") }; TextButton({ confirm = row }, enabled = !busy) { Text("Excluir") } }
             } }
         }

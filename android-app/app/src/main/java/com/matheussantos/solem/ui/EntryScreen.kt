@@ -17,11 +17,13 @@ import java.time.ZoneOffset
     type: String, catalog: Catalog, rows: List<TrainingRecord>, existing: TrainingRecord? = null,
     busy: Boolean = false, save: (Long?, TrainingMutation, () -> Unit) -> Unit,
     batch: (List<TrainingMutation>, () -> Unit) -> Unit = { _, _ -> }, embedded: Boolean = false,
-    initialDate: String = today().toString()
+    initialDate: String = today().toString(), initialExercise: String? = null
 ) {
     var date by rememberSaveable(initialDate, existing?.id) { mutableStateOf(existing?.data ?: initialDate) }
     var time by rememberSaveable { mutableStateOf(existing?.horario ?: LocalTime.now(ZoneOffset.ofHours(-3)).withNano(0).toString()) }
-    var exercise by rememberSaveable { mutableStateOf(existing?.exercicio ?: catalog.exercises.first()) }
+    var exercise by rememberSaveable(initialExercise, existing?.id) {
+        mutableStateOf(existing?.exercicio ?: initialExercise?.takeIf { it in catalog.exercises } ?: catalog.exercises.first())
+    }
     var series by rememberSaveable { mutableStateOf((existing?.series ?: 1).toString()) }
     var reps by rememberSaveable { mutableStateOf((existing?.repeticoes ?: 0).toString()) }
     var load by rememberSaveable { mutableStateOf((existing?.loadKg ?: 0.0).toString()) }

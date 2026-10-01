@@ -29,6 +29,13 @@ def navigate(page):
     st.session_state["solem_page"] = page
 
 
+def navigate_checkup(page, exercise=None):
+    navigate(page)
+    if exercise:
+        st.session_state["treino_formato"] = "🏋️ Exercício Isolado (Convencional)"
+        st.session_state["treino_exercicio"] = exercise
+
+
 def shell(df, on_logout=None):
     progress = calculate_progress(df.to_dict("records"))
     if st.session_state.get('solem_page') not in PAGES:
@@ -104,8 +111,19 @@ def overview(p, records=None, private_entries=None):
                     st.html(f'''<div class="checkup-card"><span class="checkup-card__top">{escape(goal['label'])}<small>{label}</small></span>
                         <strong>{amount} <span>/ {target} {escape(goal['unit'])}</span></strong>
                         <progress value="{pct:.1f}" max="100" aria-label="{escape(goal['label'])}: {pct:.0f}%">{pct:.0f}%</progress></div>''')
-                    st.button("Ver registro" if goal["done"] else "Registrar →", key=f"checkup_go_{goal['id']}",
-                              on_click=navigate, args=(goal["page"],), use_container_width=True)
+                    if goal["id"] == "cardio":
+                        walk, run = st.columns(2, gap="small")
+                        with walk:
+                            st.button("Caminhada", key="checkup_go_caminhada", on_click=navigate_checkup,
+                                      args=("Treino", "Caminhada"), use_container_width=True)
+                        with run:
+                            st.button("Corrida", key="checkup_go_corrida", on_click=navigate_checkup,
+                                      args=("Treino", "Corrida"), use_container_width=True)
+                    else:
+                        exercise = {"mewing": "Mewing com borracha", "flexao": "Flexão",
+                                    "agachamento": "Agachamento"}.get(goal["id"])
+                        st.button("Ver registro" if goal["done"] else "Registrar →", key=f"checkup_go_{goal['id']}",
+                                  on_click=navigate_checkup, args=(goal["page"], exercise), use_container_width=True)
         if private_entries is None:
             st.caption("A água depende do diário privado. Não foi possível consultá-lo nesta sessão; os demais indicadores continuam disponíveis.")
         monthly_journal(records, today)

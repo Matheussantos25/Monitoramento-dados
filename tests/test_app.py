@@ -27,22 +27,50 @@ class AppTests(unittest.TestCase):
                     self.assertFalse(self.app.exception, [e.message for e in self.app.exception])
 
     def test_training_and_study_show_scoped_edit_delete_controls(self):
-        for page, expected_group in (("Treino", "ESTUDO:"), ("Estudar", "ESTUDO:")):
+        for page, is_study in (("Treino", False), ("Estudar", True)):
             with self.subTest(page=page):
                 self.app.radio(key="solem_page").set_value(page).run()
-                self.app.toggle(key=f"manage_{page}").set_value(True).run()
                 self.assertFalse(self.app.exception)
-                selection = next(x for x in self.app.selectbox if x.label.startswith("Selecione o Registro para Editar/Excluir"))
-                if page == "Treino":
-                    self.assertTrue(all(expected_group not in option for option in selection.options))
-                else:
-                    self.assertTrue(all(expected_group in option for option in selection.options))
+                self.assertFalse(any(x.key == f"manage_{page}" for x in self.app.toggle))
+                records = [r for r in self.app.session_state["solem_demo_records"]
+                           if (r["grupo_muscular"] == "Estudos") == is_study
+                           and (is_study or r["grupo_muscular"] not in ("Nutrição", "Métricas"))]
+                record_id = max(r["id"] for r in records)
+                self.assertTrue(self.app.button(key=f"manage_edit_{page}_{record_id}"))
+                self.assertTrue(self.app.button(key=f"manage_delete_button_{page}_{record_id}"))
+                self.app.button(key=f"manage_edit_{page}_{record_id}").click().run()
+                self.assertEqual(self.app.session_state[f"manage_selected_{page}"], record_id)
                 self.assertTrue(any(x.label == "Salvar Alterações" or "Salvar Alterações" in x.label for x in self.app.button))
-                self.assertFalse(next(x for x in self.app.button if x.label == "Excluir registro permanentemente").disabled is False)
+                self.assertFalse(any(x.label == "Excluir registro permanentemente" for x in self.app.button))
         self.app.session_state["solem_demo_records"] = []
         for page in ("Treino", "Estudar"):
             self.app.radio(key="solem_page").set_value(page).run()
             self.assertFalse(self.app.exception)
+
+    def test_same_exercise_sessions_can_be_edited_and_deleted_individually(self):
+        from solem_health import now_local
+        day = str(now_local().date())
+        def session(record_id, hour):
+            return dict(id=record_id, data=day, horario=hour, grupo_muscular="Pernas",
+                        exercicio="Agachamento", series=1, repeticoes=20, carga_kg=0.0,
+                        descanso_seg=0, duracao_min=0, distancia_km=0.0,
+                        alimentacao_saudavel="", alimentacao_besteirol="", peso_corporal=0.0,
+                        dados_extras={})
+        self.app.session_state["solem_demo_records"] = [session(101, "08:00:00"), session(102, "18:00:00")]
+        self.app.radio(key="solem_page").set_value("Treino").run()
+        self.assertFalse(self.app.exception)
+        self.assertTrue(self.app.button(key="manage_edit_Treino_101"))
+        self.assertTrue(self.app.button(key="manage_edit_Treino_102"))
+        self.app.button(key="manage_edit_Treino_101").click().run()
+        next(x for x in self.app.number_input if x.label == "Repetições").set_value(25)
+        next(x for x in self.app.button if "Salvar Alterações" in x.label).click().run()
+        self.assertEqual([(r["id"], r["repeticoes"]) for r in self.app.session_state["solem_demo_records"]],
+                         [(101, 25), (102, 20)])
+        self.app.button(key="manage_delete_button_Treino_102").click().run()
+        self.assertTrue(self.app.button(key="manage_confirm_Treino_102"))
+        self.app.button(key="manage_confirm_Treino_102").click().run()
+        self.assertEqual([(r["id"], r["repeticoes"]) for r in self.app.session_state["solem_demo_records"]],
+                         [(101, 25)])
 
     def test_quick_action_and_save_recalculates_xp(self):
         from solem_progress import calculate_progress
@@ -68,6 +96,17 @@ class AppTests(unittest.TestCase):
         self.assertTrue(self.app.button(key="checkup_go_water"))
         self.app.button(key="checkup_go_water").click().run()
         self.assertEqual(self.app.radio(key="solem_page").value, "Saúde")
+
+    def test_checkup_shortcuts_prefill_the_matching_exercise(self):
+        for key, exercise in (("mewing", "Mewing com borracha"), ("flexao", "Flexão"),
+                              ("agachamento", "Agachamento"), ("caminhada", "Caminhada"),
+                              ("corrida", "Corrida")):
+            with self.subTest(exercise=exercise):
+                self.app.radio(key="solem_page").set_value("Visão geral").run()
+                self.app.button(key=f"checkup_go_{key}").click().run()
+                self.assertEqual(self.app.radio(key="solem_page").value, "Treino")
+                self.assertEqual(self.app.selectbox(key="treino_exercicio").value, exercise)
+                self.assertEqual(self.app.radio(key="treino_formato").value, "🏋️ Exercício Isolado (Convencional)")
 
     def test_overview_call_survives_stale_ui_module_during_hot_reload(self):
         # Streamlit Cloud can keep a previously imported two-argument function
