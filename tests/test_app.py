@@ -215,6 +215,29 @@ class AppTests(unittest.TestCase):
         self.assertEqual(saved["dados_extras"]["isometria_segundos"], 0)
         self.assertEqual(saved["distancia_km"], 2.5)
 
+    def test_gps_finish_prefills_duration_and_saves_exact_seconds(self):
+        self.app.radio(key="solem_page").set_value("Treino").run()
+        with patch("solem_gps.gps_distance_tracker", return_value={
+                "event": "finished", "id": "gps-test", "duration_seconds": 125, "km": 2.125}):
+            self.app.selectbox(key="treino_exercicio").set_value("Caminhada").run()
+            self.assertFalse(self.app.exception)
+            self.assertEqual(self.app.number_input(key="treino_duracao_min_Caminhada").value, 3)
+            self.assertEqual(self.app.number_input(key="treino_distancia").value, 2.125)
+            next(b for b in self.app.button if b.label == "Salvar treino").click().run()
+        saved = self.app.session_state["solem_demo_records"][-1]
+        self.assertEqual(saved["duracao_min"], 3)
+        self.assertEqual(saved["dados_extras"]["tempo_treino_segundos"], 125)
+
+    def test_timer_and_rest_stay_in_sync_without_overwriting_subsequent_edits(self):
+        self.app.radio(key="solem_page").set_value("Treino").run()
+        with patch("solem_workout_timer.workout_timer", return_value={
+                "event": "configure", "id": "timer-test", "seconds": 90}):
+            self.app.selectbox(key="treino_exercicio").set_value("Agachamento").run()
+            self.assertFalse(self.app.exception)
+            self.assertEqual(self.app.number_input(key="treino_descanso_seg_Agachamento").value, 90)
+            self.app.number_input(key="treino_descanso_seg_Agachamento").set_value(120).run()
+            self.assertEqual(self.app.number_input(key="treino_descanso_seg_Agachamento").value, 120)
+
     def test_workout_history_reads_beyond_first_supabase_page(self):
         self.app.session_state["solem_demo_records"] = [
             {"id": index, "data": "2026-09-20", "horario": "08:00:00", "grupo_muscular": "Peitoral",

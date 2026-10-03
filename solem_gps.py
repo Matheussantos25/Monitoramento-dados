@@ -1,6 +1,6 @@
 """Opt-in browser distance tracker for walking and running.
 
-Only the final distance crosses the component boundary; GPS coordinates stay
+Only final distance and elapsed time cross the component boundary; GPS coordinates stay
 inside the browser iframe and are never sent to Streamlit or Supabase.
 """
 from pathlib import Path

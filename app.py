@@ -15,6 +15,7 @@ from solem_ui import apply_theme, shell, overview, section_intro, goal_panel
 from solem_health import (training_measure_stats, training_category_stats, training_recommendation,
                           workout_fields, format_one_decimal, now_local)
 from solem_gps import gps_distance_tracker
+from solem_workout_timer import workout_timer, apply_timing_event
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
 def safe_get(val, key, default=None):
@@ -752,13 +753,33 @@ if pagina == "Treino":
                 st.caption(f"Categoria {group}: {category_stats['days']} dias · média {category_stats['average_reps_per_day']:.1f} rep por dia treinado. Progrida apenas quando a técnica e a recuperação permitirem.")
         else:
             st.caption("Ainda não há histórico deste exercício.")
+        fields = workout_fields(exercicio_input)
         if exercicio_input in ("Caminhada", "Corrida"):
-            gps_result = gps_distance_tracker(key="gps_treino_web")
-            if isinstance(gps_result, dict) and gps_result.get("event") == "finished":
-                event_id = gps_result.get("id")
-                if event_id != st.session_state.get("gps_event_id"):
-                    st.session_state["gps_event_id"] = event_id
-                    st.session_state["treino_distancia"] = max(0.0, round(float(gps_result.get("km", 0)), 3))
+            gps_result = gps_distance_tracker(key=f"gps_treino_{exercicio_input}")
+            apply_timing_event(st.session_state, exercicio_input, fields, gps_result, "gps")
+        st.markdown("#### Medir tempos")
+        rest_key = f"treino_descanso_seg_{exercicio_input}"
+        has_rest = "descanso_seg" in fields
+        rest_seconds = st.session_state.get(rest_key, 60)
+        if has_rest:
+            rest_column, clock_column = st.columns([1, 3])
+        else:
+            clock_column = st.container()
+        with clock_column:
+            clock_event = workout_timer(exercicio_input, rest_seconds,
+                                        "duracao_min" in fields or "isometria_segundos" in fields, has_rest)
+        clock_applied = apply_timing_event(st.session_state, exercicio_input, fields, clock_event, "timer")
+        if clock_applied and clock_event.get("event") == "configure":
+            st.rerun()  # Render the component with the newly synchronized rest value.
+        if has_rest:
+            with rest_column:
+                rest_seconds = st.number_input("Descanso entre séries (seg)", min_value=0,
+                                               max_value=86400, value=60, step=15, key=rest_key)
+                st.caption("Este valor configura o temporizador ao lado. Você inicia cada intervalo quando quiser.")
+        measured_time = st.session_state.get(f"treino_tempo_medido_{exercicio_input}")
+        if measured_time:
+            st.caption(f"Tempo medido: {measured_time['seconds'] // 60} min {measured_time['seconds'] % 60:02d} s. "
+                       "O campo em minutos é arredondado para cima; os segundos exatos são preservados ao salvar sem alterar a duração.")
         with st.form("registro_treino", clear_on_submit=True):
             st.markdown("<h3 style='margin-bottom: 20px; color: #83DCFF;'>Registrar atividade</h3>", unsafe_allow_html=True)
             c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
@@ -769,7 +790,6 @@ if pagina == "Treino":
             horario = f"{hora}:{minuto}:00"
             st.markdown("---")
             st.markdown("#### Detalhes do exercício")
-            fields = workout_fields(exercicio_input)
             labels = {
                 "series": "Séries", "repeticoes": "Repetições (Total)",
                 "carga_kg": "Carga (kg)", "descanso_seg": "Descanso entre séries (seg)",
@@ -783,6 +803,9 @@ if pagina == "Treino":
             values = {}
             columns = st.columns(min(2, len(fields)))
             for index, field in enumerate(fields):
+                if field == "descanso_seg":
+                    values[field] = rest_seconds
+                    continue
                 with columns[index % len(columns)]:
                     key = "treino_distancia" if field == "distancia_km" else f"treino_{field}_{exercicio_input}"
                     if field in ("carga_kg", "distancia_km"):
@@ -800,6 +823,9 @@ if pagina == "Treino":
                 grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if exercicio_input in l), "Outro")
                 mochila_json = {"humor": humor, "isometria_tentativas": isometria_tentativas,
                                 "isometria_segundos": values.get("isometria_segundos", 0)}
+                if measured_time and values.get("duracao_min") == measured_time["minutes"]:
+                    mochila_json["tempo_treino_segundos"] = measured_time["seconds"]
+                    mochila_json["origem_tempo_treino"] = measured_time["source"]
                 dados = {
                     "data": str(data_treino), "horario": str(horario), "grupo_muscular": grupo,
                     "exercicio": exercicio_input, "series": int(values.get("series", 0)),
@@ -812,6 +838,7 @@ if pagina == "Treino":
                     "peso_corporal": 0.0, "dados_extras": mochila_json 
                 }
                 supabase.table("treinos").insert(dados).execute()
+                st.session_state.pop(f"treino_tempo_medido_{exercicio_input}", None)
                 st.session_state["solem_feedback"] = "Treino salvo. Seu progresso foi atualizado."
                 st.rerun()
 

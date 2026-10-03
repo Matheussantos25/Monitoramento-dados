@@ -11,12 +11,14 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.matheussantos.solem.MainActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 
-data class WalkTracking(val active: Boolean = false, val meters: Double = 0.0, val error: String? = null)
+data class WalkTracking(val active: Boolean = false, val meters: Double = 0.0, val error: String? = null,
+                        val startedAtMillis: Long = 0, val startedElapsedMillis: Long = 0, val durationMillis: Long = 0)
 
 /** Started while the app is visible. Neither coordinates nor route are persisted. */
 class WalkLocationService : Service() {
@@ -50,9 +52,10 @@ class WalkLocationService : Service() {
             .any { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
         if (!allowed) return fail("Permissão de localização necessária.")
         try {
+            state.value = WalkTracking(active = true, startedAtMillis = System.currentTimeMillis(),
+                                       startedElapsedMillis = SystemClock.elapsedRealtime())
             if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
             else startForeground(NOTIFICATION, notification())
-            state.value = WalkTracking(active = true)
             previous = null
             val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).filter { manager.isProviderEnabled(it) }
             if (providers.isEmpty()) return fail("Ative a localização do aparelho.")
@@ -90,7 +93,7 @@ class WalkLocationService : Service() {
     }
 
     private fun fail(text: String): Int {
-        state.value = state.value.copy(active = false, error = text)
+        state.value = state.value.copy(error = text)
         stopTracking()
         return START_NOT_STICKY
     }
@@ -98,13 +101,18 @@ class WalkLocationService : Service() {
         listener?.let { manager.removeUpdates(it) }
         listener = null
         previous = null
-        state.value = state.value.copy(active = false)
+        finishTiming()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
     override fun onDestroy() {
         listener?.let { manager.removeUpdates(it) }
-        state.value = state.value.copy(active = false)
+        finishTiming()
         super.onDestroy()
+    }
+    private fun finishTiming() {
+        val current = state.value
+        if (current.active) state.value = current.copy(active = false,
+            durationMillis = (SystemClock.elapsedRealtime() - current.startedElapsedMillis).coerceAtLeast(0))
     }
 }

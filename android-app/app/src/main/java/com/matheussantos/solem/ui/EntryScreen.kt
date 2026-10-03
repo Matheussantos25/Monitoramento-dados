@@ -29,7 +29,9 @@ import java.time.ZoneOffset
     var load by rememberSaveable { mutableStateOf((existing?.loadKg ?: 0.0).toString()) }
     var duration by rememberSaveable { mutableStateOf((existing?.durationMinutes ?: 0).toString()) }
     var distance by rememberSaveable { mutableStateOf((existing?.distanceKm ?: 0.0).toString()) }
-    var rest by rememberSaveable { mutableStateOf((existing?.restSeconds ?: 0).toString()) }
+    var rest by rememberSaveable { mutableStateOf((existing?.restSeconds ?: 60).toString()) }
+    var measuredSeconds by rememberSaveable { mutableStateOf<Long?>(null) }
+    var timingSource by rememberSaveable { mutableStateOf("") }
     var iso by rememberSaveable { mutableStateOf(existing?.extra("isometria_segundos")?.ifBlank { "0" } ?: "0") }
     var mood by rememberSaveable { mutableStateOf(existing?.extra("humor")?.ifBlank { "Normal" } ?: "Normal") }
     var rounds by rememberSaveable { mutableStateOf("5") }
@@ -60,17 +62,21 @@ import java.time.ZoneOffset
         else when(type) {
             "Treino" -> {
                 Text(suggestTraining(rows), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (existing == null) Choice("Formato", format, listOf("Exercício isolado", "Circuito AMRAP 20 min")) { format = it }
+                if (existing == null) Choice("Formato", format, listOf("Exercício isolado", "Circuito AMRAP 20 min")) {
+                    if (WalkLocationService.state.value.active) error = "Pare o GPS antes de mudar o formato do treino."
+                    else format = it
+                }
                 if (format.startsWith("Circuito")) {
                     Text("1 round = 5 barras + 10 flexões + 15 agachamentos")
                     TimerPanel(fixedSeconds = 1200)
                     Field("Rounds completos", rounds, true) { rounds = it }
                 } else {
                     Choice("Exercício", exercise, catalog.exercises + listOfNotNull(existing?.exercicio)) {
-                        if (exercise != it) {
+                        if (WalkLocationService.state.value.active) error = "Pare o GPS antes de trocar o exercício."
+                        else if (exercise != it) {
                             exercise = it
                             series = "1"; reps = "0"; load = "0"; duration = "0"
-                            distance = "0"; rest = "0"; iso = "0"
+                            distance = "0"; rest = "60"; iso = "0"; measuredSeconds = null
                         }
                     }
                     val workoutFields = catalog.workoutFields(exercise)
@@ -97,9 +103,21 @@ import java.time.ZoneOffset
                     if ("carga_kg" in workoutFields) Field("Carga (kg)", load, true) { load = it }
                     if ("isometria_segundos" in workoutFields) Field("Tempo sustentado (seg)", iso, true) { iso = it }
                     if ("descanso_seg" in workoutFields) Field("Descanso entre séries (seg)", rest, true) { rest = it }
-                    if ("duracao_min" in workoutFields) Field("Duração (min)", duration, true) { duration = it }
+                    WorkoutTimingPanel(exercise, if ("descanso_seg" in workoutFields) (rest.toIntOrNull() ?: 0).coerceIn(0, 86400) else null,
+                        if ("duracao_min" in workoutFields || "isometria_segundos" in workoutFields) { seconds ->
+                            if ("duracao_min" in workoutFields) { duration = workoutMinutes(seconds).toString(); measuredSeconds = seconds; timingSource = "timer" }
+                            else iso = seconds.toString()
+                        } else null)
+                    if ("duracao_min" in workoutFields) Field("Duração (min)", duration, true) { duration = it; measuredSeconds = null }
                     if ("distancia_km" in workoutFields) Field("Distância (km)", distance, true) { distance = it }
-                    if (exercise in listOf("Caminhada", "Corrida")) GpsDistanceTracker { km -> distance = "%.3f".format(java.util.Locale.US, km) }
+                    if (exercise in listOf("Caminhada", "Corrida")) GpsDistanceTracker(
+                        onDistance = { km -> distance = "%.3f".format(java.util.Locale.US, km) },
+                        onFinished = { km, seconds ->
+                            distance = "%.3f".format(java.util.Locale.US, km)
+                            val bounded = seconds.coerceIn(0, 86400)
+                            duration = workoutMinutes(bounded).toString(); measuredSeconds = bounded; timingSource = "gps"
+                        })
+                    measuredSeconds?.let { Text("Tempo medido: ${clockText(it)}. Minutos arredondados para cima; segundos exatos preservados ao salvar sem alterar a duração.", style = MaterialTheme.typography.bodySmall) }
                 }
                 Choice("Estado mental", mood, listOf("Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado")) { mood = it }
             }
@@ -190,6 +208,15 @@ import java.time.ZoneOffset
                             put("isometria_segundos", isoSeconds)
                             put("isometria_tentativas", if ("isometria_segundos" in workoutFields) repetitions else 0)
                             extras["humor"] = JsonPrimitive(mood)
+                            if (existing != null && "duracao_min" in workoutFields && int(duration) != existing.durationMinutes) {
+                                extras.remove("tempo_treino_segundos"); extras.remove("origem_tempo_treino")
+                            }
+                            measuredSeconds?.let { seconds ->
+                                if ("duracao_min" in workoutFields && int(duration) == workoutMinutes(seconds)) {
+                                    extras["tempo_treino_segundos"] = JsonPrimitive(seconds)
+                                    extras["origem_tempo_treino"] = JsonPrimitive(timingSource)
+                                }
+                            }
                             base.copy(data = date, horario = time, group = catalog.group(exercise), exercicio = exercise,
                                 series = if ("series" in workoutFields) int(series) else 0,
                                 repeticoes = repetitions,

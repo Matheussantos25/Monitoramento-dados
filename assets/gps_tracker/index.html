@@ -19,8 +19,9 @@
 <body>
   <div class="box">
     <p class="title">Distância por GPS (opcional)</p>
-    <p class="description">No navegador, a medição não é confiável com a tela bloqueada: o sistema pode pausar o GPS ao ocultar a página. Para medir com a tela bloqueada, use o app Android. Só a distância final é usada; trajeto e coordenadas não são salvos.</p>
-    <div class="controls"><button id="toggle" type="button">Iniciar GPS</button><output id="distance">0,000 km</output></div>
+    <p class="description">No navegador, a medição não é confiável com a tela bloqueada: o sistema pode pausar o GPS ao ocultar a página. Para medir com a tela bloqueada, use o app Android. Distância e duração finais preenchem o registro; trajeto e coordenadas não são salvos.</p>
+    <div class="controls"><button id="toggle" type="button">Iniciar GPS</button><output id="distance">0,000 km</output><output id="elapsed" aria-label="Duração do GPS">00:00:00</output></div>
+    <p class="status" id="started"></p>
     <p class="status" id="status" role="status">Você também pode digitar a distância manualmente.</p>
   </div>
   <script>
@@ -32,6 +33,13 @@
     let previous = null;
     let meters = 0;
     let serial = 0;
+    let startedAt = null;
+    let durationSeconds = 0;
+    function showElapsed() {
+      if (watchId !== null && startedAt !== null) durationSeconds = Math.floor((Date.now() - startedAt) / 1000);
+      document.getElementById("elapsed").textContent = [Math.floor(durationSeconds / 3600), Math.floor(durationSeconds / 60) % 60, durationSeconds % 60].map(n => String(n).padStart(2, "0")).join(":");
+    }
+    setInterval(showElapsed, 250);
 
     function send(type, data) {
       window.parent.postMessage(Object.assign({isStreamlitMessage: true, type}, data), "*");
@@ -51,6 +59,7 @@
       return 6371000 * 2 * Math.atan2(Math.sqrt(arc), Math.sqrt(1 - arc));
     }
     function stop(publish, message) {
+      showElapsed();
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       watchId = null;
       previous = null;
@@ -59,7 +68,7 @@
       if (publish) {
         serial += 1;
         send("streamlit:setComponentValue", {dataType: "json", value: {
-          event: "finished", id: Date.now() + "-" + serial, km: Number((meters / 1000).toFixed(3))
+          event: "finished", id: Date.now() + "-" + serial, km: Number((meters / 1000).toFixed(3)), duration_seconds: durationSeconds
         }});
       }
     }
@@ -87,12 +96,15 @@
       stop(false, reason + " Informe a distância manualmente, se preferir.");
     }
     button.addEventListener("click", () => {
-      if (watchId !== null) { stop(true, "Distância transferida para o formulário. Confira e salve o treino."); return; }
+      if (watchId !== null) { stop(true, "Distância e duração transferidas para o formulário. Confira e salve o treino."); return; }
       if (!window.isSecureContext || !navigator.geolocation) {
         status.textContent = "GPS indisponível: abra o site por HTTPS ou informe a distância manualmente.";
         return;
       }
       meters = 0;
+      startedAt = Date.now();
+      durationSeconds = 0;
+      document.getElementById("started").textContent = "Iniciado às " + new Date(startedAt).toLocaleTimeString("pt-BR");
       previous = null;
       showDistance();
       status.textContent = "Solicitando localização…";
@@ -100,6 +112,7 @@
       try {
         watchId = navigator.geolocation.watchPosition(onPosition, onError,
           {enableHighAccuracy: true, maximumAge: 0, timeout: 20000});
+        showElapsed();
       } catch (_) {
         stop(false, "Não foi possível iniciar o GPS. Informe a distância manualmente.");
       }

@@ -49,6 +49,12 @@ A tabela legada `treinos` tem policy pública `ALL true` apesar de RLS habilitad
 
 As cópias privadas de prompts também requerem `../supabase/migrations/20260928_private_prompts.sql`, aplicada depois da migração financeira. Ela já foi aplicada ao projeto de produção em 28/09/2026. As páginas, PDFs e itens financeiros excluídos permanecem recuperáveis na lixeira; os treinos e estudos legados ainda têm exclusão permanente com confirmação.
 
+## Relógios do treino (0.9.8)
+
+Exercício isolado inclui cronômetro com pausa/retomada e temporizador. O temporizador acompanha o campo de descanso entre séries quando disponível; nos demais exercícios, ajuste seu próprio intervalo. Alterar o intervalo reinicia a contagem. Inicie manualmente cada descanso. Para isometria ou cardio, **Usar tempo no registro** preenche a medida correspondente, sem salvar automaticamente.
+
+O serviço GPS agora mede também a duração com o relógio monotônico do Android, inclusive enquanto a tela estiver bloqueada. Ao parar pelo app ou pela notificação, distância e duração são transferidas ao formulário quando a tela estiver ativa. Minutos são arredondados para cima para compatibilidade com a coluna inteira; segundos exatos ficam em `dados_extras.tempo_treino_segundos` se a duração automática não for alterada. Nenhuma coordenada é persistida e nenhuma migração adicional é necessária. Compilação e testes automatizados não substituem um teste de percurso no aparelho real, especialmente com economia de bateria.
+
 ## Compilar e instalar
 
 No PowerShell, dentro de `android-app`:
