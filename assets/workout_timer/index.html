@@ -10,7 +10,7 @@ label,p{font-size:12px;color:#b7c8df}input{width:78px}p{margin-bottom:0;line-hei
 @media(max-width:540px){.clocks{grid-template-columns:1fr}output{font-size:28px}}
 </style></head><body><div class="clocks">
 <section class="clock"><h3>Cronômetro da atividade</h3><output id="stopwatch" aria-label="Tempo medido">00:00:00</output>
-<div class="controls"><button class="primary" id="start-watch">Iniciar</button><button id="reset-watch">Zerar</button><button id="apply-watch" hidden>Usar tempo no registro</button></div><p>Pause antes de transferir o tempo. Não salva o treino automaticamente.</p></section>
+<div class="controls"><button class="primary" id="start-watch">Iniciar</button><button id="reset-watch">Zerar</button><button id="apply-watch" hidden>Usar tempo no registro</button></div><p id="watch-hint">Meça suas séries. O relógio não salva o treino automaticamente.</p></section>
 <section class="clock"><h3>Temporizador / descanso</h3><label for="seconds">Contagem regressiva (segundos)</label> <input id="seconds" type="number" min="0" max="86400" step="1" value="60">
 <output id="countdown" aria-label="Tempo restante">00:01:00</output><div class="controls"><button class="primary" id="start-count">Iniciar</button><button id="reset-count">Reiniciar</button></div><p id="rest-hint"></p><p id="done" role="status" aria-live="polite"></p></section></div>
 <script src="clock.js"></script><script>
@@ -38,6 +38,7 @@ window.addEventListener('message',e=>{if(e.data?.type!=='streamlit:render')retur
 if(!storageKey){storageKey='solem_workout_clock_'+args.exercise;try{const saved=JSON.parse(sessionStorage.getItem(storageKey));if(saved){Object.assign(watch,saved.watch);Object.assign(countdown,saved.countdown);total=saved.total;lastRest=saved.lastRest;complete=saved.complete;}}catch(_){}}
 if(args.has_rest&&lastRest!==args.rest_seconds){lastRest=args.rest_seconds;total=Math.max(0,Number(lastRest)||0);countdown.reset();complete=false;}
 el('seconds').value=total;el('apply-watch').hidden=!args.can_apply;el('rest-hint').textContent=args.has_rest?'Vinculado ao campo Descanso entre séries. Alterar o tempo reinicia a contagem.':'Ajuste o tempo de sua atividade. O cronômetro e este temporizador são independentes.';
+el('watch-hint').textContent=args.can_apply?'Pause antes de transferir o tempo. Não salva o treino automaticamente.':'Use para medir suas séries; registre as repetições no formulário.';
 paint();persist();send('streamlit:setFrameHeight',{height:document.documentElement.scrollHeight});});
 new ResizeObserver(()=>send('streamlit:setFrameHeight',{height:document.documentElement.scrollHeight})).observe(document.body);
 setInterval(paint,200);document.addEventListener('visibilitychange',paint);send('streamlit:componentReady',{apiVersion:1});

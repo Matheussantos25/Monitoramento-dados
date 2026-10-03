@@ -31,7 +31,7 @@ assert.equal(finalEvent.duration_seconds, 125);
 assert.equal(finalEvent.km, 0);
 assert.equal(elements.elapsed.textContent, '00:02:05');
 // Exercise the actual timer controls, component messages and rest synchronization.
-const timerElements = Object.fromEntries(['stopwatch','countdown','start-watch','reset-watch','apply-watch','seconds','start-count','reset-count','rest-hint','done'].map(id=>[id,{textContent:'',value:60}]));
+const timerElements = Object.fromEntries(['stopwatch','countdown','start-watch','reset-watch','apply-watch','seconds','start-count','reset-count','rest-hint','watch-hint','done'].map(id=>[id,{textContent:'',value:60}]));
 let render, paint, timerEvent, sequence=0;
 const storage = new Map();
 const timerContext = vm.createContext({
