@@ -98,10 +98,12 @@ import com.matheussantos.solem.domain.*
     }
     val topics = questions.groupBy { it.exercicio + " • " + it.extra("topico_edital").ifBlank { "Geral" } }
     Page("Evolução nos estudos") {
-        OutlinedButton({ showSyllabus = !showSyllabus }) { Text(if (showSyllabus) "Ocultar edital" else "Ver edital completo") }
-        if (showSyllabus) SelectionContainer { Text(syllabus) }
+        if (!catalog.generic) {
+            OutlinedButton({ showSyllabus = !showSyllabus }) { Text(if (showSyllabus) "Ocultar edital" else "Ver edital completo") }
+            if (showSyllabus) SelectionContainer { Text(syllabus) }
+        }
         Choice("Período", period, catalog.periods) { period = it }
-        Goal("Questões de hoje", periodRows.filter { it.data == today().toString() && it.extra("fonte_questoes") != "Anki" }.sumOf { it.repeticoes.toDouble() }, 150)
+        Goal("Questões de hoje", periodRows.filter { it.data == today().toString() && it.extra("fonte_questoes") != "Anki" }.sumOf { it.repeticoes.toDouble() }, if (catalog.generic) 10 else 150)
         Choice("Fonte", source, listOf("Todas") + periodRows.map { it.extra("fonte_questoes") }.distinct()) { source = it }
         Panel("Seu desempenho") {
             Text("%.1f horas líquidas • %.1f%% de acerto".format(study.sumOf { it.studyMinutes() } / 60, accuracy(questions)))
@@ -130,7 +132,7 @@ import com.matheussantos.solem.domain.*
                 Text("${today().plusDays(i.toLong())} • $subject\n${choices[index % choices.size]}")
                 HorizontalDivider()
             }
-            Text("Inclua Matemática e Português diariamente.")
+            Text(if (catalog.generic) "Sugestões de revisão; adapte seu planejamento na aba Cronograma." else "Inclua Matemática e Português diariamente.")
         }
     }
 }

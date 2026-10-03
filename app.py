@@ -16,6 +16,7 @@ from solem_health import (training_measure_stats, training_category_stats, train
                           workout_fields, format_one_decimal, now_local)
 from solem_gps import gps_distance_tracker
 from solem_workout_timer import workout_timer, apply_timing_event
+from solem_account import DEFAULTS, generic_account, activity_table, personal_study_topics
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
 def safe_get(val, key, default=None):
@@ -28,6 +29,8 @@ def safe_get(val, key, default=None):
     return default
 
 def carregar_prompts_estudo():
+    if st.session_state.get("generic_account", False):
+        return DEFAULTS["prompts"].copy()
     pasta_prompts = Path(__file__).resolve().parent / "prompts"
     prompts = {}
     titulos_personalizados = {
@@ -308,9 +311,25 @@ apply_theme()
 
 IS_DEMO = os.environ.get("SOLEM_DEMO") == "1"
 logout_private = None
+GENERIC_ACCOUNT = False
 if not IS_DEMO:
     from solem_workspace_ui import require_login, logout_private
-    require_login()
+    account_client = require_login()
+    account_user = account_client.auth.get_session().user
+    GENERIC_ACCOUNT = generic_account(account_user.email, account_user.created_at)
+else:
+    GENERIC_ACCOUNT = os.environ.get("SOLEM_DEMO_PROFILE") == "generic"
+st.session_state["generic_account"] = GENERIC_ACCOUNT
+if GENERIC_ACCOUNT:
+    EXERCICIOS_PRESETADOS = DEFAULTS["EXERCICIOS_PRESETADOS"]
+    TODOS_EXERCICIOS = sorted(ex for group in EXERCICIOS_PRESETADOS.values() for ex in group)
+    TOPICOS_EDITAL = DEFAULTS["TOPICOS_EDITAL"]
+    DISCIPLINAS_ESTUDO = sorted(TOPICOS_EDITAL)
+    DECKS_ANKI = DEFAULTS["DECKS_ANKI"]
+    FONTES_QUESTOES = DEFAULTS["FONTES_QUESTOES"]
+    ROTA_ESTRATEGICA = list(TOPICOS_EDITAL)
+    PESOS_DISCIPLINA = {subject: 1 for subject in DISCIPLINAS_ESTUDO}
+ACTIVITY_TABLE = activity_table(GENERIC_ACCOUNT) if not IS_DEMO else "treinos"
 
 # --- BANCO DE DADOS ---
 @st.cache_resource
@@ -324,7 +343,7 @@ if IS_DEMO:
     st.caption("DEMONSTRAÇÃO · Dados fictícios. Alterações ficam apenas nesta sessão.")
 else:
     try:
-        supabase = init_connection()
+        supabase = account_client if GENERIC_ACCOUNT else init_connection()
     except Exception:
         st.error("Não foi possível conectar ao banco. Verifique a configuração de conexão do app.")
         st.stop()
@@ -333,7 +352,7 @@ def fetch_data():
     rows = []
     page_size = 500
     while True:
-        page = supabase.table("treinos").select("*").order("id").range(
+        page = supabase.table(ACTIVITY_TABLE).select("*").order("id").range(
             len(rows), len(rows) + page_size - 1).execute().data
         rows.extend(page)
         if len(page) < page_size:
@@ -437,7 +456,7 @@ def preparar_importacao_simulado(payload):
     schemas_aceitos = {"solem_simulado_v1", "solem_simulado_ce_v1"}
     if schema not in schemas_aceitos:
         erros.append("O campo schema precisa ser 'solem_simulado_v1' ou 'solem_simulado_ce_v1'.")
-    fonte_importacao = "IA (FGV adaptado C/E)" if schema == "solem_simulado_ce_v1" else "IA (Estilo FGV)"
+    fonte_importacao = ("Gerado por IA" if globals().get("GENERIC_ACCOUNT", False) else ("IA (FGV adaptado C/E)" if schema == "solem_simulado_ce_v1" else "IA (Estilo FGV)"))
 
     simulado_id = str(payload.get("simulado_id", "")).strip()
     if not simulado_id:
@@ -685,6 +704,9 @@ except Exception:
 
 if not df_raw.empty:
     df_raw['data'] = pd.to_datetime(df_raw['data'])
+if GENERIC_ACCOUNT:
+    TOPICOS_EDITAL = personal_study_topics(TOPICOS_EDITAL, df_raw.to_dict("records"))
+    DISCIPLINAS_ESTUDO = sorted(TOPICOS_EDITAL)
 
 if not df_raw.empty:
     df_treinos = df_raw[~df_raw['grupo_muscular'].isin(['Nutrição', 'Métricas', 'Estudos'])].copy()
@@ -837,7 +859,7 @@ if pagina == "Treino":
                     "alimentacao_saudavel": "", "alimentacao_besteirol": "",
                     "peso_corporal": 0.0, "dados_extras": mochila_json 
                 }
-                supabase.table("treinos").insert(dados).execute()
+                supabase.table(ACTIVITY_TABLE).insert(dados).execute()
                 st.session_state.pop(f"treino_tempo_medido_{exercicio_input}", None)
                 st.session_state["solem_feedback"] = "Treino salvo. Seu progresso foi atualizado."
                 st.rerun()
@@ -901,7 +923,7 @@ if pagina == "Treino":
                     dados_flexao.update({"grupo_muscular": "Peitoral", "exercicio": "Flexão", "repeticoes": int(rounds * 10), "duracao_min": 0})
                     dados_agachamento = dados_barra.copy()
                     dados_agachamento.update({"grupo_muscular": "Pernas", "exercicio": "Agachamento", "repeticoes": int(rounds * 15), "duracao_min": 0})
-                    supabase.table("treinos").insert([dados_barra, dados_flexao, dados_agachamento]).execute()
+                    supabase.table(ACTIVITY_TABLE).insert([dados_barra, dados_flexao, dados_agachamento]).execute()
                     st.session_state["solem_feedback"] = "Circuito salvo. Os três exercícios estão no seu histórico."
                     st.rerun()
                 else: st.error("Insira pelo menos 1 round para registrar o treino.")
@@ -998,7 +1020,7 @@ if pagina == "Alimentação":
             lista_s = alim_s_preset + ([alim_s_extra.strip()] if alim_s_extra.strip() else [])
             lista_b = alim_b_preset + ([alim_b_extra.strip()] if alim_b_extra.strip() else [])
             dados_dieta = { "data": str(data_dieta), "horario": "00:00:00", "grupo_muscular": "Nutrição", "exercicio": "Refeição Diária", "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0, "alimentacao_saudavel": ", ".join(lista_s), "alimentacao_besteirol": ", ".join(lista_b), "peso_corporal": 0.0, "dados_extras": {} }
-            supabase.table("treinos").insert(dados_dieta).execute()
+            supabase.table(ACTIVITY_TABLE).insert(dados_dieta).execute()
             st.session_state["solem_feedback"] = "Refeição registrada. Seu diário está atualizado."
             st.rerun()
 
@@ -1014,7 +1036,7 @@ if pagina == "Peso":
         with c_p2: peso_corporal_input = st.number_input("Seu Peso (kg)", min_value=0.0, step=0.1)
         if st.form_submit_button("Salvar medida", use_container_width=True):
             dados_peso = { "data": str(data_peso), "horario": "00:00:00", "grupo_muscular": "Métricas", "exercicio": "Peso Diário", "series": 0, "repeticoes": 0, "carga_kg": 0, "descanso_seg": 0, "duracao_min": 0, "distancia_km": 0, "alimentacao_saudavel": "", "alimentacao_besteirol": "", "peso_corporal": float(peso_corporal_input), "dados_extras": {} }
-            supabase.table("treinos").insert(dados_peso).execute()
+            supabase.table(ACTIVITY_TABLE).insert(dados_peso).execute()
             st.session_state["solem_feedback"] = "Medida salva no seu histórico."
             st.rerun()
 
@@ -1023,7 +1045,10 @@ if pagina == "Peso":
 # ==========================================
 if pagina == "Estudar":
     section_intro('MENTE EM MOVIMENTO', 'Um espaço para o foco.', 'Escolha seu próximo tema, concentre-se e registre seu aprendizado.')
-    st.markdown("<h3 style='margin-bottom: 20px; color: #83DCFF;'>Central de foco · Operação FGV</h3>", unsafe_allow_html=True)
+    if GENERIC_ACCOUNT:
+        st.subheader("Central de foco")
+    else:
+        st.markdown("<h3 style='margin-bottom: 20px; color: #83DCFF;'>Central de foco · Operação FGV</h3>", unsafe_allow_html=True)
 
     mensagem_importacao = st.session_state.pop("mensagem_importacao_simulado", None)
     if mensagem_importacao:
@@ -1095,7 +1120,7 @@ if pagina == "Estudar":
                         key="executar_importacao_simulado"
                     ):
                         try:
-                            supabase.table("treinos").insert(importacao_preparada["registros"]).execute()
+                            supabase.table(ACTIVITY_TABLE).insert(importacao_preparada["registros"]).execute()
                             st.session_state.pop("importacao_simulado_preparada", None)
                             st.session_state["mensagem_importacao_simulado"] = (
                                 f"Simulado '{importacao_preparada['simulado_id']}' importado com "
@@ -1138,7 +1163,10 @@ if pagina == "Estudar":
         '</div>'
         '</div>'
     )
-    st.markdown(html_bussola, unsafe_allow_html=True)
+    if GENERIC_ACCOUNT:
+        st.info(f"Próximo tema sugerido: {prox_disciplina} · {prox_topico_sugerido}")
+    else:
+        st.markdown(html_bussola, unsafe_allow_html=True)
 
     col_pomodoro, col_registro = st.columns([1, 1.5], gap="large")
     with col_pomodoro:
@@ -1272,21 +1300,21 @@ if pagina == "Estudar":
 
     with col_registro:
         st.markdown("#### Registrar sessão")
-        tipo_sessao = st.radio("Tipo de Sessão", ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"], horizontal=True)
+        tipo_sessao = st.radio("Tipo de Sessão", ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"] + (["📚 Leitura / Prática"] if GENERIC_ACCOUNT else []), horizontal=True)
 
         if tipo_sessao == "🃏 Revisão (Anki)":
             disciplina = st.selectbox("Deck do Anki", DECKS_ANKI)
             topicos_disponiveis = []
         else:
             index_recomendado = DISCIPLINAS_ESTUDO.index(prox_disciplina) if prox_disciplina in DISCIPLINAS_ESTUDO else 0
-            disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO, index=index_recomendado, key="disciplina_estudo_select")
+            disciplina = st.selectbox("Módulo / Disciplina", DISCIPLINAS_ESTUDO, index=index_recomendado, key="disciplina_estudo_select", accept_new_options=GENERIC_ACCOUNT)
             topicos_disponiveis = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(disciplina, ["Geral"])
 
         with st.form("registro_estudo", clear_on_submit=True):
             data_estudo = st.date_input("Data da Sessão", value=(datetime.utcnow() - timedelta(hours=3)).date())
             
             if tipo_sessao != "🃏 Revisão (Anki)":
-                topicos_selecionados = st.multiselect("📖 Tópico(s) do Edital", topicos_disponiveis)
+                topicos_selecionados = st.multiselect("Tópicos de estudo" if GENERIC_ACCOUNT else "📖 Tópico(s) do Edital", topicos_disponiveis, accept_new_options=GENERIC_ACCOUNT)
                 topicos_str = ", ".join(topicos_selecionados) if topicos_selecionados else "Geral"
             else: topicos_str = "Revisão Espaçada"
             
@@ -1313,18 +1341,22 @@ if pagina == "Estudar":
                 with c_est1: tempo_estudo = st.number_input("Tempo Líquido (min)", min_value=0, step=10)
                 with c_est2: cartoes_anki = st.number_input("🔄 Cartões Revisados", min_value=0, step=10)
                 fonte_questoes = "Anki"
+            elif tipo_sessao == "📚 Leitura / Prática":
+                tempo_estudo = st.number_input("Tempo de leitura ou prática (min)", min_value=0, step=5)
 
             st.write("")
             if st.form_submit_button("Salvar sessão", use_container_width=True):
                 total_q = cartoes_anki if tipo_sessao == "🃏 Revisão (Anki)" else certas + erradas
                 mochila_estudo_json = { "topico_edital": topicos_str, "q_certas": certas, "q_erradas": erradas, "tempo_video": tempo_video, "fonte_questoes": fonte_questoes }
+                if GENERIC_ACCOUNT:
+                    mochila_estudo_json["tipo_sessao"] = "Leitura / Prática" if tipo_sessao == "📚 Leitura / Prática" else tipo_sessao
                 horario_br = (datetime.utcnow() - timedelta(hours=3)).strftime("%H:%M:%S")
                 dados_estudo = {
                     "data": str(data_estudo), "horario": str(horario_br), "grupo_muscular": "Estudos", "exercicio": disciplina, 
                     "series": 0, "repeticoes": int(total_q), "carga_kg": 0.0, "descanso_seg": 0, "duracao_min": int(tempo_estudo),
                     "distancia_km": 0.0, "alimentacao_saudavel": "", "alimentacao_besteirol": "", "peso_corporal": 0.0, "dados_extras": mochila_estudo_json 
                 }
-                supabase.table("treinos").insert(dados_estudo).execute()
+                supabase.table(ACTIVITY_TABLE).insert(dados_estudo).execute()
                 st.session_state["solem_feedback"] = "Sessão salva. Mais um passo na sua jornada."
                 st.rerun()      
 
@@ -1355,8 +1387,9 @@ if pagina == "Evolução nos estudos":
     )
     st.markdown(html_motivacional, unsafe_allow_html=True)
     
-    with st.expander("📖 Clique para visualizar o Edital Completo"):
-        st.markdown("""
+    if not GENERIC_ACCOUNT:
+        with st.expander("📖 Clique para visualizar o Edital Completo"):
+            st.markdown("""
         **MATEMÁTICA E ESTATÍSTICA APLICADA:** I MATEMÁTICA: 1 Cálculo: Funções. Limites. Derivadas. Derivadas Parciais. Máximos e mínimos. Integrais. 2 Álgebra linear: Notação de vetores e matrizes. Produto escalar e produto vetorial. Matriz identidade, inversa e transposta. Transformações lineares. Normas L1 e L2. Autovalores e autovetores. II ESTATÍSTICA: 1 Conceitos de probabilidade. Modelo de probabilidade. Probabilidade condicional. Independência. Variáveis aleatórias. Esperança, variância e covariância. Distribuições contínuas e discretas. Distribuições multidimensionais: matriz de covariância. 2 Estatísticas descritivas. Teorema do Limite Central. Teste de hipótese e intervalo de confiança. Estimador de máxima verossimilhança. Inferência bayesiana. Coeficiente de correlação de Pearson. Diagrama boxplot e avaliação de outliers.
         
         **CIÊNCIA DE DADOS:** 1 Aprendizado supervisionado: Regressão e Classificação. Métricas de avaliação. Overfitting e underfitting de modelos. Regularização. Seleção de modelos. Validação cruzada. Conjunto de treino, validação e teste. Trade off entre variância e viés. Regressão Linear e Regressão Logística. Árvores de Decisão e random forests. SVM. K-NN. 2 Aprendizado não-supervisionado: Redução de dimensionalidade: PCA. K-Means. Mistura de Gaussianas. Regras de Associação. 3 Redes neurais artificiais: Definições e arquitetura. Funções de ativação. Otimização: método do gradiente, método do gradiente estocástico e backpropagation. Métodos de regularização: penalização com normas L1 e L2. CNN. 4 Machine Learning aplicado. Noções de visão computacional com CNN. Classificação de imagens e detecção de objetos. Noções de processamento de linguagem natural. 5 ETL. 6 Manipulação, tratamento e visualização de dados. 7 Inteligência artificial. 7.1 Análise de dados (Pandas, NumPy, Jupiter, R). 7.2 Aprendizado de máquina. 7.2.1 Técnicas de classificação. 7.2.2 Técnicas de regressão. 7.2.3 Técnicas de agrupamento. 7.2.4 Técnicas de redução de dimensionalidade. 7.2.5 Técnicas de associação. 7.2.6 Sistemas de recomendação. 8 Processamento de linguagem natural (PLN). 9 Visão computacional. 10 Deep learning. 11 Mineração de Dados. 12 Ferramenta SAS.
@@ -1376,9 +1409,9 @@ if pagina == "Evolução nos estudos":
         **ATUALIDADES E INTELIGÊNCIA ARTIFICIAL:** 1 Tópicos relevantes e atuais de diversas áreas, tais como segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, desenvolvimento sustentável e ecologia. 2 Inteligência Artificial: fundamentos e aplicações: conceitos de inteligência artificial; aprendizado da máquina; introdução aos modelos generativos e modelos de linguagem; ética, governança e privacidade em IA.
         
         **LEGISLAÇÃO ACERCA DE SEGURANÇA DA INFORMAÇÃO E PROTEÇÃO DE DADOS:** 1 Lei nº 12.527/2011 (Lei de Acesso à Informação): capítulos I, II, III, IV e V; Dec. nº 7.724 e nº 7845. 2 Lei nº 12.737/2012 (Lei de Delitos Informáticos): art. 2º. 3 Lei nº 12.965/2014 (Marco Civil da Internet): capítulos II, Seção I, e III, Seções I e II. 4 Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais – LGPD): capítulos I, II, III, IV, VII, VIII
-        """)
+            """)
 
-    meta_diaria = 150
+    meta_diaria = DEFAULTS["checkup_targets"]["questions"] if GENERIC_ACCOUNT else 150
     questoes_hoje = 0
     if not df_estudos_dash.empty:
         df_estudos_dash['data_real'] = pd.to_datetime(df_estudos_dash['data'])
@@ -1549,7 +1582,7 @@ if pagina == "Evolução nos estudos":
             cronograma_dados.append({ "Data": dia.strftime("%d/%m"), "Dia da Semana": dias_semana_map[dia.weekday()], "Disciplina de Rodízio": disc_atual, "Assunto (Subdisciplina)": topico_atual })
         df_cronograma = pd.DataFrame(cronograma_dados)
         st.dataframe(df_cronograma, use_container_width=True, hide_index=True, height=250)
-        st.write("*Lembre-se: Matemática e Português devem ser incluídos diariamente, independente da Disciplina de Rodízio do dia.*")
+        st.write("Sugestões de revisão; adapte seu planejamento na aba Cronograma." if GENERIC_ACCOUNT else "*Lembre-se: Matemática e Português devem ser incluídos diariamente, independente da Disciplina de Rodízio do dia.*")
 
         st.write("---")
         with st.container(border=True):
@@ -1566,7 +1599,7 @@ if pagina == "Evolução nos estudos":
             else: st.info("Registre 'Questões Corretas/Erradas' para gerar este gráfico.")
 
         st.markdown("---")
-        st.markdown("#### 📖 Análise Granular por Tópico do Edital")
+        st.markdown("#### Análise por tópico de estudo" if GENERIC_ACCOUNT else "#### 📖 Análise Granular por Tópico do Edital")
         disciplinas_unicas = df_dash_est['exercicio'].unique().tolist()
         disciplina_selecionada = st.selectbox("Filtrar Tópicos por Disciplina:", ["Visão Geral (Todas)"] + disciplinas_unicas)
         df_tops = df_dash_est.copy()
@@ -1661,7 +1694,7 @@ if pagina in ("Configurações", "Treino", "Estudar"):
                 confirm, cancel = st.columns(2)
                 with confirm:
                     if st.button("Confirmar exclusão deste registro", key=f"manage_confirm_{pagina}_{pending_id}", type="primary"):
-                        supabase.table("treinos").delete().eq("id", int(pending_id)).execute()
+                        supabase.table(ACTIVITY_TABLE).delete().eq("id", int(pending_id)).execute()
                         st.session_state.pop(f"manage_delete_{pagina}", None)
                         if st.session_state.get(f"manage_selected_{pagina}") == pending_id:
                             st.session_state.pop(f"manage_selected_{pagina}", None)
@@ -1698,12 +1731,15 @@ if pagina in ("Configurações", "Treino", "Estudar"):
             if is_anki_default: tipo_padrao = "🃏 Revisão (Anki)"
             elif has_video and not has_questoes: tipo_padrao = "🎥 Apenas Vídeo Aula"
             else: tipo_padrao = "📝 Apenas Questões"
+            if GENERIC_ACCOUNT and extras.get("tipo_sessao") == "Leitura / Prática":
+                tipo_padrao = "📚 Leitura / Prática"
+            tipos_edit = ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"] + (["📚 Leitura / Prática"] if GENERIC_ACCOUNT else [])
 
             st.write("---")
             tipo_sessao_edit = st.radio(
                 "Mudar Tipo de Sessão (Corrija se registrou errado):",
-                ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"],
-                index=["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"].index(tipo_padrao),
+                tipos_edit,
+                index=tipos_edit.index(tipo_padrao),
                 horizontal=True, key=f"radio_tipo_edit_{id_real}"
             )
 
@@ -1737,7 +1773,7 @@ if pagina in ("Configurações", "Treino", "Estudar"):
                     old_topicos_str = extras.get('topico_edital', 'Geral')
                     old_topicos_list = [t.strip() for t in old_topicos_str.split(',')] if old_topicos_str else []
                     valid_old_topicos = [t for t in old_topicos_list if t in topicos_disp]
-                    new_topicos = st.multiselect("Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
+                    new_topicos = st.multiselect("Tópicos de estudo" if GENERIC_ACCOUNT else "Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
                     new_vid = st.number_input("Tempo Vídeo (min)", min_value=0, value=int(extras.get('tempo_video', 0)))
                     new_dur = 0; new_certas = 0; new_erradas = 0; new_cartoes = 0; new_fonte = "Não Aplicável"
 
@@ -1748,7 +1784,7 @@ if pagina in ("Configurações", "Treino", "Estudar"):
                     old_topicos_str = extras.get('topico_edital', 'Geral')
                     old_topicos_list = [t.strip() for t in old_topicos_str.split(',')] if old_topicos_str else []
                     valid_old_topicos = [t for t in old_topicos_list if t in topicos_disp]
-                    new_topicos = st.multiselect("Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
+                    new_topicos = st.multiselect("Tópicos de estudo" if GENERIC_ACCOUNT else "Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
                     c3, c4, c5 = st.columns(3)
                     with c3:
                         dur_val = row_data.get('duracao_min', 0)
@@ -1760,6 +1796,11 @@ if pagina in ("Configurações", "Treino", "Estudar"):
                         old_fonte = extras.get('fonte_questoes', 'Não Informada')
                         idx_fonte = FONTES_QUESTOES.index(old_fonte) if old_fonte in FONTES_QUESTOES else 0
                         new_fonte = st.selectbox("Fonte das Questões", FONTES_QUESTOES, index=idx_fonte)
+                elif tipo_sessao_edit == "📚 Leitura / Prática":
+                    new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=DISCIPLINAS_ESTUDO.index(row_data['exercicio']))
+                    new_topicos = st.multiselect("Tópicos de estudo", TOPICOS_EDITAL.get(new_ex, ["Fundamentos"]), default=[x.strip() for x in extras.get('topico_edital', '').split(',') if x.strip() in TOPICOS_EDITAL.get(new_ex, [])], accept_new_options=True)
+                    new_dur = st.number_input("Tempo de leitura ou prática (min)", min_value=0, value=int(row_data.get('duracao_min') or 0), key=f"reading_edit_duration_{id_real}")
+                    new_vid = 0; new_certas = 0; new_erradas = 0; new_cartoes = 0; new_fonte = "Não Aplicável"
                     new_vid = 0; new_cartoes = 0
                 
             elif is_treino:
@@ -1805,6 +1846,8 @@ if pagina in ("Configurações", "Treino", "Estudar"):
                 if tipo_sessao_edit == "🃏 Revisão (Anki)": update_data["repeticoes"] = new_cartoes
                 else: update_data["repeticoes"] = new_certas + new_erradas
                 extras["topico_edital"] = ", ".join(new_topicos) if new_topicos else ("Revisão Espaçada" if tipo_sessao_edit == "🃏 Revisão (Anki)" else "Geral")
+                if GENERIC_ACCOUNT:
+                    extras["tipo_sessao"] = "Leitura / Prática" if tipo_sessao_edit == "📚 Leitura / Prática" else tipo_sessao_edit
                 extras["q_certas"] = new_certas
                 extras["q_erradas"] = new_erradas
                 extras["tempo_video"] = new_vid
@@ -1828,7 +1871,7 @@ if pagina in ("Configurações", "Treino", "Estudar"):
             elif is_peso:
                 update_data["peso_corporal"] = new_peso
             
-            supabase.table("treinos").update(update_data).eq("id", id_real).execute()
+            supabase.table(ACTIVITY_TABLE).update(update_data).eq("id", id_real).execute()
             st.session_state["solem_feedback"] = "Registro atualizado. Seu progresso foi recalculado."
             st.rerun()
 
@@ -1839,7 +1882,7 @@ if pagina in ("Configurações", "Treino", "Estudar"):
                 st.warning("A exclusão é permanente e recalcula o progresso associado a esta atividade.")
                 confirmed = st.checkbox("Confirmo que quero excluir este registro permanentemente", key=f"confirm_legacy_{id_real}")
                 if st.button("Excluir registro permanentemente", disabled=not confirmed, type="primary", use_container_width=True):
-                    supabase.table("treinos").delete().eq("id", id_real).execute()
+                    supabase.table(ACTIVITY_TABLE).delete().eq("id", id_real).execute()
                     st.session_state["solem_feedback"] = "Registro excluído. Seu histórico foi atualizado."
                     st.rerun()
     else: st.info("Seu histórico ainda está vazio. Registre uma atividade para começar sua jornada.")

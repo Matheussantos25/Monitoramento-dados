@@ -93,7 +93,7 @@ def overview(p, records=None, private_entries=None):
         <div class="system-status__foot"><span>◈ {p['streak']} dias de sequência</span><span>+{p['today_xp']} XP hoje</span></div>
     </section>''')
     if records is not None:
-        goals = daily_checkup(records, private_entries, today)
+        goals = daily_checkup(records, private_entries, today, st.session_state.get("generic_account", False))
         available = [goal for goal in goals if goal["value"] is not None]
         done_count = sum(goal["done"] for goal in available)
         st.html(f'<div class="section-title checkup-title"><h2>Check-up de hoje</h2><span>{done_count} de {len(available)} metas acompanhadas</span></div>')

@@ -10,6 +10,7 @@ import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.storage
 import io.ktor.http.ContentType
 import kotlinx.serialization.json.*
@@ -20,6 +21,7 @@ class WorkspaceRepository {
         install(Auth)
         install(Postgrest)
         install(Storage)
+        install(Realtime)
     }
     suspend fun list(): List<PersonalItem> {
         check(client.auth.currentUserOrNull() != null) { "Entre novamente para abrir seu espaço privado." }

@@ -108,3 +108,12 @@ Limitações conhecidas:
 - A sincronização depende da conexão, das permissões e da publicação Realtime existentes. Há atualização manual como alternativa.
 
 Antes de distribuir amplamente, valide em um aparelho: leitura do histórico, criação/edição/exclusão de um registro de teste em cada área, atualização pela web, importação de um simulado de teste e áudio/vídeo. Não execute testes destrutivos sobre registros reais.
+# Novas contas — 0.9.9
+
+O APK identifica o perfil após restaurar/validar o login, pela data de cadastro do
+Supabase Auth e pelo manifesto compartilhado `account_defaults.json`. Novas contas
+usam catálogos amplos, prompts gerais e históricos privados em `solem_activities`.
+Contas existentes continuam com os catálogos e histórico legados. O ViewModel de
+treino é separado por ID de conta para não reaproveitar a lista de outro login.
+Instale o novo APK para receber esta seleção; APKs antigos continuam com o catálogo
+antigo. Nenhuma chave privilegiada foi adicionada.

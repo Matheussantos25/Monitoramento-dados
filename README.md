@@ -90,3 +90,25 @@ Os testes cobrem progresso, navegação, cálculos de água/sono/treino e remoç
 ## Atualizar o Streamlit Community Cloud
 
 Revise as alterações e integre a branch da interface à branch utilizada pelo aplicativo (atualmente `main`). Inclua os módulos, a pasta `assets` e `.streamlit/config.toml`, além de `app.py`. Preserve os Secrets existentes. A integração com Supabase em produção deve ser conferida após a atualização, pois os testes locais não usam suas credenciais.
+# Padrões de novas contas (0.9.9)
+
+Novos cadastros a partir de `2026-10-03T23:00:00Z` recebem exercícios comuns,
+áreas de aprendizagem amplas, assuntos/tópicos personalizáveis, leitura/prática,
+e 9 prompts para aprender, revisar, programar, praticar idiomas e organizar projetos.
+O manifesto `account_defaults.json` é usado pelo site e exportado para o Android.
+Contas anteriores mantêm os padrões antigos; a conta pessoal preservada no manifesto
+mantém sempre a experiência anterior. Isso é uma preferência de compatibilidade,
+não um papel administrativo nem uma regra de autorização.
+
+Os novos usuários começam sem histórico de treino/estudo e usam `solem_activities`,
+criada no mesmo Supabase por `supabase/new-account-activities.sql`, com identidade,
+`user_id` automático e RLS de proprietário para leitura/escrita. Os módulos privados
+de saúde/biblioteca/financeiro continuam nas tabelas privadas existentes. Não há
+migração/cópia/modificação dos registros legados. Não há fallback para `treinos`
+em caso de erro. Realtime é ativado na tabela nova; o Android mantém a consulta
+de recuperação se a assinatura falhar.
+
+**Limitação legada:** a tabela antiga `treinos` permanece com as permissões existentes.
+Não confunda esconder seu histórico nas novas telas com proteger a API legada.
+Uma migração de propriedade/RLS do legado é uma tarefa separada, pois alteraria as
+contas existentes. O seletor usa a data de criação do Auth, não metadata editável.

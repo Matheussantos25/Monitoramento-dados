@@ -40,9 +40,10 @@ def promotion_overlay(tier, label):
     </section>''')
 
 def rank_panel(records, topics, today):
+    generic = st.session_state.get("generic_account", False)
     data = ranks(records, topics, today)
     st.subheader('Sua jornada ranqueada')
-    st.caption('Físico por repetições acumuladas · Estudos por acerto e volume de questões em cada tópico do edital.')
+    st.caption('Físico por repetições acumuladas · Estudos por acerto e volume de questões em cada tópico de estudo.' if generic else 'Físico por repetições acumuladas · Estudos por acerto e volume de questões em cada tópico do edital.')
     with st.expander('Efeitos e regras dos elos'):
         st.caption('As promoções são celebradas automaticamente com animação e som. Sem perda por descanso. Corrigir ou excluir registros recalcula os elos; a celebração não se repete ao atualizar a página. O navegador pode bloquear áudio automático até a primeira interação.')
         st.dataframe([{'Elo': n, 'Repetições acumuladas': REP_LIMITS[i], 'Acerto mínimo (%)': ACCURACY_LIMITS[i], 'Questões mínimas por tópico': SAMPLE_LIMITS[i]} for i, n in enumerate(NAMES)], hide_index=True)
@@ -69,7 +70,7 @@ def rank_panel(records, topics, today):
         st.progress((data['reps'] - start) / (target - start), text=f"Próximo elo: {NAMES[tier + 1]} · faltam {target - data['reps']} repetições, no seu ritmo")
     else:
         st.caption('Mestre alcançado. Mantenha sua rotina e respeite o descanso.')
-    discipline = st.selectbox('Elos por disciplina do edital', list(topics), key='rank_discipline')
+    discipline = st.selectbox('Elos por área de estudo' if generic else 'Elos por disciplina do edital', list(topics), key='rank_discipline')
     selected = [x for x in data['topics'] if x['discipline'] == discipline]
     topic_name = st.selectbox('Insígnia do tópico', [x['topic'] for x in selected], key='rank_topic_emblem')
     selected_rank = next((x for x in selected if x['topic'] == topic_name), None)
@@ -77,7 +78,7 @@ def rank_panel(records, topics, today):
         emblem(selected_rank['tier'], 150)
         st.caption(selected_rank['rank'])
     placed = sum(x['tier'] >= 0 for x in data['topics'])
-    st.caption(f"Cobertura do edital: {placed}/{len(data['topics'])} tópicos com pelo menos 20 questões classificáveis.")
+    st.caption(f"{'Cobertura dos estudos' if generic else 'Cobertura do edital'}: {placed}/{len(data['topics'])} tópicos com pelo menos 20 questões classificáveis.")
     st.dataframe([{'Tópico': x['topic'], 'Elo': x['rank'], 'Acerto (%)': round(x['accuracy'], 1) if x['total'] else None, 'Questões': x['total'], 'Próximo passo': f"Resolver mais {20 - x['total']} questões" if x['total'] < 20 else ('Manter a revisão' if x['tier'] == 7 else f"{NAMES[x['tier']+1]}: ≥{SAMPLE_LIMITS[x['tier']+1]} questões e ≥{ACCURACY_LIMITS[x['tier']+1]}% de acerto")} for x in selected], hide_index=True, use_container_width=True)
     if data['ignored']:
-        st.info(f"{data['ignored']} questões não entram nos elos por tópico: tema genérico, múltiplos tópicos ou nome diferente do edital. Os registros originais foram preservados. Anki não entra nesta classificação.")
+        st.info(f"{data['ignored']} questões não entram nos elos por tópico: tema genérico, múltiplos tópicos ou nome diferente da {'lista de temas' if generic else 'lista do edital'}. Os registros originais foram preservados. Anki não entra nesta classificação.")

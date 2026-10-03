@@ -75,7 +75,7 @@ import kotlinx.coroutines.delay
             }
             Text("Sem perda por descanso. Séries não multiplicam o total. Cardio e isometria permanecem no XP e calendário.")
         }
-        Choice("Disciplina do edital", subject, catalog.topics.keys.toList()) { subject = it }
+        Choice(if (catalog.generic) "Área de estudo" else "Disciplina do edital", subject, catalog.topics.keys.toList()) { subject = it }
         Text("${ranks.topics.count { it.tier >= 0 }}/${ranks.topics.size} tópicos com colocação concluída")
         ranks.topics.filter { it.subject == subject }.forEach { topic ->
             Panel(topic.topic) {
@@ -86,7 +86,7 @@ import kotlinx.coroutines.delay
                 else if (topic.tier < 7) Text("Próximo: ${rankNames[topic.tier + 1]} · ≥${sampleLimits[topic.tier + 1]} questões e ≥${accuracyLimits[topic.tier + 1]}% de acerto")
             }
         }
-        Text("${ranks.ignored} questões sem correspondência única com o edital ficam fora dos elos. Anki não conta. Todo o histórico válido é considerado; editar registros recalcula o elo.")
+        Text("${ranks.ignored} questões sem correspondência única com ${if (catalog.generic) "os tópicos" else "o edital"} ficam fora dos elos. Anki não conta. Todo o histórico válido é considerado; editar registros recalcula o elo.")
         Panel("Regras propostas de gamificação") {
             rankNames.forEachIndexed { i, name -> Text("$name · físico ${repLimits[i]} reps · tópico ≥${sampleLimits[i]} questões / ≥${accuracyLimits[i]}%") }
         }

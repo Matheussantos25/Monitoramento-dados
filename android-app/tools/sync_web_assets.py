@@ -36,6 +36,7 @@ def save(path, value):
 
 assets = android / "app/src/main/assets"
 save(assets / "catalog.json", catalog)
+shutil.copy2(repo / "account_defaults.json", assets / "account_defaults.json")
 shutil.copytree(repo / "prompts", assets / "prompts", dirs_exist_ok=True)
 edital = next(n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str) and "**MATEMÁTICA E ESTATÍSTICA APLICADA:**" in n.value)
 (assets / "edital.txt").write_text(edital.strip(), encoding="utf-8")
@@ -67,6 +68,7 @@ for schema in ("solem_simulado_v1", "solem_simulado_ce_v1"):
         row["horario"] = "12:00:00"
     fixtures.append(dict(input=payload, expected=result["registros"]))
 resources = android / "app/src/test/resources"
+shutil.copy2(repo / "account_defaults.json", resources / "account_defaults.json")
 save(resources / "catalog.json", catalog)
 save(resources / "import-parity.json", fixtures)
 print("Exported web catalogs and workout profiles, original prompts/videos and 2 Python import parity fixtures.")

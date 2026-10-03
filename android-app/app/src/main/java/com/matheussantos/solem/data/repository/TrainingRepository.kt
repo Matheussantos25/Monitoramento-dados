@@ -10,9 +10,10 @@ import io.github.jan.supabase.realtime.selectAsFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonObject
 
-class TrainingRepository {
-    private val table = "treinos"
-    private val client get() = SupabaseProvider.client
+class TrainingRepository(
+    private val client: io.github.jan.supabase.SupabaseClient = SupabaseProvider.client,
+    private val table: String = "treinos"
+) {
 
     /** Initial SELECT plus INSERT/UPDATE/DELETE events when treinos is in Realtime replication. */
     @OptIn(SupabaseExperimental::class)

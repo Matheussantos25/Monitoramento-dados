@@ -25,6 +25,7 @@ import com.matheussantos.solem.viewmodel.WorkspaceViewModel
 import com.matheussantos.solem.data.model.PersonalItem
 import java.util.UUID
 import kotlinx.coroutines.delay
+import kotlinx.serialization.json.*
 
 @Composable fun TimerPanel(fixedSeconds: Int? = null) {
     var mode by rememberSaveable { mutableStateOf("Pomodoro") }
@@ -101,8 +102,10 @@ import kotlinx.coroutines.delay
         val next = nextSubject(rows, catalog)
         Panel("Bússola inteligente") {
             Text("Rotação principal: $next\n" + weakestTopic(rows, next, catalog))
+            if (!catalog.generic) {
             Text("Diário — Português\n" + weakestTopic(rows, "Língua Portuguesa", catalog))
             Text("Diário — Matemática\n" + weakestTopic(rows, "Matemática e Estatística Aplicada", catalog))
+            }
         }
         TimerPanel()
         Choice("Ação", panel, listOf("Registrar sessão", "Importar simulado")) { panel = it }
@@ -111,13 +114,18 @@ import kotlinx.coroutines.delay
         else ImportPanel(rows, catalog, busy) { values, done -> vm.insertBatch(values, done) }
     }
 }
-@Composable fun PromptsPage(vm: WorkspaceViewModel) {
+@Composable fun PromptsPage(vm: WorkspaceViewModel, generic: Boolean = false) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
-    val names = remember { context.assets.list("prompts").orEmpty().sorted() }
+    val models = remember(generic) {
+        if (generic) kotlinx.serialization.json.Json.parseToJsonElement(context.assets.open("account_defaults.json").bufferedReader().use { it.readText() }).jsonObject
+            .getValue("prompts").jsonObject.mapValues { it.value.jsonPrimitive.content }
+        else context.assets.list("prompts").orEmpty().sorted().associateWith { name -> context.assets.open("prompts/$name").bufferedReader().use { it.readText() } }
+    }
+    val names = models.keys.toList()
     var selected by rememberSaveable { mutableStateOf(names.firstOrNull().orEmpty()) }
     var showPersonal by rememberSaveable { mutableStateOf(false) }
-    val content = remember(selected) { if (selected.isBlank()) "" else context.assets.open("prompts/$selected").bufferedReader().use { it.readText() } }
+    val content = models[selected].orEmpty()
     if (showPersonal) {
         Column {
             OutlinedButton({ showPersonal = false }, Modifier.padding(horizontal=20.dp)) { Text("Voltar aos modelos prontos") }

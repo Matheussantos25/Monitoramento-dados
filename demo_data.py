@@ -36,7 +36,7 @@ def sample_records():
 class DemoClient:
     def __init__(self):
         if "solem_demo_records" not in st.session_state:
-            st.session_state["solem_demo_records"] = sample_records()
+            st.session_state["solem_demo_records"] = [] if st.session_state.get("generic_account") else sample_records()
 
     def table(self, name):
         if name != "treinos":

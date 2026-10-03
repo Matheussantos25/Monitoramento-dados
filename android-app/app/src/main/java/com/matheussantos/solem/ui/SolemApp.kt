@@ -32,14 +32,20 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
     when {
         !auth.initialized -> Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }
         !auth.signedIn -> WorkspacePage(workspaceVm)
-        else -> AuthenticatedSolemApp(workspaceVm)
+        else -> key(auth.accountId) { AuthenticatedSolemApp(workspaceVm, auth.accountId, auth.generic) }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun AuthenticatedSolemApp(workspaceVm: WorkspaceViewModel, vm: TrainingViewModel = viewModel()) {
+@Composable private fun AuthenticatedSolemApp(workspaceVm: WorkspaceViewModel, accountId: String, generic: Boolean) {
+    val vm: TrainingViewModel = viewModel(key="training-$accountId", factory=object : androidx.lifecycle.ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T = TrainingViewModel(
+            if (generic) com.matheussantos.solem.data.repository.TrainingRepository(workspaceVm.trainingClient, "solem_activities")
+            else com.matheussantos.solem.data.repository.TrainingRepository()
+        ) as T
+    })
     val context = LocalContext.current
-    val catalog = remember { Catalog(context) }
     val nav = rememberNavController()
     val state by vm.state.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
@@ -49,6 +55,7 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val rows = (state as? TrainingUiState.Ready)?.records.orEmpty()
+    val catalog = remember(generic, rows) { Catalog(context, generic).withStudyTopics(rows) }
     LaunchedEffect(message) { message?.let { snack.showSnackbar(it); vm.consumeMessage() } }
     ModalNavigationDrawer(drawerState=drawer,drawerContent={
         ModalDrawerSheet {
@@ -83,7 +90,7 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
                 else -> {}
             }
             NavHost(nav, startDestination = "0") {
-                composable("0") { Overview(rows, { nav.navigate(it.toString()) }, { exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}") }) }
+                composable("0") { Overview(rows, { nav.navigate(it.toString()) }, { exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}") }, generic) }
                 composable("1") {
                     var section by rememberSaveable { mutableStateOf("Registrar") }
                     Column(Modifier.fillMaxSize()) {
@@ -109,7 +116,7 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
                     }
                 }
                 composable("6") { StudyCharts(rows, catalog) }
-                composable("7") { PromptsPage(workspaceVm) }
+                composable("7") { PromptsPage(workspaceVm, generic) }
                 composable("8") { History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }) }
                 composable("new-workout/{exercise}") { entry ->
                     EntryScreen("Treino", catalog, rows, busy=busy,
@@ -138,7 +145,7 @@ fun kind(row: TrainingRecord) = when(row.group) {
     "Métricas" -> if (row.exercicio == "Sono Diário") "Saúde" else "Peso"
     else -> "Treino"
 }
-@Composable fun Overview(rows: List<TrainingRecord>, navigate: (Int) -> Unit, registerExercise: (String) -> Unit) {
+@Composable fun Overview(rows: List<TrainingRecord>, navigate: (Int) -> Unit, registerExercise: (String) -> Unit, generic: Boolean = false) {
     val p = calculateProgress(rows)
     Page("Seu espaço de evolução") {
         Panel("STATUS DO PERSONAGEM") {
@@ -165,17 +172,19 @@ fun kind(row: TrainingRecord) = when(row.group) {
         }
         val todayWorkouts = rows.filter { it.data.take(10) == today().toString() && it.isWorkout() }
         Panel("CHECK-UP DE HOJE") {
+            if (!generic) {
             Goal("Mewing com borracha", todayWorkouts.filter { it.exercicio == "Mewing com borracha" }
                 .sumOf { it.repeticoes.toDouble() }, 400, "rep")
             TextButton({registerExercise("Mewing com borracha")}) {Text("Registrar Mewing com borracha")}
+            }
             Goal("Flexões", todayWorkouts.filter { it.exercicio == "Flexão" }
-                .sumOf { it.repeticoes.toDouble() }, 50, "rep")
+                .sumOf { it.repeticoes.toDouble() }, if (generic) 10 else 50, "rep")
             TextButton({registerExercise("Flexão")}) {Text("Registrar Flexão")}
             Goal("Agachamentos", todayWorkouts.filter { it.exercicio == "Agachamento" }
-                .sumOf { it.repeticoes.toDouble() }, 50, "rep")
+                .sumOf { it.repeticoes.toDouble() }, if (generic) 15 else 50, "rep")
             TextButton({registerExercise("Agachamento")}) {Text("Registrar Agachamento")}
             Goal("Caminhada ou corrida", todayWorkouts.filter { it.exercicio == "Caminhada" || it.exercicio == "Corrida" }
-                .sumOf { it.distanceKm }, 5, "km", 2)
+                .sumOf { it.distanceKm }, if (generic) 1 else 5, "km", 2)
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 TextButton({registerExercise("Caminhada")}) {Text("Caminhada")}
                 TextButton({registerExercise("Corrida")}) {Text("Corrida")}

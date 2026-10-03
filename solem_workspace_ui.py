@@ -35,9 +35,9 @@ def logout_private():
             client.auth.sign_out()
         except Exception:
             pass
+    # Clear drafts, widget selections and progress too when changing accounts.
     for key in list(st.session_state):
-        if key.startswith(('private_', 'ws_')):
-            del st.session_state[key]
+        del st.session_state[key]
     st.session_state.solem_page = 'Visão geral'
 
 

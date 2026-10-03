@@ -18,14 +18,24 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.io.ByteArrayOutputStream
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.*
+import com.matheussantos.solem.domain.genericAccount
 
 data class WorkspaceState(val initialized: Boolean = false, val signedIn: Boolean = false, val busy: Boolean = false,
+    val accountId: String = "", val generic: Boolean = true,
     val items: List<PersonalItem> = emptyList(), val photos: List<ProgressPhoto> = emptyList(),
     val healthEntries: List<HealthEntry> = emptyList(),
     val photoData: Map<String, ByteArray> = emptyMap(), val message: String? = null, val failed: Boolean = false)
 class WorkspaceViewModel(application: Application): AndroidViewModel(application) {
+    private fun accountState(): Pair<String, Boolean> {
+        val user = repo.client.auth.currentUserOrNull()
+        val defaults = Json.parseToJsonElement(getApplication<Application>().assets.open("account_defaults.json").bufferedReader().use { it.readText() }).jsonObject
+        return user?.id.orEmpty() to genericAccount(user?.email, user?.createdAt?.toString(),
+            defaults.getValue("preserved_email").jsonPrimitive.content, defaults.getValue("new_accounts_since").jsonPrimitive.content)
+    }
     private var repository: WorkspaceRepository? = null
     private val repo get() = repository ?: WorkspaceRepository().also { repository=it }
+    val trainingClient get() = repo.client
     private val photoRepo get() = PhotoRepository(repo.client)
     private val healthRepo get() = HealthRepository(repo.client)
     private val mutableState = MutableStateFlow(WorkspaceState())
@@ -37,7 +47,8 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
             try {
                 repo.client.auth.awaitInitialization()
                 val logged = repo.client.auth.currentSessionOrNull() != null
-                mutableState.update { it.copy(initialized=true,signedIn=logged) }
+                val (id, generic) = accountState()
+                mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic) }
                 if (logged) load()
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) {
@@ -63,7 +74,8 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
         if (signup) repo.client.auth.signUpWith(Email) { this.email=email.trim(); this.password=password }
         else repo.client.auth.signInWith(Email) { this.email=email.trim(); this.password=password }
         val logged = repo.client.auth.currentUserOrNull() != null
-        mutableState.update { it.copy(initialized=true,signedIn=logged,items=emptyList(),message=if(!logged) "Confira seu e-mail para confirmar o cadastro e depois entre." else null) }
+        val (id, generic) = accountState()
+        mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic,items=emptyList(),message=if(!logged) "Confira seu e-mail para confirmar o cadastro e depois entre." else null) }
         if(logged) load()
     }
     private suspend fun load() { val rows = repo.list(); mutableState.update { it.copy(items=rows) } }

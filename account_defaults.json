@@ -1,0 +1,37 @@
+{
+  "new_accounts_since": "2026-10-03T23:00:00Z",
+  "preserved_email": "msdof25@gmail.com",
+  "EXERCICIOS_PRESETADOS": {
+    "Abdominal": ["Abdominal", "Prancha"],
+    "Bíceps": ["Rosca direta", "Barra Fixa (Supinada)"],
+    "Cardio": ["Bike", "Caminhada", "Corrida", "Pular Corda", "Subida Escada (Andares)"],
+    "Costas": ["Barra Fixa (Pronada)", "Puxada Alta", "Remada Baixa"],
+    "Peitoral": ["Flexão", "Supino"],
+    "Pernas": ["Agachamento", "Afundo", "Elevação de panturrilha"],
+    "Ombros": ["Desenvolvimento", "Elevação lateral"]
+  },
+  "TOPICOS_EDITAL": {
+    "Programação": ["Fundamentos", "Estruturas de dados", "Desenvolvimento web", "Aplicativos", "Testes", "Banco de dados"],
+    "Idiomas": ["Vocabulário", "Gramática", "Leitura", "Conversação", "Compreensão auditiva"],
+    "Matemática": ["Fundamentos", "Álgebra", "Geometria", "Estatística"],
+    "Ciências": ["Biologia", "Física", "Química", "Método científico"],
+    "Humanidades": ["História", "Geografia", "Filosofia", "Atualidades"],
+    "Comunicação": ["Escrita", "Apresentações", "Argumentação"],
+    "Projeto pessoal": ["Pesquisa", "Planejamento", "Prática", "Revisão"],
+    "Outro": ["Fundamentos", "Prática", "Revisão"]
+  },
+  "DECKS_ANKI": ["Idiomas", "Conceitos", "Revisão de erros", "Outro"],
+  "FONTES_QUESTOES": ["Curso", "Livro", "Plataforma de exercícios", "Gerado por IA", "Anki", "Outra"],
+  "checkup_targets": {"water": 2000, "flexao": 10, "agachamento": 15, "cardio": 1, "questions": 10, "study": 25},
+  "prompts": {
+    "Aprender um assunto do zero": "Atue como tutor. Quero aprender [assunto] para [objetivo]. Meu nível é [nível] e tenho [tempo] disponível. Faça até 3 perguntas para ajustar a abordagem. Explique os fundamentos com exemplos concretos, proponha uma atividade curta e verifique minha compreensão antes de avançar. Diferencie fatos de hipóteses e indique quando não tiver certeza.",
+    "Revisão ativa e questões": "Crie 10 questões progressivas sobre [tema], adequadas ao meu nível [nível] e objetivo [objetivo]. Misture aplicação e compreensão. Apresente primeiro as perguntas, sem respostas. Após eu responder, corrija com justificativas, identifique lacunas por tópico e sugira uma revisão. Não invente referências.",
+    "Flashcards para revisão": "A partir do material abaixo, crie flashcards de revisão ativa. Um conceito por cartão, perguntas claras e respostas curtas. Evite ambiguidades e duplicatas. Entregue uma tabela Frente | Verso | Tópico. Use apenas o conteúdo fornecido; sinalize dúvidas em vez de completar com informações inventadas. Material: [cole aqui].",
+    "Resumo estruturado": "Resuma o material abaixo para [objetivo]. Organize em ideias principais, conceitos-chave, exemplos e perguntas de revisão. Preserve as ressalvas do texto. Não acrescente fatos não presentes sem identificá-los explicitamente. Finalize com uma síntese de até 5 linhas. Material: [cole aqui].",
+    "Plano semanal de aprendizagem": "Ajude a planejar uma semana de estudo sobre [objetivo]. Disponibilidade: [dias e horários]. Nível: [nível]. Prazo: [prazo]. Distribua teoria, prática, revisão e pausas em sessões realistas. Entregue uma tabela com dia, tema, duração e resultado esperado. Permita ajustes e não trate o plano como obrigação.",
+    "Praticar programação": "Atue como mentor de programação em [linguagem]. Meu nível é [nível] e quero praticar [tema]. Proponha um exercício com critérios de aceitação e exemplos de entrada/saída. Não entregue a solução imediatamente. Revise minha tentativa, explique falhas e sugira testes, incluindo casos de borda.",
+    "Praticar um idioma": "Converse comigo em [idioma] sobre [tema], no nível [nível]. Faça uma pergunta por vez. Corrija os erros mais importantes sem interromper excessivamente a conversa. Ao final, mostre expressões úteis e um exercício curto de revisão.",
+    "Organizar uma ideia em mapa mental": "Transforme o conteúdo abaixo em um mapa mental textual: uma única raiz e 2 espaços por nível. Use até 5 níveis e 80 tópicos, com rótulos claros de até 160 caracteres. Separe conceitos, exemplos e ações. Não acrescente informações não fornecidas. Conteúdo: [cole aqui].",
+    "Revisar um projeto profissional": "Analise meu projeto [descrição] considerando público [público] e objetivo [objetivo]. Avalie clareza, usabilidade, acessibilidade, segurança e testes. Diferencie problemas observados de sugestões. Priorize melhorias por impacto e esforço e explique como verificar cada uma. Não invente resultados nem métricas."
+  }
+}

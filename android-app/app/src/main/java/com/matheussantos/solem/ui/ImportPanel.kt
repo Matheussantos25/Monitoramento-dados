@@ -16,7 +16,7 @@ import java.time.ZoneOffset
         label = { Text("Cole o resultado do simulado com o JSON") }, minLines = 5, maxLines = 12)
     Button(onClick = {
         try {
-            preview = SimulationImport.parse(input, catalog.subjects, catalog.topics, LocalTime.now(ZoneOffset.ofHours(-3)).withNano(0).toString())
+            preview = SimulationImport.parse(input, catalog.subjects, catalog.topics, LocalTime.now(ZoneOffset.ofHours(-3)).withNano(0).toString(), catalog.generic)
             error = null
         } catch (e: Exception) { preview = null; error = e.message ?: "Formato inválido." }
     }, enabled = !busy) { Text("Validar e visualizar") }

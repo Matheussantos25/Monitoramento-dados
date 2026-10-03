@@ -41,6 +41,7 @@ import java.time.ZoneOffset
     var mealType by rememberSaveable { mutableStateOf(existing?.extra("tipo_refeicao")?.ifBlank { "Almoço" } ?: "Almoço") }
     var weight by rememberSaveable { mutableStateOf((existing?.bodyWeight ?: 0.0).toString()) }
     var session by rememberSaveable { mutableStateOf(when {
+        existing?.extra("tipo_sessao") == "Leitura / Prática" -> "Leitura / Prática"
         existing?.extra("fonte_questoes") == "Anki" || existing?.exercicio in catalog.decks -> "Revisão (Anki)"
         (existing?.number("tempo_video") ?: 0.0) > 0 && (existing?.number("q_certas") ?: 0.0) + (existing?.number("q_erradas") ?: 0.0) == 0.0 -> "Vídeo aula"
         else -> "Questões"
@@ -50,7 +51,7 @@ import java.time.ZoneOffset
     var correct by rememberSaveable { mutableStateOf(existing?.extra("q_certas")?.ifBlank { "0" } ?: "0") }
     var wrong by rememberSaveable { mutableStateOf(existing?.extra("q_erradas")?.ifBlank { "0" } ?: "0") }
     var video by rememberSaveable { mutableStateOf(existing?.extra("tempo_video")?.ifBlank { "0" } ?: "0") }
-    var source by rememberSaveable { mutableStateOf(existing?.extra("fonte_questoes")?.ifBlank { "FGV" } ?: "FGV") }
+    var source by rememberSaveable { mutableStateOf(existing?.extra("fonte_questoes")?.ifBlank { catalog.sources.first() } ?: catalog.sources.first()) }
     var error by remember { mutableStateOf<String?>(null) }
     var success by remember { mutableStateOf(false) }
     val imported = existing?.extra("origem_importacao") == "simulado_json"
@@ -130,23 +131,25 @@ import java.time.ZoneOffset
             }
             "Peso" -> Field("Peso corporal (kg)", weight, true) { weight = it }
             "Estudo" -> {
-                Choice("Tipo de sessão", session, listOf("Questões", "Vídeo aula", "Revisão (Anki)")) {
+                Choice("Tipo de sessão", session, listOf("Questões", "Vídeo aula", "Revisão (Anki)") + if (catalog.generic) listOf("Leitura / Prática") else emptyList()) {
                     session = it
                     subject = if (it == "Revisão (Anki)") catalog.decks.first() else nextSubject(rows, catalog)
                     topics = ""
                 }
                 Choice(if (session == "Revisão (Anki)") "Deck" else "Disciplina", subject,
                     (if (session == "Revisão (Anki)") catalog.decks else catalog.subjects) + listOfNotNull(existing?.exercicio)) { subject = it; topics = "" }
+                if (catalog.generic && session != "Revisão (Anki)") Field("Seu assunto (personalizável)", subject) { subject = it.take(160); topics = "" }
                 if (session != "Revisão (Anki)") {
                     val choices = listOf("🎯 Simulado / Visão Geral") + catalog.topics[subject].orEmpty()
-                    MultiChoice("Tópicos do edital", choices.filter { topics.contains(it) }, choices) { topics = it.joinToString(", ") }
+                    MultiChoice(if (catalog.generic) "Tópicos de estudo" else "Tópicos do edital", choices.filter { topics.contains(it) }, choices) { topics = it.joinToString(", ") }
                     if (topics.isNotBlank()) Text(topics)
+                    if (catalog.generic) Field("Seus tópicos (separados por vírgula)", topics) { topics = it.take(500) }
                 }
                 if (session == "Vídeo aula") Field("Vídeo aula (minutos)", video, true) { video = it }
                 else {
                     Field("Tempo líquido (minutos)", duration, true) { duration = it }
                     if (session == "Revisão (Anki)") Field("Cartões revisados", reps, true) { reps = it }
-                    else {
+                    else if (session != "Leitura / Prática") {
                         Field("Questões corretas", correct, true) { correct = it }
                         Field("Questões erradas", wrong, true) { wrong = it }
                         Choice("Fonte", source, catalog.sources + listOf(source)) { source = it }
@@ -192,12 +195,15 @@ import java.time.ZoneOffset
                         "Estudo" -> {
                             val anki = session == "Revisão (Anki)"
                             val isVideo = session == "Vídeo aula"
-                            val c = if (anki || isVideo) 0 else int(correct)
-                            val e = if (anki || isVideo) 0 else int(wrong)
+                            val isReading = session == "Leitura / Prática"
+                            val c = if (anki || isVideo || isReading) 0 else int(correct)
+                            val e = if (anki || isVideo || isReading) 0 else int(wrong)
                             val total = Math.addExact(c, e)
                             put("q_certas", c); put("q_erradas", e); put("tempo_video", if (isVideo) int(video) else 0)
                             extras["topico_edital"] = JsonPrimitive(if (anki) "Revisão Espaçada" else topics.ifBlank { "Geral" })
-                            extras["fonte_questoes"] = JsonPrimitive(if (anki) "Anki" else if (isVideo) "Não Aplicável" else source)
+                            extras["fonte_questoes"] = JsonPrimitive(if (anki) "Anki" else if (isVideo || isReading) "Não Aplicável" else source)
+                            if (catalog.generic) extras["tipo_sessao"] = JsonPrimitive(session)
+                            require(subject.isNotBlank()) { "Informe uma disciplina ou assunto." }
                             base.copy(data = date, horario = time, group = "Estudos", exercicio = subject, repeticoes = if (anki) int(reps) else total,
                                 durationMinutes = if (isVideo) 0 else int(duration), extras = JsonObject(extras))
                         }

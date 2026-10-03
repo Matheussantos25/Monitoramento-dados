@@ -8,7 +8,7 @@ import java.time.format.DateTimeFormatter
 data class ImportResult(val id: String, val rows: List<TrainingMutation>, val questionCount: Int, val warnings: List<String>)
 object SimulationImport {
     private fun JsonObject.text(key: String) = (this[key] as? JsonPrimitive)?.contentOrNull.orEmpty()
-    fun parse(input: String, subjects: List<String>, topics: Map<String,List<String>>, time: String): ImportResult {
+    fun parse(input: String, subjects: List<String>, topics: Map<String,List<String>>, time: String, generic: Boolean = false): ImportResult {
         val segment = if ("SOLEM_IMPORT_START" in input && "SOLEM_IMPORT_END" in input)
             input.substringAfter("SOLEM_IMPORT_START").substringBefore("SOLEM_IMPORT_END") else input
         val begin = segment.indexOf('{'); val end = segment.lastIndexOf('}')
@@ -36,7 +36,7 @@ object SimulationImport {
             require(subject in subjects) { "Questão $n: disciplina não reconhecida." }
             val topic = q.text("topico_edital").trim()
             require(topic.isNotBlank() && topic.length <= 500 && topic.lowercase() !in listOf("geral", "simulado / visão geral", "simulado/visão geral", "diversos")) { "Questão $n: informe tópico específico." }
-            if (topic !in topics[subject].orEmpty()) warnings += "Tópico preservado fora da lista do edital: $topic"
+            if (topic !in topics[subject].orEmpty()) warnings += "Tópico preservado fora da lista ${if (generic) "de estudo" else "do edital"}: $topic"
             val result = when(q.text("resultado").trim().lowercase()) {
                 "correta", "correto", "certo", "acerto" -> "correta"
                 "errada", "errado", "erro" -> "errada"
@@ -77,7 +77,7 @@ object SimulationImport {
         val rows = groups.values.map { g -> TrainingMutation(date, time, "Estudos", g.subject,
             repeticoes = g.correct+g.wrong, durationMinutes = g.minutes, extras = buildJsonObject {
                 put("topico_edital", g.topic); put("q_certas", g.correct); put("q_erradas", g.wrong); put("q_anuladas", g.cancelled); put("tempo_video", 0)
-                put("fonte_questoes", if (schema == "solem_simulado_ce_v1") "IA (FGV adaptado C/E)" else "IA (Estilo FGV)")
+                put("fonte_questoes", if (generic) "Gerado por IA" else if (schema == "solem_simulado_ce_v1") "IA (FGV adaptado C/E)" else "IA (Estilo FGV)")
                 put("origem_importacao", "simulado_json"); put("simulado_id", id); put("importacao_id", importId)
                 put("tempo_segundos_exato", g.seconds); put("tempo_estimado", !g.exact)
                 put("questoes_numeros", JsonArray(g.details.map { it["numero"]!! }.sortedBy { it.jsonPrimitive.int }))

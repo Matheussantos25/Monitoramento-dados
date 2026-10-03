@@ -6,7 +6,7 @@ to Supabase. ``None`` for private entries means unavailable, not zero intake.
 from solem_progress import category_of, extras_of, number, record_date
 
 
-def daily_checkup(records, private_entries, day):
+def daily_checkup(records, private_entries, day, generic=False):
     questions = 0
     study_minutes = 0.0
     exercise_totals = {"Mewing com borracha": 0, "Flexão": 0, "Agachamento": 0}
@@ -57,5 +57,9 @@ def daily_checkup(records, private_entries, day):
         {"id": "study", "label": "Tempo de estudo", "value": int(study_minutes),
          "target": 60, "unit": "min", "page": "Estudar"},
     )
+    if generic:
+        from solem_account import DEFAULTS
+        goals = [{**goal, "target": DEFAULTS["checkup_targets"][goal["id"]]}
+                 for goal in goals if goal["id"] != "mewing"]
     return [{**goal, "done": goal["value"] is not None and goal["value"] >= goal["target"]}
             for goal in goals]
