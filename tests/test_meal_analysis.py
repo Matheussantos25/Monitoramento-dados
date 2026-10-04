@@ -67,14 +67,27 @@ def test_photo_exif_stripped_and_consent_before_network():
 def test_session_quota_configuration_and_redacted_errors():
     client=SimpleNamespace(auth=SimpleNamespace(get_session=lambda:SimpleNamespace(access_token="test")),
                            supabase_url="https://example.supabase.co/",supabase_key="public")
-    for status,code in ((503,"not_configured"),(429,"quota_exhausted"),(401,"session_expired")):
+    for status,code in ((503,"not_configured"),(503,"budget_not_configured"),(429,"budget_exhausted"),(429,"quota_exhausted"),(401,"session_expired")):
         response=SimpleNamespace(status_code=status,is_success=False,json=lambda:{"code":code,"error":"secret"})
         with patch("solem_meal_analysis.httpx.post",return_value=response):
-            with pytest.raises(ValueError,match=ERRORS[code].split('.')[0]): invoke(client,{"action":"catalog"})
+            with pytest.raises(ValueError) as error: invoke(client,{"action":"catalog"})
+            assert str(error.value) == ERRORS[code]
     response=SimpleNamespace(status_code=500,is_success=False,json=lambda:{"code":"secret-private-error"})
     with patch("solem_meal_analysis.httpx.post",return_value=response):
         with pytest.raises(ValueError) as error: invoke(client,{})
         assert "secret" not in str(error.value)
+
+
+def test_consent_version_parity_and_no_provider_key_in_clients():
+    from pathlib import Path
+    from solem_meal_analysis import CONSENT_VERSION
+    root=Path(__file__).resolve().parents[1]
+    backend=(root/'supabase/functions/meal-analysis/core.mjs').read_text(encoding='utf-8')
+    android=(root/'android-app/app/src/main/java/com/matheussantos/solem/domain/MealNutrition.kt').read_text(encoding='utf-8')
+    assert CONSENT_VERSION in backend and CONSENT_VERSION in android
+    assert CONSENT_VERSION == 'meal-photo-openrouter-2026-10-v2'
+    interface=(root/'solem_meal_photo_ui.py').read_text(encoding='utf-8')
+    assert 'gratuitamente' not in interface and 'OpenRouter e ao Google' in interface
 
 
 def test_review_save_edit_recalculate_and_confirmation():

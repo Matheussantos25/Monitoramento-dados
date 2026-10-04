@@ -76,9 +76,9 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False):
 
 def photo_meal(client, day, save, demo=False):
     with st.expander("Registrar refeição por foto", expanded=False):
-        st.caption("Gemini gratuito · até 6 tentativas por conta/dia e 20 no app/dia, sujeito também à cota do Google. Nenhuma opção paga automática.")
-        st.info("A foto do prato será enviada ao Google. No plano gratuito, imagens e respostas podem ser usadas para melhorar produtos e revisadas por pessoas. Não envie rostos, documentos ou dados pessoais. A imagem não é salva no diário; só os alimentos e valores confirmados.")
-        st.link_button("Privacidade do serviço gratuito", "https://ai.google.dev/gemini-api/terms")
+        st.caption("Gemini via OpenRouter · teto de US$ 1/mês para todo o app, com saldo do administrador. Até 6 tentativas por conta/dia e 20 no app/dia. Sem recarga ou troca automática de modelo.")
+        st.info("A foto do prato será enviada ao OpenRouter e ao Google Vertex para reconhecimento. O roteamento exige endpoint sem retenção (ZDR), mas os serviços ainda processam a imagem e metadados conforme suas políticas. Não envie rostos, documentos ou dados pessoais. Só os alimentos e valores confirmados são salvos no diário, não a foto.")
+        st.link_button("Privacidade do OpenRouter", "https://openrouter.ai/privacy")
         if demo:
             st.caption("Envio de fotos desativado na demonstração. O registro manual permanece disponível.")
             return
@@ -87,7 +87,7 @@ def photo_meal(client, day, save, demo=False):
         source = st.radio("Origem da foto", ["Escolher imagem", "Câmera"], key=prefix + "_source", horizontal=True)
         uploaded = st.file_uploader("Foto apenas do prato", type=["jpg", "jpeg", "png", "webp"], max_upload_size=8,
                                     key=prefix + "_upload") if source == "Escolher imagem" else st.camera_input("Fotografar prato", key=prefix + "_camera")
-        consent = st.checkbox("Autorizo enviar somente esta foto do prato ao Google e li o aviso acima.", key=prefix + "_consent")
+        consent = st.checkbox("Autorizo enviar somente esta foto do prato ao OpenRouter e ao Google e li o aviso acima.", key=prefix + "_consent_v2")
         adult = st.checkbox("Tenho 18 anos ou mais.", key=prefix + "_adult")
         if uploaded is None: return
         raw = uploaded.getvalue()
@@ -97,7 +97,7 @@ def photo_meal(client, day, save, demo=False):
         if draft and draft["digest"] != digest:
             st.session_state.pop(draft_key, None)
             draft = None
-        if st.button("Analisar foto gratuitamente", key=prefix + "_analyze", disabled=not(consent and adult)):
+        if st.button("Analisar foto", key=prefix + "_analyze", disabled=not(consent and adult)):
             try:
                 jpeg = normalized_jpeg(raw)
                 with st.spinner("Identificando alimentos e sugerindo porções…"):

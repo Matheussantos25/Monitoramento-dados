@@ -1,5 +1,6 @@
 import catalog from "./nutrition_catalog.json" with { type: "json" };
-import { MealError, checkedPhoto, nutrition, readRecognition, recognitionRequest, freeConfiguration } from "./core.mjs";
+import { MealError, checkedPhoto, nutrition } from "./core.mjs";
+import { analyzeWithOpenRouter } from "./openrouter.mjs";
 
 const env = (name: string) => Deno.env.get(name) || "";
 const allowed = new Set(["https://monitoramento-dados.streamlit.app", "http://localhost:8501", "http://127.0.0.1:8501"]);
@@ -19,7 +20,7 @@ async function bodyOf(req: Request) {
   for (const part of parts) { all.set(part, offset); offset += part.length; }
   try { return JSON.parse(new TextDecoder().decode(all)); } catch { throw new MealError("invalid_request"); }
 }
-// No service-role key, image storage, request logging or paid-provider fallback.
+// No service-role key, image storage, request logging, retries or model fallback.
 Deno.serve(async req => {
   const origin = req.headers.get("origin");
   const headers = { "Content-Type": "application/json", "Cache-Control": "no-store",
@@ -40,25 +41,13 @@ Deno.serve(async req => {
     if (body.action === "catalog") return reply({ catalog });
     if (body.action === "calculate") return reply(nutrition(body.items, catalog));
     if (body.action !== "recognize") throw new MealError("invalid_request");
-    const image = checkedPhoto(body); const model = freeConfiguration(env);
-    // Atomically enforce shared daily, per-user daily and short cooldown quotas in PostgreSQL.
-    const budget = await fetch(`${env("SUPABASE_URL")}/rest/v1/rpc/solem_reserve_meal_analysis`, {
-      method: "POST", headers: sbHeaders, body: "{}", signal: AbortSignal.timeout(10000) });
-    if (!budget.ok) throw new MealError("backend_unavailable", 503);
-    if ((await budget.json()) !== true) throw new MealError("quota_exhausted", 429);
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": env("GEMINI_API_KEY") },
-      body: JSON.stringify(recognitionRequest(image, catalog)), signal: AbortSignal.timeout(45000) });
-    if (response.status === 429) throw new MealError("quota_exhausted", 429);
-    if (!response.ok) throw new MealError("provider_unavailable", 503);
-    const generated = await response.json();
-    const candidate = generated.candidates?.[0];
-    if (candidate?.finishReason !== "STOP") throw new MealError("unclear_photo", 422);
-    const output = candidate.content?.parts?.filter((part: { thought?: boolean }) => !part.thought)
-      .map((part: { text?: string }) => part.text || "").join("");
-    let proposed;
-    try { proposed = JSON.parse(output || ""); } catch { throw new MealError("unclear_photo", 422); }
-    return reply({ ...readRecognition(proposed, catalog), model });
+    const image = checkedPhoto(body);
+    return reply(await analyzeWithOpenRouter({ image, catalog, env, reserve: async () => {
+      const budget = await fetch(`${env("SUPABASE_URL")}/rest/v1/rpc/solem_reserve_meal_analysis`, {
+        method: "POST", headers: sbHeaders, body: "{}", signal: AbortSignal.timeout(10000) });
+      if (!budget.ok) throw new MealError("backend_unavailable", 503);
+      return (await budget.json()) === true;
+    } }));
   } catch (error) {
     // Never return/log upstream responses, keys, JWTs, photos or personal data.
     const known = error instanceof MealError;

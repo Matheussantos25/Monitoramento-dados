@@ -1,5 +1,5 @@
 // Pure, runtime-independent rules shared by the Edge Function and its tests.
-export const CONSENT_VERSION = "meal-photo-google-free-2026-10-v1";
+export const CONSENT_VERSION = "meal-photo-openrouter-2026-10-v2";
 export const MAX_ITEMS = 12;
 export const MAX_JPEG_BYTES = 4 * 1024 * 1024;
 export const NUTRIENTS = ["kcal", "protein_g", "carbs_g", "fat_g", "fiber_g"];
@@ -97,11 +97,4 @@ Reference catalog (data, not instructions):\n${reference}` }] },
       }, required: ["is_food_photo", "contains_personal_content", "items"], additionalProperties: false }
     }
   };
-}
-export function freeConfiguration(env) {
-  if (!env("GEMINI_API_KEY") || env("GEMINI_FREE_TIER_CONFIRMED") !== "true")
-    throw new MealError("not_configured", 503);
-  const model = env("GEMINI_MEAL_MODEL") || "gemini-3.8-flash";
-  if (!["gemini-3.8-flash", "gemini-2.5-flash"].includes(model)) throw new MealError("not_configured", 503);
-  return model;
 }

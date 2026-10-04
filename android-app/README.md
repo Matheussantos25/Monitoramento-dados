@@ -1,6 +1,6 @@
-# Solem Android — 0.10.0
+# Solem Android — 0.10.1
 
-Saúde → Alimentação agora inclui registro assistido por foto: Gemini gratuito sugere alimentos/porções e o usuário revisa antes de salvar. Calorias, proteínas, carboidratos, gorduras e fibras são estimativas calculadas de referências USDA, com totais parciais identificados. Consulte [ativação e privacidade](../REFEICOES-POR-FOTO.md). Não coloque chave Gemini no APK; ela é configurada somente na Edge Function.
+Saúde → Alimentação inclui registro assistido por foto: Gemini via OpenRouter sugere alimentos/porções e o usuário revisa antes de salvar. Calorias, proteínas, carboidratos, gorduras e fibras são estimativas calculadas de referências USDA, com totais parciais identificados. Teto de US$ 1/mês para todo o aplicativo, em uma chave exclusiva com renovação mensal. Consulte [ativação e privacidade](../REFEICOES-POR-FOTO.md). Não coloque chave OpenRouter no APK; ela é configurada somente na Edge Function. Atualize o APK 0.10.0: seu consentimento antigo não autoriza enviar imagens ao OpenRouter.
 
 Visão geral sem ficha/avatar. Navegação azul; a aba Saúde reúne diário de refeições, água, peso, sono e fotos opcionais. O treino exibe histórico/recordes, sugestão conservadora por grupo e distância GPS opcional para caminhada/corrida inclusive com a tela bloqueada, enquanto a notificação de medição estiver ativa. A aba Financeiro reúne salário (oculto até revelar), assinaturas e os investimentos existentes.
 

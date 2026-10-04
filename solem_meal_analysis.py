@@ -6,12 +6,14 @@ from pathlib import Path
 
 import httpx
 
-CONSENT_VERSION = "meal-photo-google-free-2026-10-v1"
+CONSENT_VERSION = "meal-photo-openrouter-2026-10-v2"
 CATALOG_PATH = Path(__file__).parent / "supabase/functions/meal-analysis/nutrition_catalog.json"
 NUTRIENTS = ("kcal", "protein_g", "carbs_g", "fat_g", "fiber_g")
 ERRORS = {
-    "not_configured": "O reconhecimento ainda não foi ativado. Falta configurar a chave gratuita no backend.",
-    "quota_exhausted": "Limite gratuito ou intervalo entre análises atingido. Aguarde e tente depois; o registro manual continua disponível.",
+    "not_configured": "O reconhecimento ainda não foi ativado. Falta configurar OPENROUTER_API_KEY no backend.",
+    "budget_not_configured": "Configure uma chave exclusiva no OpenRouter: limite de US$ 1, renovação mensal e Include BYOK ativado.",
+    "budget_exhausted": "Orçamento mensal de reconhecimento atingido, margem insuficiente ou saldo indisponível. O registro manual continua disponível.",
+    "quota_exhausted": "Limite diário ou intervalo entre análises atingido. Aguarde e tente depois; o registro manual continua disponível.",
     "session_expired": "Sua sessão expirou. Entre novamente para analisar a foto.",
     "invalid_image": "Escolha uma foto JPG, PNG ou WebP de até 8 MB, com até 20 megapixels.",
     "not_food": "Não foi possível identificar uma refeição. Envie uma foto nítida do prato.",
@@ -68,7 +70,7 @@ def invoke(client, body):
         if session is None: raise ValueError(ERRORS["session_expired"])
         response = httpx.post(client.supabase_url.rstrip("/") + "/functions/v1/meal-analysis",
                               headers={"Authorization": "Bearer " + session.access_token,
-                                       "apikey": client.supabase_key}, json=body, timeout=65)
+                                       "apikey": client.supabase_key}, json=body, timeout=90)
     except ValueError: raise
     except Exception:
         raise ValueError("Não foi possível analisar. Confira a conexão e a sessão; seu registro manual continua disponível.") from None
@@ -79,7 +81,8 @@ def invoke(client, body):
     if not response.is_success:
         code = result.get("code")
         if response.status_code == 401: code = "session_expired"
-        if response.status_code == 429: code = "quota_exhausted"
+        if response.status_code == 429 and code not in ("budget_exhausted", "quota_exhausted"):
+            code = "quota_exhausted"
         raise ValueError(ERRORS.get(code, "O serviço está temporariamente indisponível. Tente depois ou registre manualmente."))
     return result
 

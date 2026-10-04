@@ -2,7 +2,7 @@
 
 Aplicativo Streamlit para acompanhar treinos, alimentação, peso e estudos. A interface inclui uma visão geral com experiência (XP), níveis, sequência de dias ativos e atalhos para os registros.
 
-Refeições por foto: identificação assistida com Gemini gratuito, revisão de porções e cálculo nutricional no diário privado. Consulte [configuração, privacidade e limitações](REFEICOES-POR-FOTO.md); a chave Gemini pertence somente ao backend Supabase.
+Refeições por foto: Gemini via OpenRouter, revisão de porções e cálculo nutricional no diário privado. Teto de US$ 1/mês em uma chave exclusiva; consulte [configuração, privacidade e limitações](REFEICOES-POR-FOTO.md). A chave OpenRouter pertence somente ao backend Supabase.
 
 ## Executar com seu banco
 

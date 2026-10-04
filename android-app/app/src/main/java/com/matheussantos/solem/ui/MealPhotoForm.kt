@@ -49,18 +49,18 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
     LaunchedEffect(day) { vm.clear() }
     DisposableEffect(vm) { onDispose { vm.clear() } }
     TextButton(onClick={ open=!open }) { Text(if(open) "Fechar registro por foto" else "Registrar refeição por foto") }
-    if(open) Panel("Foto do prato · Gemini gratuito") {
-        Text("A foto será enviada ao Google. No plano gratuito, imagens e respostas podem ser usadas para melhorar produtos, inclusive com revisão humana. Não envie rostos, documentos ou dados pessoais.")
-        Text("Só os alimentos e valores confirmados são salvos no diário, não a foto. Até 6 tentativas/conta/dia e 20/app/dia; a cota do Google pode ser menor. Nenhuma alternativa paga automática.",style=MaterialTheme.typography.bodySmall)
-        TextButton(onClick={ links.openUri("https://ai.google.dev/gemini-api/terms") }) { Text("Privacidade do serviço gratuito") }
+    if(open) Panel("Foto do prato · Gemini via OpenRouter") {
+        Text("A foto será enviada ao OpenRouter e ao Google Vertex. O roteamento exige endpoint sem retenção (ZDR), mas os serviços processam a imagem e metadados conforme suas políticas. Não envie rostos, documentos ou dados pessoais.")
+        Text("Só alimentos e valores confirmados são salvos no diário, não a foto. Teto de US$ 1/mês para todo o app, com saldo do administrador. Até 6 tentativas/conta/dia e 20/app/dia; sem recarga ou troca automática de modelo.",style=MaterialTheme.typography.bodySmall)
+        TextButton(onClick={ links.openUri("https://openrouter.ai/privacy") }) { Text("Privacidade do OpenRouter") }
         Button(onClick={ picker.launch(arrayOf("image/jpeg","image/png","image/webp")) },enabled=!state.busy && !busy) {
             Text(if(state.source==null) "Escolher foto do prato" else "Trocar foto do prato")
         }
         if(state.source!=null) Text("Foto selecionada. Metadados de localização serão removidos antes do envio.")
-        Row { Checkbox(checked=consent,onCheckedChange={consent=it}); Text("Autorizo enviar somente esta foto do prato ao Google e li o aviso acima.") }
+        Row { Checkbox(checked=consent,onCheckedChange={consent=it}); Text("Autorizo enviar somente esta foto do prato ao OpenRouter e ao Google e li o aviso acima.") }
         Row { Checkbox(checked=adult,onCheckedChange={adult=it}); Text("Tenho 18 anos ou mais.") }
         Button(onClick={vm.analyze(consent,adult)},enabled=consent && adult && state.source!=null && !state.busy && !busy) {
-            Text("Analisar gratuitamente")
+            Text("Analisar foto")
         }
         if(state.busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Identificando alimentos e sugerindo porções…") }
         state.message?.let { Text(it,color=MaterialTheme.colorScheme.error) }
