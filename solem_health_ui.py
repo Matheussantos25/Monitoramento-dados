@@ -54,8 +54,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
     food_tab, water_tab, weight_tab, sleep_tab, photo_tab = st.tabs(["Alimentação", "Água", "Peso", "Sono", "Fotos"])
 
     with food_tab:
-        from solem_meal_photo_ui import photo_meal, daily_metrics, nutrient_metrics, review_meal
-        photo_meal(client, day, _save, demo=demo)
+        from solem_meal_photo_ui import daily_metrics, nutrient_metrics, review_meal
         daily_metrics(meals)
         st.caption("Adicione quantas refeições precisar no mesmo dia. A classificação é apenas para facilitar o registro.")
         meal_type = st.selectbox("Tipo de refeição", MEAL_TYPES, key="new_meal_type")

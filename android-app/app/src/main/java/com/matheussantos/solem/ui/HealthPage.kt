@@ -73,7 +73,6 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
         }
         if (day != null) when (selected) {
             0 -> {
-                MealPhotoForm(day,catalog,vm,state.busy)
                 val references: List<MealReference> = remember {
                     mealJson.decodeFromString(contextAssets(context))
                 }

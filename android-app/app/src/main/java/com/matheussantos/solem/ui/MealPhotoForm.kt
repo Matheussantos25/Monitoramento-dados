@@ -1,21 +1,14 @@
 package com.matheussantos.solem.ui
 
-import android.app.Application
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.matheussantos.solem.data.model.HealthEntry
 import com.matheussantos.solem.domain.*
-import com.matheussantos.solem.viewmodel.*
+import com.matheussantos.solem.viewmodel.WorkspaceViewModel
 import kotlinx.serialization.json.*
 import java.time.LocalDate
 import java.time.LocalTime
@@ -31,47 +24,6 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
     if(estimate.missing>0) Text("${estimate.missing} alimento(s) não calculados. Sem correspondência ou porção não significa zero calorias.",
         color=MaterialTheme.colorScheme.error)
     Text("Porções aproximadas, não medidas. Óleo, molhos e preparo podem alterar os valores.",style=MaterialTheme.typography.bodySmall)
-}
-
-@Composable fun MealPhotoForm(day: LocalDate, catalog: Catalog, workspace: WorkspaceViewModel, busy: Boolean) {
-    val account by workspace.state.collectAsStateWithLifecycle()
-    val application=LocalContext.current.applicationContext as Application
-    val vm: MealAnalysisViewModel=viewModel(key="meal-photo-${account.accountId}", factory=object: androidx.lifecycle.ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST") override fun <T: androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T =
-            MealAnalysisViewModel(application,workspace.trainingClient) as T
-    })
-    val state by vm.state.collectAsStateWithLifecycle()
-    var open by rememberSaveable { mutableStateOf(false) }
-    var consent by remember(day) { mutableStateOf(false) }
-    var adult by remember(day) { mutableStateOf(false) }
-    val links=LocalUriHandler.current
-    val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { vm.select(it) }
-    LaunchedEffect(day) { vm.clear() }
-    DisposableEffect(vm) { onDispose { vm.clear() } }
-    TextButton(onClick={ open=!open }) { Text(if(open) "Fechar registro por foto" else "Registrar refeição por foto") }
-    if(open) Panel("Foto do prato · Gemini via OpenRouter") {
-        Text("A foto será enviada ao OpenRouter e ao Google Vertex. O roteamento exige endpoint sem retenção (ZDR), mas os serviços processam a imagem e metadados conforme suas políticas. Não envie rostos, documentos ou dados pessoais.")
-        Text("Só alimentos e valores confirmados são salvos no diário, não a foto. Teto de US$ 1/mês para todo o app, com saldo do administrador. Até 6 tentativas/conta/dia e 20/app/dia; sem recarga ou troca automática de modelo.",style=MaterialTheme.typography.bodySmall)
-        TextButton(onClick={ links.openUri("https://openrouter.ai/privacy") }) { Text("Privacidade do OpenRouter") }
-        Button(onClick={ picker.launch(arrayOf("image/jpeg","image/png","image/webp")) },enabled=!state.busy && !busy) {
-            Text(if(state.source==null) "Escolher foto do prato" else "Trocar foto do prato")
-        }
-        if(state.source!=null) Text("Foto selecionada. Metadados de localização serão removidos antes do envio.")
-        Row { Checkbox(checked=consent,onCheckedChange={consent=it}); Text("Autorizo enviar somente esta foto do prato ao OpenRouter e ao Google e li o aviso acima.") }
-        Row { Checkbox(checked=adult,onCheckedChange={adult=it}); Text("Tenho 18 anos ou mais.") }
-        Button(onClick={vm.analyze(consent,adult)},enabled=consent && adult && state.source!=null && !state.busy && !busy) {
-            Text("Analisar foto")
-        }
-        if(state.busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Identificando alimentos e sugerindo porções…") }
-        state.message?.let { Text(it,color=MaterialTheme.colorScheme.error) }
-        state.draft?.let { draft ->
-            key(day,state.revision) {
-                MealReview(day,catalog,workspace,vm.catalog,draft.items,busy,
-                    saved={vm.clear()})
-            }
-            TextButton(onClick=vm::clear,enabled=!state.busy) { Text("Descartar sugestão") }
-        }
-    }
 }
 
 @Composable fun MealReview(day: LocalDate, catalog: Catalog, workspace: WorkspaceViewModel,

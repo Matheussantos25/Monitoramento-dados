@@ -1,10 +1,7 @@
-"""Streamlit photo-assisted meals. Photos live only in the current upload session."""
-from hashlib import sha256
-from uuid import uuid4
+"""Local nutrition display and editing for existing meal records."""
 import streamlit as st
 from solem_health import MEAL_TYPES, now_local
-from solem_photos_ui import normalized_jpeg
-from solem_meal_analysis import catalog, nutrition, recognize, meal_details, day_nutrition
+from solem_meal_analysis import catalog, nutrition, meal_details, day_nutrition
 
 
 def nutrient_metrics(result):
@@ -72,44 +69,3 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False):
         try: details = meal_details(meal_type, items)
         except ValueError as error: st.error(str(error))
         else: save(client, day, meal_time.strftime("%H:%M:%S"), "meal", details, "Refeição confirmada e salva.", old=old, demo=demo)
-
-
-def photo_meal(client, day, save, demo=False):
-    with st.expander("Registrar refeição por foto", expanded=False):
-        st.caption("Gemini via OpenRouter · teto de US$ 1/mês para todo o app, com saldo do administrador. Até 6 tentativas por conta/dia e 20 no app/dia. Sem recarga ou troca automática de modelo.")
-        st.info("A foto do prato será enviada ao OpenRouter e ao Google Vertex para reconhecimento. O roteamento exige endpoint sem retenção (ZDR), mas os serviços ainda processam a imagem e metadados conforme suas políticas. Não envie rostos, documentos ou dados pessoais. Só os alimentos e valores confirmados são salvos no diário, não a foto.")
-        st.link_button("Privacidade do OpenRouter", "https://openrouter.ai/privacy")
-        if demo:
-            st.caption("Envio de fotos desativado na demonstração. O registro manual permanece disponível.")
-            return
-        # Day is part of the draft key: a photo cannot silently transfer to another date.
-        prefix = f"meal_photo_{day}"
-        source = st.radio("Origem da foto", ["Escolher imagem", "Câmera"], key=prefix + "_source", horizontal=True)
-        uploaded = st.file_uploader("Foto apenas do prato", type=["jpg", "jpeg", "png", "webp"], max_upload_size=8,
-                                    key=prefix + "_upload") if source == "Escolher imagem" else st.camera_input("Fotografar prato", key=prefix + "_camera")
-        consent = st.checkbox("Autorizo enviar somente esta foto do prato ao OpenRouter e ao Google e li o aviso acima.", key=prefix + "_consent_v2")
-        adult = st.checkbox("Tenho 18 anos ou mais.", key=prefix + "_adult")
-        if uploaded is None: return
-        raw = uploaded.getvalue()
-        digest = sha256(raw).hexdigest()[:16]
-        draft_key = prefix + "_draft"
-        draft = st.session_state.get(draft_key)
-        if draft and draft["digest"] != digest:
-            st.session_state.pop(draft_key, None)
-            draft = None
-        if st.button("Analisar foto", key=prefix + "_analyze", disabled=not(consent and adult)):
-            try:
-                jpeg = normalized_jpeg(raw)
-                with st.spinner("Identificando alimentos e sugerindo porções…"):
-                    proposal = recognize(client, jpeg, consent, adult)
-                draft = {"digest": digest, "revision": uuid4().hex[:12], "proposal": proposal}
-                st.session_state[draft_key] = draft
-            except ValueError as error: st.error(str(error))
-        if draft:
-            review_meal(client, day, draft["proposal"], save, prefix + "_" + draft["revision"], demo=demo)
-            if st.button("Descartar sugestão", key=prefix + "_discard"):
-                st.session_state.pop(draft_key, None)
-                # Clear all editor state, including confirmation, before starting over.
-                for key in list(st.session_state):
-                    if key.startswith(prefix + "_" + draft["revision"]): del st.session_state[key]
-                st.rerun()

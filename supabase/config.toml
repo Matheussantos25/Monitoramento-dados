@@ -1,3 +1,3 @@
 [functions.meal-analysis]
-# Handler validates the bearer token with Supabase Auth (also supports asymmetric JWTs).
+# Retired endpoint returns 410 only, without reading credentials, images or data.
 verify_jwt = false

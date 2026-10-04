@@ -1,13 +1,11 @@
 import json
 from io import BytesIO
-from types import SimpleNamespace
-from unittest.mock import patch
 
 import pytest
 from PIL import Image
 from streamlit.testing.v1 import AppTest
 
-from solem_meal_analysis import catalog, nutrition, meal_details, day_nutrition, invoke, recognize, ERRORS
+from solem_meal_analysis import catalog, nutrition, meal_details, day_nutrition
 from solem_photos_ui import normalized_jpeg
 
 RICE = {"name": "Arroz", "food_id": "169757", "grams": 150, "confidence": "high"}
@@ -49,45 +47,28 @@ def test_private_payload_and_daily_partial():
     assert not day_nutrition([])["counted"]
 
 
-def test_photo_exif_stripped_and_consent_before_network():
+def test_progress_photo_exif_still_stripped():
     picture=Image.new("RGB",(20,20),"white")
     exif=Image.Exif(); exif[270]="private metadata"
     raw=BytesIO();picture.save(raw,"JPEG",exif=exif)
     jpeg=normalized_jpeg(raw.getvalue())
     assert not Image.open(BytesIO(jpeg)).getexif()
-    with patch("solem_meal_analysis.invoke") as call:
-        with pytest.raises(ValueError): recognize(None,jpeg,False,True)
-        call.assert_not_called()
-        call.return_value={"items":[RICE],"totals":{"kcal":99999}}
-        assert recognize(None,jpeg,True,True)["totals"]["kcal"] == 195
-        payload=call.call_args.args[1]
-        assert set(payload)=={"action","mime_type","image","consent_version","adult"}
 
 
-def test_session_quota_configuration_and_redacted_errors():
-    client=SimpleNamespace(auth=SimpleNamespace(get_session=lambda:SimpleNamespace(access_token="test")),
-                           supabase_url="https://example.supabase.co/",supabase_key="public")
-    for status,code in ((503,"not_configured"),(503,"budget_not_configured"),(429,"budget_exhausted"),(429,"quota_exhausted"),(401,"session_expired")):
-        response=SimpleNamespace(status_code=status,is_success=False,json=lambda:{"code":code,"error":"secret"})
-        with patch("solem_meal_analysis.httpx.post",return_value=response):
-            with pytest.raises(ValueError) as error: invoke(client,{"action":"catalog"})
-            assert str(error.value) == ERRORS[code]
-    response=SimpleNamespace(status_code=500,is_success=False,json=lambda:{"code":"secret-private-error"})
-    with patch("solem_meal_analysis.httpx.post",return_value=response):
-        with pytest.raises(ValueError) as error: invoke(client,{})
-        assert "secret" not in str(error.value)
-
-
-def test_consent_version_parity_and_no_provider_key_in_clients():
+def test_recognition_removed_from_clients():
     from pathlib import Path
-    from solem_meal_analysis import CONSENT_VERSION
-    root=Path(__file__).resolve().parents[1]
-    backend=(root/'supabase/functions/meal-analysis/core.mjs').read_text(encoding='utf-8')
-    android=(root/'android-app/app/src/main/java/com/matheussantos/solem/domain/MealNutrition.kt').read_text(encoding='utf-8')
-    assert CONSENT_VERSION in backend and CONSENT_VERSION in android
-    assert CONSENT_VERSION == 'meal-photo-openrouter-2026-10-v2'
-    interface=(root/'solem_meal_photo_ui.py').read_text(encoding='utf-8')
-    assert 'gratuitamente' not in interface and 'OpenRouter e ao Google' in interface
+    import solem_meal_analysis as module
+    root = Path(__file__).resolve().parents[1]
+    health = (root / "solem_health_ui.py").read_text(encoding="utf-8")
+    interface = (root / "solem_meal_photo_ui.py").read_text(encoding="utf-8")
+    android = (root / "android-app/app/src/main/java/com/matheussantos/solem/ui/HealthPage.kt").read_text(encoding="utf-8")
+    assert "photo_meal(" not in health
+    assert "Analisar foto" not in interface and "OpenRouter" not in interface
+    assert "MealPhotoForm(" not in android
+    assert not hasattr(module, "invoke") and not hasattr(module, "recognize")
+    assert not hasattr(module, "httpx")
+    assert not (root / "android-app/app/src/main/java/com/matheussantos/solem/data/repository/MealAnalysisRepository.kt").exists()
+    assert not (root / "android-app/app/src/main/java/com/matheussantos/solem/viewmodel/MealAnalysisViewModel.kt").exists()
 
 
 def test_review_save_edit_recalculate_and_confirmation():

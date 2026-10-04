@@ -5,7 +5,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.*
 import kotlin.math.floor
 
-const val MEAL_CONSENT = "meal-photo-openrouter-2026-10-v2"
 @Serializable data class MealNutrients(val kcal: Double = 0.0,
     @SerialName("protein_g") val protein: Double = 0.0,
     @SerialName("carbs_g") val carbs: Double = 0.0,
