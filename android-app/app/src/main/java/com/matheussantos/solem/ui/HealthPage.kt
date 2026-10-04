@@ -13,12 +13,15 @@ import com.matheussantos.solem.data.model.HealthEntry
 import com.matheussantos.solem.domain.Catalog
 import com.matheussantos.solem.domain.sleepMinutes
 import com.matheussantos.solem.domain.today
+import com.matheussantos.solem.domain.*
+import androidx.compose.ui.platform.LocalContext
 import com.matheussantos.solem.viewmodel.WorkspaceViewModel
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
@@ -31,6 +34,7 @@ private fun foods(row: HealthEntry, key: String): String = (row.details[key] as?
 private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter { it.isNotBlank() }
 
 @Composable fun HealthPage(catalog: Catalog, vm: WorkspaceViewModel) {
+    val context=LocalContext.current
     val state by vm.state.collectAsStateWithLifecycle()
     var selected by rememberSaveable { mutableIntStateOf(0) }
     var dayText by rememberSaveable { mutableStateOf(today().toString()) }
@@ -69,16 +73,37 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
         }
         if (day != null) when (selected) {
             0 -> {
+                MealPhotoForm(day,catalog,vm,state.busy)
+                val references: List<MealReference> = remember {
+                    mealJson.decodeFromString(contextAssets(context))
+                }
+                val calculated=dayMeals.mapNotNull { row ->
+                    runCatching { row.details["nutrition"]?.let { mealJson.decodeFromJsonElement<MealEstimate>(it) }
+                        ?.let { calculateMeal(it.items,references) } }.getOrNull()
+                }
+                if(calculated.isNotEmpty()) Panel("Nutrição registrada no dia") {
+                    val totals=MealNutrients(calculated.sumOf { it.totals.kcal },calculated.sumOf { it.totals.protein },
+                        calculated.sumOf { it.totals.carbs },calculated.sumOf { it.totals.fat },calculated.sumOf { it.totals.fiber })
+                    MealNutritionSummary(MealEstimate(emptyList(),totals,calculated.sumOf { it.missing },
+                        calculated.size==dayMeals.size && calculated.all { it.complete }))
+                    Text("${calculated.size} de ${dayMeals.size} refeição(ões) com cálculo. Registros manuais não estão incluídos.")
+                }
                 MealForm(day, catalog, state.busy, vm)
                 if (dayMeals.isEmpty()) Text("Nenhuma refeição registrada neste dia.")
                 dayMeals.sortedBy { it.loggedAt }.forEach { row ->
                     Panel("${row.text("tipo_refeicao")} · ${row.loggedAt.take(5)}") {
-                        Text("Habituais: ${foods(row, "saudaveis").ifBlank { "—" }}")
+                        Text("${if(row.details["nutrition"]!=null) "Confirmados" else "Habituais"}: ${foods(row, "saudaveis").ifBlank { "—" }}")
                         Text("Ocasionais: ${foods(row, "ocasionais").ifBlank { "—" }}")
+                        val nutrition=runCatching { row.details["nutrition"]?.let { mealJson.decodeFromJsonElement<MealEstimate>(it) } }.getOrNull()
+                        nutrition?.let { runCatching { calculateMeal(it.items,references) }.getOrNull()?.let { checked -> MealNutritionSummary(checked) } }
                         TextButton(onClick = { editingId = if (editingId == row.id) null else row.id }) {
                             Text(if (editingId == row.id) "Fechar edição" else "Editar refeição")
                         }
-                        if (editingId == row.id) MealForm(day, catalog, state.busy, vm, row)
+                        if (editingId == row.id) {
+                            if(nutrition!=null) key(row.id) { MealReview(day,catalog,vm,references,nutrition.items,state.busy,row,
+                                saved={editingId=null}) }
+                            else MealForm(day, catalog, state.busy, vm, row)
+                        }
                         TextButton(onClick = { deleting = row }) { Text("Remover refeição") }
                     }
                 }
@@ -144,6 +169,8 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
         } catch (_: Exception) { error = "Confira o horário da refeição." }
     }, enabled = !busy) { Text(if (previous == null) "Salvar refeição privada" else "Salvar edição da refeição") }
 }
+
+private fun contextAssets(context: android.content.Context) = context.assets.open("nutrition_catalog.json").bufferedReader().use { it.readText() }
 
 @Composable private fun WaterForm(day: LocalDate, total: Int, busy: Boolean, vm: WorkspaceViewModel,
                                   previous: HealthEntry? = null) {

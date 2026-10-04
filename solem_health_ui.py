@@ -19,6 +19,9 @@ def _save(client, day, time, kind, details, message, old=None, demo=False):
         st.error("Não foi possível salvar no diário privado. Confira conexão, sessão e migração; seus campos continuam preenchidos.")
         return
     st.session_state["solem_feedback"] = message
+    if details.get("input_method") == "photo_reviewed":
+        for key in list(st.session_state):
+            if key.startswith(f"meal_photo_{day}"): del st.session_state[key]
     st.rerun()
 
 def _delete(client, entry_id, demo):
@@ -51,6 +54,9 @@ def health_page(client, healthy_options, occasional_options, demo=False):
     food_tab, water_tab, weight_tab, sleep_tab, photo_tab = st.tabs(["Alimentação", "Água", "Peso", "Sono", "Fotos"])
 
     with food_tab:
+        from solem_meal_photo_ui import photo_meal, daily_metrics, nutrient_metrics, review_meal
+        photo_meal(client, day, _save, demo=demo)
+        daily_metrics(meals)
         st.caption("Adicione quantas refeições precisar no mesmo dia. A classificação é apenas para facilitar o registro.")
         meal_type = st.selectbox("Tipo de refeição", MEAL_TYPES, key="new_meal_type")
         with st.form("health_meal", clear_on_submit=True):
@@ -74,9 +80,17 @@ def health_page(client, healthy_options, occasional_options, demo=False):
             details = row["details"]
             with st.container(border=True):
                 st.markdown(f"**{details.get('tipo_refeicao', 'Refeição')} · {str(row['logged_at'])[:5]}**")
-                st.caption("Saudáveis: " + (", ".join(details.get("saudaveis", [])) or "—"))
+                st.caption(("Confirmados: " if details.get("nutrition") else "Habituais: ") + (", ".join(details.get("saudaveis", [])) or "—"))
                 st.caption("Ocasionais: " + (", ".join(details.get("ocasionais", [])) or "—"))
+                if details.get("nutrition"):
+                    from solem_meal_analysis import nutrition
+                    try: nutrient_metrics(nutrition(details["nutrition"]["items"]))
+                    except (KeyError, ValueError, TypeError): st.warning("Confira os dados nutricionais desta refeição antes de editar.")
+                    with st.expander("Editar alimentos e porções"):
+                        review_meal(client, day, details["nutrition"], _save, f"meal_nutrition_{row['id']}", old=row, demo=demo)
                 with st.expander("Editar refeição"):
+                    if details.get("nutrition"):
+                        st.caption("A edição manual abaixo substitui a análise nutricional. Para preservá-la, use Editar alimentos e porções acima.")
                     previous_type = details.get("tipo_refeicao", "Outra")
                     types = MEAL_TYPES if previous_type in MEAL_TYPES else (*MEAL_TYPES, previous_type)
                     edit_type = st.selectbox("Tipo de refeição", types, index=types.index(previous_type),

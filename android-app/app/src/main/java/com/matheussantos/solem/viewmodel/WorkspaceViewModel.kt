@@ -94,8 +94,9 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
     }
     fun archive(item: PersonalItem) = action { repo.archive(item,!item.archived); load() }
     fun loadHealth() = action { mutableState.update { it.copy(healthEntries=healthRepo.list()) } }
-    fun saveHealth(day: String, time: String, kind: String, details: JsonObject, id: String? = null) = action {
+    fun saveHealth(day: String, time: String, kind: String, details: JsonObject, id: String? = null, onSaved: () -> Unit = {}) = action {
         healthRepo.save(day, time, kind, details, id)
+        onSaved() // Clear a photo draft only after the write succeeds, before refresh.
         mutableState.update { it.copy(healthEntries=healthRepo.list(), message="Diário privado atualizado.") }
     }
     fun deleteHealth(id: String) = action {
