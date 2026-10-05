@@ -1711,169 +1711,184 @@ if pagina in ("Configurações", "Treino", "Estudar"):
                 st.stop()
         st.write("---")
         
-        row_data = df_manage[df_manage['id'] == id_real].iloc[0]
-        is_estudo = row_data['grupo_muscular'] == 'Estudos'
-        is_nutricao = row_data['grupo_muscular'] == 'Nutrição'
-        is_peso = row_data['grupo_muscular'] == 'Métricas'
-        is_treino = not (is_estudo or is_nutricao or is_peso)
-        
-        extras = row_data['dados_extras']
-        if isinstance(extras, str):
-            try: extras = json.loads(extras)
-            except: extras = {}
-        elif not isinstance(extras, dict): extras = {}
-            
-        if is_estudo:
-            is_anki_default = extras.get('fonte_questoes') == 'Anki' or row_data['exercicio'] in DECKS_ANKI
-            has_video = int(extras.get('tempo_video', 0)) > 0
-            has_questoes = int(extras.get('q_certas', 0)) > 0 or int(extras.get('q_erradas', 0)) > 0
+        def dismiss_record_editor(page=pagina):
+            st.session_state.pop(f"manage_selected_{page}", None)
 
-            if is_anki_default: tipo_padrao = "🃏 Revisão (Anki)"
-            elif has_video and not has_questoes: tipo_padrao = "🎥 Apenas Vídeo Aula"
-            else: tipo_padrao = "📝 Apenas Questões"
-            if GENERIC_ACCOUNT and extras.get("tipo_sessao") == "Leitura / Prática":
-                tipo_padrao = "📚 Leitura / Prática"
-            tipos_edit = ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"] + (["📚 Leitura / Prática"] if GENERIC_ACCOUNT else [])
+        def render_record_editor():
+            row_data = df_manage[df_manage['id'] == id_real].iloc[0]
+            is_estudo = row_data['grupo_muscular'] == 'Estudos'
+            is_nutricao = row_data['grupo_muscular'] == 'Nutrição'
+            is_peso = row_data['grupo_muscular'] == 'Métricas'
+            is_treino = not (is_estudo or is_nutricao or is_peso)
 
-            st.write("---")
-            tipo_sessao_edit = st.radio(
-                "Mudar Tipo de Sessão (Corrija se registrou errado):",
-                tipos_edit,
-                index=tipos_edit.index(tipo_padrao),
-                horizontal=True, key=f"radio_tipo_edit_{id_real}"
-            )
+            extras = row_data['dados_extras']
+            if isinstance(extras, str):
+                try: extras = json.loads(extras)
+                except: extras = {}
+            elif not isinstance(extras, dict): extras = {}
 
-        with st.form(f"form_edit_{id_real}"):
-            st.markdown(f"#### ✏️ Editar Dados do Registro (ID: {id_real})")
-            c1, c2 = st.columns(2)
-            with c1: new_date = st.date_input("Data", value=pd.to_datetime(row_data['data']).date())
-            with c2:
-                try: time_obj = pd.to_datetime(row_data['horario']).time()
-                except: time_obj = (datetime.utcnow() - timedelta(hours=3)).time()
-                new_time = st.time_input("Horário", value=time_obj)
-            st.write("")
-            
             if is_estudo:
-                if tipo_sessao_edit == "🃏 Revisão (Anki)":
-                    idx_ex = DECKS_ANKI.index(row_data['exercicio']) if row_data['exercicio'] in DECKS_ANKI else 0
-                    new_ex = st.selectbox("Deck do Anki", DECKS_ANKI, index=idx_ex)
-                    c3, c4 = st.columns(2)
-                    with c3:
-                        dur_val = row_data.get('duracao_min', 0)
-                        new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
-                    with c4:
-                        rep_val = row_data.get('repeticoes', 0)
-                        new_cartoes = st.number_input("Cartões Revisados", min_value=0, value=int(rep_val if pd.notnull(rep_val) else 0))
-                    new_topicos = []; new_certas = 0; new_erradas = 0; new_vid = 0; new_fonte = "Anki"
+                is_anki_default = extras.get('fonte_questoes') == 'Anki' or row_data['exercicio'] in DECKS_ANKI
+                has_video = int(extras.get('tempo_video', 0)) > 0
+                has_questoes = int(extras.get('q_certas', 0)) > 0 or int(extras.get('q_erradas', 0)) > 0
 
-                elif tipo_sessao_edit == "🎥 Apenas Vídeo Aula":
-                    idx_ex = DISCIPLINAS_ESTUDO.index(row_data['exercicio']) if row_data['exercicio'] in DISCIPLINAS_ESTUDO else 0
-                    new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=idx_ex)
-                    topicos_disp = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(new_ex, ["Geral"])
-                    old_topicos_str = extras.get('topico_edital', 'Geral')
-                    old_topicos_list = [t.strip() for t in old_topicos_str.split(',')] if old_topicos_str else []
-                    valid_old_topicos = [t for t in old_topicos_list if t in topicos_disp]
-                    new_topicos = st.multiselect("Tópicos de estudo" if GENERIC_ACCOUNT else "Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
-                    new_vid = st.number_input("Tempo Vídeo (min)", min_value=0, value=int(extras.get('tempo_video', 0)))
-                    new_dur = 0; new_certas = 0; new_erradas = 0; new_cartoes = 0; new_fonte = "Não Aplicável"
+                if is_anki_default: tipo_padrao = "🃏 Revisão (Anki)"
+                elif has_video and not has_questoes: tipo_padrao = "🎥 Apenas Vídeo Aula"
+                else: tipo_padrao = "📝 Apenas Questões"
+                if GENERIC_ACCOUNT and extras.get("tipo_sessao") == "Leitura / Prática":
+                    tipo_padrao = "📚 Leitura / Prática"
+                tipos_edit = ["🎥 Apenas Vídeo Aula", "📝 Apenas Questões", "🃏 Revisão (Anki)"] + (["📚 Leitura / Prática"] if GENERIC_ACCOUNT else [])
 
-                elif tipo_sessao_edit == "📝 Apenas Questões":
-                    idx_ex = DISCIPLINAS_ESTUDO.index(row_data['exercicio']) if row_data['exercicio'] in DISCIPLINAS_ESTUDO else 0
-                    new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=idx_ex)
-                    topicos_disp = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(new_ex, ["Geral"])
-                    old_topicos_str = extras.get('topico_edital', 'Geral')
-                    old_topicos_list = [t.strip() for t in old_topicos_str.split(',')] if old_topicos_str else []
-                    valid_old_topicos = [t for t in old_topicos_list if t in topicos_disp]
-                    new_topicos = st.multiselect("Tópicos de estudo" if GENERIC_ACCOUNT else "Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
+                st.write("---")
+                tipo_sessao_edit = st.radio(
+                    "Mudar Tipo de Sessão (Corrija se registrou errado):",
+                    tipos_edit,
+                    index=tipos_edit.index(tipo_padrao),
+                    horizontal=True, key=f"radio_tipo_edit_{id_real}"
+                )
+
+            with st.form(f"form_edit_{id_real}"):
+                st.markdown(f"#### ✏️ Editar Dados do Registro (ID: {id_real})")
+                c1, c2 = st.columns(2)
+                with c1: new_date = st.date_input("Data", value=pd.to_datetime(row_data['data']).date())
+                with c2:
+                    try: time_obj = pd.to_datetime(row_data['horario']).time()
+                    except: time_obj = (datetime.utcnow() - timedelta(hours=3)).time()
+                    new_time = st.time_input("Horário", value=time_obj)
+                st.write("")
+
+                if is_estudo:
+                    if tipo_sessao_edit == "🃏 Revisão (Anki)":
+                        idx_ex = DECKS_ANKI.index(row_data['exercicio']) if row_data['exercicio'] in DECKS_ANKI else 0
+                        new_ex = st.selectbox("Deck do Anki", DECKS_ANKI, index=idx_ex)
+                        c3, c4 = st.columns(2)
+                        with c3:
+                            dur_val = row_data.get('duracao_min', 0)
+                            new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
+                        with c4:
+                            rep_val = row_data.get('repeticoes', 0)
+                            new_cartoes = st.number_input("Cartões Revisados", min_value=0, value=int(rep_val if pd.notnull(rep_val) else 0))
+                        new_topicos = []; new_certas = 0; new_erradas = 0; new_vid = 0; new_fonte = "Anki"
+
+                    elif tipo_sessao_edit == "🎥 Apenas Vídeo Aula":
+                        idx_ex = DISCIPLINAS_ESTUDO.index(row_data['exercicio']) if row_data['exercicio'] in DISCIPLINAS_ESTUDO else 0
+                        new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=idx_ex)
+                        topicos_disp = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(new_ex, ["Geral"])
+                        old_topicos_str = extras.get('topico_edital', 'Geral')
+                        old_topicos_list = [t.strip() for t in old_topicos_str.split(',')] if old_topicos_str else []
+                        valid_old_topicos = [t for t in old_topicos_list if t in topicos_disp]
+                        new_topicos = st.multiselect("Tópicos de estudo" if GENERIC_ACCOUNT else "Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
+                        new_vid = st.number_input("Tempo Vídeo (min)", min_value=0, value=int(extras.get('tempo_video', 0)))
+                        new_dur = 0; new_certas = 0; new_erradas = 0; new_cartoes = 0; new_fonte = "Não Aplicável"
+
+                    elif tipo_sessao_edit == "📝 Apenas Questões":
+                        idx_ex = DISCIPLINAS_ESTUDO.index(row_data['exercicio']) if row_data['exercicio'] in DISCIPLINAS_ESTUDO else 0
+                        new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=idx_ex)
+                        topicos_disp = ["🎯 Simulado / Visão Geral"] + TOPICOS_EDITAL.get(new_ex, ["Geral"])
+                        old_topicos_str = extras.get('topico_edital', 'Geral')
+                        old_topicos_list = [t.strip() for t in old_topicos_str.split(',')] if old_topicos_str else []
+                        valid_old_topicos = [t for t in old_topicos_list if t in topicos_disp]
+                        new_topicos = st.multiselect("Tópicos de estudo" if GENERIC_ACCOUNT else "Tópico(s) do Edital", topicos_disp, default=valid_old_topicos)
+                        c3, c4, c5 = st.columns(3)
+                        with c3:
+                            dur_val = row_data.get('duracao_min', 0)
+                            new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
+                        with c4:
+                            new_certas = st.number_input("Acertos", min_value=0, value=int(extras.get('q_certas', 0)))
+                            new_erradas = st.number_input("Erros", min_value=0, value=int(extras.get('q_erradas', 0)))
+                        with c5:
+                            old_fonte = extras.get('fonte_questoes', 'Não Informada')
+                            idx_fonte = FONTES_QUESTOES.index(old_fonte) if old_fonte in FONTES_QUESTOES else 0
+                            new_fonte = st.selectbox("Fonte das Questões", FONTES_QUESTOES, index=idx_fonte)
+                    elif tipo_sessao_edit == "📚 Leitura / Prática":
+                        new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=DISCIPLINAS_ESTUDO.index(row_data['exercicio']))
+                        new_topicos = st.multiselect("Tópicos de estudo", TOPICOS_EDITAL.get(new_ex, ["Fundamentos"]), default=[x.strip() for x in extras.get('topico_edital', '').split(',') if x.strip() in TOPICOS_EDITAL.get(new_ex, [])], accept_new_options=True)
+                        new_dur = st.number_input("Tempo de leitura ou prática (min)", min_value=0, value=int(row_data.get('duracao_min') or 0), key=f"reading_edit_duration_{id_real}")
+                        new_vid = 0; new_certas = 0; new_erradas = 0; new_cartoes = 0; new_fonte = "Não Aplicável"
+                        new_vid = 0; new_cartoes = 0
+
+                elif is_treino:
+                    idx_ex = TODOS_EXERCICIOS.index(row_data['exercicio']) if row_data['exercicio'] in TODOS_EXERCICIOS else 0
+                    new_ex = st.selectbox("Exercício", TODOS_EXERCICIOS, index=idx_ex)
                     c3, c4, c5 = st.columns(3)
                     with c3:
-                        dur_val = row_data.get('duracao_min', 0)
-                        new_dur = st.number_input("Tempo Líquido (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
+                        ser_val = row_data.get('series', 0)
+                        new_series = st.number_input("Séries", min_value=0, value=int(ser_val if pd.notnull(ser_val) else 0))
+                        rep_val = row_data.get('repeticoes', 0)
+                        new_reps = st.number_input("Repetições", min_value=0, value=int(rep_val if pd.notnull(rep_val) else 0))
+                        car_val = row_data.get('carga_kg', 0.0)
+                        new_carga = st.number_input("Carga (kg)", min_value=0.0, value=float(car_val if pd.notnull(car_val) else 0.0))
                     with c4:
-                        new_certas = st.number_input("Acertos", min_value=0, value=int(extras.get('q_certas', 0)))
-                        new_erradas = st.number_input("Erros", min_value=0, value=int(extras.get('q_erradas', 0)))
+                        new_iso = st.number_input("Isometria (seg)", min_value=0, value=int(extras.get('isometria_segundos', 0)))
+                        desc_val = row_data.get('descanso_seg', 0)
+                        new_desc = st.number_input("Descanso (seg)", min_value=0, value=int(desc_val if pd.notnull(desc_val) else 0))
                     with c5:
-                        old_fonte = extras.get('fonte_questoes', 'Não Informada')
-                        idx_fonte = FONTES_QUESTOES.index(old_fonte) if old_fonte in FONTES_QUESTOES else 0
-                        new_fonte = st.selectbox("Fonte das Questões", FONTES_QUESTOES, index=idx_fonte)
-                elif tipo_sessao_edit == "📚 Leitura / Prática":
-                    new_ex = st.selectbox("Disciplina", DISCIPLINAS_ESTUDO, index=DISCIPLINAS_ESTUDO.index(row_data['exercicio']))
-                    new_topicos = st.multiselect("Tópicos de estudo", TOPICOS_EDITAL.get(new_ex, ["Fundamentos"]), default=[x.strip() for x in extras.get('topico_edital', '').split(',') if x.strip() in TOPICOS_EDITAL.get(new_ex, [])], accept_new_options=True)
-                    new_dur = st.number_input("Tempo de leitura ou prática (min)", min_value=0, value=int(row_data.get('duracao_min') or 0), key=f"reading_edit_duration_{id_real}")
-                    new_vid = 0; new_certas = 0; new_erradas = 0; new_cartoes = 0; new_fonte = "Não Aplicável"
-                    new_vid = 0; new_cartoes = 0
-                
-            elif is_treino:
-                idx_ex = TODOS_EXERCICIOS.index(row_data['exercicio']) if row_data['exercicio'] in TODOS_EXERCICIOS else 0
-                new_ex = st.selectbox("Exercício", TODOS_EXERCICIOS, index=idx_ex)
-                c3, c4, c5 = st.columns(3)
-                with c3:
-                    ser_val = row_data.get('series', 0)
-                    new_series = st.number_input("Séries", min_value=0, value=int(ser_val if pd.notnull(ser_val) else 0))
-                    rep_val = row_data.get('repeticoes', 0)
-                    new_reps = st.number_input("Repetições", min_value=0, value=int(rep_val if pd.notnull(rep_val) else 0))
-                    car_val = row_data.get('carga_kg', 0.0)
-                    new_carga = st.number_input("Carga (kg)", min_value=0.0, value=float(car_val if pd.notnull(car_val) else 0.0))
-                with c4:
-                    new_iso = st.number_input("Isometria (seg)", min_value=0, value=int(extras.get('isometria_segundos', 0)))
-                    desc_val = row_data.get('descanso_seg', 0)
-                    new_desc = st.number_input("Descanso (seg)", min_value=0, value=int(desc_val if pd.notnull(desc_val) else 0))
-                with c5:
-                    dur_val = row_data.get('duracao_min', 0)
-                    new_dur = st.number_input("Duração Cardio (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
-                    dist_val = row_data.get('distancia_km', 0.0)
-                    new_dist = st.number_input("Distância (km)", min_value=0.0, value=float(dist_val if pd.notnull(dist_val) else 0.0))
-                humores = ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"]
-                old_humor = extras.get('humor', 'Normal')
-                new_humor = st.selectbox("Estado Mental", humores, index=humores.index(old_humor) if old_humor in humores else 0)
+                        dur_val = row_data.get('duracao_min', 0)
+                        new_dur = st.number_input("Duração Cardio (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
+                        dist_val = row_data.get('distancia_km', 0.0)
+                        new_dist = st.number_input("Distância (km)", min_value=0.0, value=float(dist_val if pd.notnull(dist_val) else 0.0))
+                    humores = ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"]
+                    old_humor = extras.get('humor', 'Normal')
+                    new_humor = st.selectbox("Estado Mental", humores, index=humores.index(old_humor) if old_humor in humores else 0)
 
-            elif is_nutricao:
-                st.info("💡 Edite os alimentos listados abaixo (separados por vírgula).")
-                new_saudavel = st.text_area("Alimentação Saudável", value=str(row_data['alimentacao_saudavel']))
-                new_besteira = st.text_area("Junk Food (Besteirol)", value=str(row_data['alimentacao_besteirol']))
-                
-            elif is_peso:
-                peso_val = row_data.get('peso_corporal', 0.0)
-                new_peso = st.number_input("Peso Corporal (kg)", min_value=0.0, value=float(peso_val if pd.notnull(peso_val) else 0.0))
+                elif is_nutricao:
+                    st.info("💡 Edite os alimentos listados abaixo (separados por vírgula).")
+                    new_saudavel = st.text_area("Alimentação Saudável", value=str(row_data['alimentacao_saudavel']))
+                    new_besteira = st.text_area("Junk Food (Besteirol)", value=str(row_data['alimentacao_besteirol']))
 
-            submit_edit = st.form_submit_button("💾 Salvar Alterações", use_container_width=True)
+                elif is_peso:
+                    peso_val = row_data.get('peso_corporal', 0.0)
+                    new_peso = st.number_input("Peso Corporal (kg)", min_value=0.0, value=float(peso_val if pd.notnull(peso_val) else 0.0))
 
-        if submit_edit:
-            update_data = { "data": str(new_date), "horario": str(new_time) }
-            if is_estudo:
-                update_data["exercicio"] = new_ex
-                update_data["duracao_min"] = new_dur
-                if tipo_sessao_edit == "🃏 Revisão (Anki)": update_data["repeticoes"] = new_cartoes
-                else: update_data["repeticoes"] = new_certas + new_erradas
-                extras["topico_edital"] = ", ".join(new_topicos) if new_topicos else ("Revisão Espaçada" if tipo_sessao_edit == "🃏 Revisão (Anki)" else "Geral")
-                if GENERIC_ACCOUNT:
-                    extras["tipo_sessao"] = "Leitura / Prática" if tipo_sessao_edit == "📚 Leitura / Prática" else tipo_sessao_edit
-                extras["q_certas"] = new_certas
-                extras["q_erradas"] = new_erradas
-                extras["tempo_video"] = new_vid
-                extras["fonte_questoes"] = new_fonte
-                update_data["dados_extras"] = extras
-            elif is_treino:
-                update_data["exercicio"] = new_ex
-                update_data["grupo_muscular"] = next((g for g, l in EXERCICIOS_PRESETADOS.items() if new_ex in l), "Outro")
-                update_data["series"] = new_series
-                update_data["repeticoes"] = new_reps
-                update_data["carga_kg"] = new_carga
-                update_data["descanso_seg"] = new_desc
-                update_data["duracao_min"] = new_dur
-                update_data["distancia_km"] = new_dist
-                extras["isometria_segundos"] = new_iso
-                extras["humor"] = new_humor
-                update_data["dados_extras"] = extras
-            elif is_nutricao:
-                update_data["alimentacao_saudavel"] = new_saudavel
-                update_data["alimentacao_besteirol"] = new_besteira
-            elif is_peso:
-                update_data["peso_corporal"] = new_peso
-            
-            supabase.table(ACTIVITY_TABLE).update(update_data).eq("id", id_real).execute()
-            st.session_state["solem_feedback"] = "Registro atualizado. Seu progresso foi recalculado."
-            st.rerun()
+                submit_edit = st.form_submit_button("💾 Salvar Alterações", use_container_width=True)
+
+            if submit_edit:
+                update_data = { "data": str(new_date), "horario": str(new_time) }
+                if is_estudo:
+                    update_data["exercicio"] = new_ex
+                    update_data["duracao_min"] = new_dur
+                    if tipo_sessao_edit == "🃏 Revisão (Anki)": update_data["repeticoes"] = new_cartoes
+                    else: update_data["repeticoes"] = new_certas + new_erradas
+                    extras["topico_edital"] = ", ".join(new_topicos) if new_topicos else ("Revisão Espaçada" if tipo_sessao_edit == "🃏 Revisão (Anki)" else "Geral")
+                    if GENERIC_ACCOUNT:
+                        extras["tipo_sessao"] = "Leitura / Prática" if tipo_sessao_edit == "📚 Leitura / Prática" else tipo_sessao_edit
+                    extras["q_certas"] = new_certas
+                    extras["q_erradas"] = new_erradas
+                    extras["tempo_video"] = new_vid
+                    extras["fonte_questoes"] = new_fonte
+                    update_data["dados_extras"] = extras
+                elif is_treino:
+                    update_data["exercicio"] = new_ex
+                    update_data["grupo_muscular"] = next((g for g, l in EXERCICIOS_PRESETADOS.items() if new_ex in l), "Outro")
+                    update_data["series"] = new_series
+                    update_data["repeticoes"] = new_reps
+                    update_data["carga_kg"] = new_carga
+                    update_data["descanso_seg"] = new_desc
+                    update_data["duracao_min"] = new_dur
+                    update_data["distancia_km"] = new_dist
+                    extras["isometria_segundos"] = new_iso
+                    extras["humor"] = new_humor
+                    update_data["dados_extras"] = extras
+                elif is_nutricao:
+                    update_data["alimentacao_saudavel"] = new_saudavel
+                    update_data["alimentacao_besteirol"] = new_besteira
+                elif is_peso:
+                    update_data["peso_corporal"] = new_peso
+
+                supabase.table(ACTIVITY_TABLE).update(update_data).eq("id", id_real).execute()
+                st.session_state.pop(f"manage_selected_{pagina}", None)
+                st.session_state["solem_feedback"] = "Registro atualizado. Seu progresso foi recalculado."
+                st.rerun()
+            if pagina != "Configurações":
+                if st.button("Cancelar edição", key=f"manage_close_{pagina}_{id_real}"):
+                    dismiss_record_editor()
+                    st.rerun()
+
+        if pagina == "Configurações":
+            render_record_editor()
+        else:
+            # A modal keeps the selected session visible, even with 20 history cards.
+            st.dialog("Editar registro", width="large", on_dismiss=dismiss_record_editor)(render_record_editor)()
 
         if pagina == "Configurações":
             st.write("---")

@@ -72,6 +72,41 @@ class AppTests(unittest.TestCase):
         self.assertEqual([(r["id"], r["repeticoes"]) for r in self.app.session_state["solem_demo_records"]],
                          [(101, 25)])
 
+    def test_edit_opens_visible_dialog_with_paginated_history_and_cancel(self):
+        from copy import deepcopy
+        from solem_health import now_local
+        original = next(r for r in self.app.session_state["solem_demo_records"]
+                        if r["grupo_muscular"] == "Peitoral")
+        records = []
+        for index in range(25):
+            row = deepcopy(original)
+            row.update(id=100 + index, data=str(now_local().date()),
+                       horario="08:00:00", repeticoes=20 + index)
+            records.append(row)
+        self.app.session_state["solem_demo_records"] = records
+        self.app.radio(key="solem_page").set_value("Treino").run()
+        self.assertEqual(self.app.selectbox(key="manage_page_Treino").options, ["1", "2"])
+        self.app.button(key="manage_edit_Treino_124").click().run()
+        self.assertFalse(self.app.exception)
+        self.assertTrue(self.app.get("dialog"))
+        self.assertEqual(next(x for x in self.app.number_input if x.label == "Repetições").value, 44)
+        next(x for x in self.app.number_input if x.label == "Repetições").set_value(999)
+        self.app.button(key="manage_close_Treino_124").click().run()
+        self.assertFalse(self.app.exception)
+        self.assertNotIn("manage_selected_Treino", self.app.session_state)
+        self.assertEqual(self.app.session_state["solem_demo_records"][-1]["repeticoes"], 44)
+        self.app.selectbox(key="manage_page_Treino").set_value(2).run()
+        self.app.button(key="manage_edit_Treino_100").click().run()
+        self.assertTrue(self.app.get("dialog"))
+        self.assertEqual(next(x for x in self.app.number_input if x.label == "Repetições").value, 20)
+        next(x for x in self.app.number_input if x.label == "Repetições").set_value(23)
+        next(x for x in self.app.button if "Salvar Alterações" in x.label).click().run()
+        self.assertFalse(self.app.exception)
+        self.assertNotIn("manage_selected_Treino", self.app.session_state)
+        self.assertEqual(self.app.session_state["solem_demo_records"][0]["repeticoes"], 23)
+        self.assertEqual([r["repeticoes"] for r in self.app.session_state["solem_demo_records"]][1:],
+                         [r["repeticoes"] for r in records][1:])
+
     def test_quick_action_and_save_recalculates_xp(self):
         from solem_progress import calculate_progress
         before = calculate_progress(self.app.session_state["solem_demo_records"])["xp"]
