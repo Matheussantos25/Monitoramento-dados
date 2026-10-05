@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.SystemClock
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -43,6 +44,9 @@ import java.time.format.DateTimeFormatter
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result.values.any { it }) start() else message = "Localização não autorizada. Informe a distância manualmente."
     }
+    var notificationAllowed by remember {mutableStateOf(Build.VERSION.SDK_INT<33 || ContextCompat.checkSelfPermission(context,
+        Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED)}
+    val notificationLauncher=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {notificationAllowed=it}
     LaunchedEffect(tracking.meters) { if (tracking.active || startedHere) onDistance(tracking.meters / 1000.0) }
     LaunchedEffect(tracking.active, tracking.startedAtMillis) {
         if (tracking.active) {
@@ -74,6 +78,10 @@ import java.time.format.DateTimeFormatter
             Text("%.3f km".format(java.util.Locale.US, tracking.meters / 1000.0), modifier = Modifier.padding(top = 12.dp))
         }
         Text("Duração: ${clockText(elapsed / 1000)}")
+        if(Build.VERSION.SDK_INT>=33 && !notificationAllowed) {
+            Text("Ative a notificação para acessar o botão Parar GPS na tela bloqueada. Sem ela, pare pelo app.",style=MaterialTheme.typography.bodySmall)
+            TextButton({notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)}) {Text("Ativar notificação do GPS")}
+        }
         if (tracking.startedAtMillis > 0) Text("Iniciado às " + Instant.ofEpochMilli(tracking.startedAtMillis)
             .atOffset(ZoneOffset.ofHours(-3)).format(DateTimeFormatter.ofPattern("HH:mm:ss")), style = MaterialTheme.typography.bodySmall)
         (message ?: tracking.error)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }

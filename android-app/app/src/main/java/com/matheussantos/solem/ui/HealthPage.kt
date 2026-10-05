@@ -8,6 +8,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronLeft
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.matheussantos.solem.data.model.HealthEntry
 import com.matheussantos.solem.domain.Catalog
@@ -33,13 +38,15 @@ private fun foods(row: HealthEntry, key: String): String = (row.details[key] as?
     ?.mapNotNull { (it as? JsonPrimitive)?.content }?.joinToString(", ").orEmpty()
 private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter { it.isNotBlank() }
 
-@Composable fun HealthPage(catalog: Catalog, vm: WorkspaceViewModel) {
+@OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
+@Composable fun HealthPage(catalog: Catalog, vm: WorkspaceViewModel,initialSection:Int=-1) {
     val context=LocalContext.current
     val state by vm.state.collectAsStateWithLifecycle()
-    var selected by rememberSaveable { mutableIntStateOf(0) }
+    var selected by rememberSaveable(initialSection) { mutableIntStateOf(initialSection.coerceIn(-1,4)) }
     var dayText by rememberSaveable { mutableStateOf(today().toString()) }
     var deleting by remember { mutableStateOf<HealthEntry?>(null) }
     var editingId by remember { mutableStateOf<String?>(null) }
+    var pickingDate by remember { mutableStateOf(false) }
     val day = runCatching { LocalDate.parse(dayText) }.getOrNull()
     val rows = if (day == null) emptyList() else state.healthEntries.filter { it.day == day.toString() }
     val dayMeals = rows.filter { it.kind == "meal" }
@@ -48,30 +55,35 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
     }
     val weight = rows.firstOrNull { it.kind == "weight" }
     val sleep = rows.firstOrNull { it.kind == "sleep" }
-    var requested by remember { mutableStateOf(false) }
-    LaunchedEffect(state.busy) {
-        if (!state.busy && !requested) { requested = true; vm.loadHealth() }
-    }
+    LaunchedEffect(dayText) { editingId=null }
     Page("Saúde") {
-        Text("Seu diário privado de alimentação, água, peso, sono e fotos. Os registros antigos em treinos não foram migrados.",
+        Text("Alimentação, hidratação, descanso e evolução. Um diário privado, no seu ritmo.",
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Field("Dia em foco (AAAA-MM-DD)", dayText) { dayText = it }
-        if (day == null) Text("Informe uma data válida.", color = MaterialTheme.colorScheme.error)
-        else Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            listOf("Refeições: ${dayMeals.size}", "Água: $water ml",
-                "Peso: ${weight?.text("kg")?.ifBlank { "—" } ?: "—"} kg",
-                "Sono: ${sleep?.text("duracao_min")?.ifBlank { "—" } ?: "—"} min")
-                .forEach { Text(it, color = MaterialTheme.colorScheme.primary) }
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+            IconButton({day?.let {dayText=it.minusDays(1).toString()}}) {Icon(Icons.Outlined.ChevronLeft,"Dia anterior")}
+            TextButton({pickingDate=true},modifier=Modifier.weight(1f)) {
+                Icon(Icons.Outlined.CalendarMonth,null);Spacer(Modifier.width(8.dp))
+                Text(day?.format(DateTimeFormatter.ofPattern("dd MMM yyyy",java.util.Locale.forLanguageTag("pt-BR"))) ?: dayText)
+            }
+            IconButton({day?.let {dayText=it.plusDays(1).toString()}}) {Icon(Icons.Outlined.ChevronRight,"Próximo dia")}
         }
+        if(day!=today()) TextButton({dayText=today().toString()}) {Text("Voltar para hoje")}
+        if (day == null) Text("Informe uma data válida.", color = MaterialTheme.colorScheme.error)
         if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (state.failed) Text(state.message ?: "Falha no diário. Confira a sessão e a migração 20260923_health_diary.sql.",
             color = MaterialTheme.colorScheme.error)
         TextButton(onClick = vm::loadHealth, enabled = !state.busy) { Text("Atualizar diário") }
         val tabs = listOf("Alimentação", "Água", "Peso", "Sono", "Fotos")
-        ScrollableTabRow(selectedTabIndex = selected) {
-            tabs.forEachIndexed { index, name -> Tab(selected == index, onClick = { selected = index }, text = { Text(name) }) }
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected=selected==-1,onClick={selected=-1},label={Text("Resumo")})
+            tabs.forEachIndexed { index,name -> FilterChip(selected=selected==index,onClick={selected=index},label={Text(name)}) }
         }
         if (day != null) when (selected) {
+            -1 -> HealthSummary(rows,state.healthLoaded && !state.healthFailed,state.busy,{selected=it},{volume ->
+                vm.saveHealth(day.toString(),currentTime(),"water",buildJsonObject {
+                    put("recipiente","Registro rápido");put("volume_ml",volume);put("quantidade",1)
+                })
+            })
             0 -> {
                 val references: List<MealReference> = remember {
                     mealJson.decodeFromString(contextAssets(context))
@@ -127,6 +139,13 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
             3 -> DailySleep(day, sleep, state.busy, vm)
             4 -> ProgressPhotosPage(vm, day)
         }
+    }
+    if(pickingDate) {
+        val picker=rememberDatePickerState(initialSelectedDateMillis=(day ?: today()).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli())
+        DatePickerDialog(onDismissRequest={pickingDate=false},confirmButton={TextButton({
+            picker.selectedDateMillis?.let {dayText=java.time.Instant.ofEpochMilli(it).atOffset(ZoneOffset.UTC).toLocalDate().toString()}
+            pickingDate=false
+        }) {Text("Selecionar")}},dismissButton={TextButton({pickingDate=false}) {Text("Cancelar")}}) { DatePicker(state=picker) }
     }
     deleting?.let { row ->
         AlertDialog(onDismissRequest = { deleting = null }, title = { Text("Remover registro privado?") },

@@ -7,6 +7,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,20 +27,28 @@ import com.matheussantos.solem.domain.*
 import com.matheussantos.solem.ui.state.TrainingUiState
 import com.matheussantos.solem.viewmodel.TrainingViewModel
 import com.matheussantos.solem.viewmodel.WorkspaceViewModel
+import com.matheussantos.solem.data.PersonalizationStore
+import com.matheussantos.solem.ui.theme.LocalDashboardPreferences
+import com.matheussantos.solem.ui.theme.SolemTheme
 
-val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Configurações", "Calendário", "Elos", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro")
+val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Todos os registros", "Calendário", "Elos", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Personalizar")
 
 @Composable fun SolemApp(workspaceVm: WorkspaceViewModel = viewModel()) {
     val auth by workspaceVm.state.collectAsStateWithLifecycle()
-    when {
+    val context=LocalContext.current
+    val store=remember(auth.accountId,auth.generic) { PersonalizationStore(context,auth.accountId,auth.generic) }
+    val settings by store.state.collectAsStateWithLifecycle()
+    CompositionLocalProvider(LocalDashboardPreferences provides settings) {
+    SolemTheme(settings) { Surface(Modifier.fillMaxSize()) { when {
         !auth.initialized -> Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }
         !auth.signedIn -> WorkspacePage(workspaceVm)
-        else -> key(auth.accountId) { AuthenticatedSolemApp(workspaceVm, auth.accountId, auth.generic) }
+        else -> key(auth.accountId) { AuthenticatedSolemApp(workspaceVm, auth.accountId, auth.generic,store) }
+    } } }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun AuthenticatedSolemApp(workspaceVm: WorkspaceViewModel, accountId: String, generic: Boolean) {
+@Composable private fun AuthenticatedSolemApp(workspaceVm: WorkspaceViewModel, accountId: String, generic: Boolean,store:PersonalizationStore) {
     val vm: TrainingViewModel = viewModel(key="training-$accountId", factory=object : androidx.lifecycle.ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T = TrainingViewModel(
@@ -55,13 +66,22 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val rows = (state as? TrainingUiState.Ready)?.records.orEmpty()
+    val healthState by workspaceVm.state.collectAsStateWithLifecycle()
+    var healthRequested by remember { mutableStateOf(false) }
+    LaunchedEffect(healthState.busy,healthState.healthLoaded) {
+        if(!healthState.busy && !healthState.healthLoaded && !healthRequested) {healthRequested=true;workspaceVm.loadHealth()}
+    }
+    val activityAvailable=state is TrainingUiState.Ready || state is TrainingUiState.Empty
+    val route=backStack?.destination?.route.orEmpty()
+    val isRecord=route.startsWith("edit/") || route.startsWith("new-workout/")
     val catalog = remember(generic, rows) { Catalog(context, generic).withStudyTopics(rows) }
     LaunchedEffect(message) { message?.let { snack.showSnackbar(it); vm.consumeMessage() } }
+    JourneyPromotionHost(rows,catalog,activityAvailable,store)
     ModalNavigationDrawer(drawerState=drawer,drawerContent={
         ModalDrawerSheet {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
                 Text("✳ solem",Modifier.padding(16.dp),style=MaterialTheme.typography.headlineMedium)
-                listOf("JORNADA" to listOf(0,1,2,3,5,6,9,10), "BIBLIOTECA" to listOf(11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(8)).forEach { (group, indices) ->
+                listOf("JORNADA" to listOf(0,1,2,3,5,6,9,10), "BIBLIOTECA" to listOf(11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(17,8)).forEach { (group, indices) ->
                     Text(group,Modifier.padding(16.dp,12.dp),style=MaterialTheme.typography.labelSmall)
                     indices.forEach { index -> NavigationDrawerItem(label={Text(pages[index])},selected=backStack?.destination?.route==index.toString(),onClick={
                         nav.navigate(index.toString()) {launchSingleTop=true;popUpTo("0")}
@@ -78,19 +98,38 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
         }
     }) {
     Scaffold(snackbarHost = { SnackbarHost(snack) }, topBar = {
-        TopAppBar(title={Text(pages.getOrNull(backStack?.destination?.route?.toIntOrNull() ?: -1) ?: "Registro")},
-            navigationIcon={IconButton({scope.launch {drawer.open()}}) {Icon(Icons.Default.Menu,"Abrir menu")}},
-            actions={IconButton(vm::refresh,enabled=!busy) {Icon(Icons.Default.Refresh,"Atualizar histórico")}})
-    }) { padding ->
+        TopAppBar(title={Text(if(route.startsWith("health/")) "Saúde" else pages.getOrNull(route.toIntOrNull() ?: -1) ?: "Registro",
+            maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)},
+            navigationIcon={if(isRecord) IconButton({nav.popBackStack()}) {Icon(Icons.AutoMirrored.Filled.ArrowBack,"Voltar")}
+                else IconButton({scope.launch {drawer.open()}}) {Icon(Icons.Default.Menu,"Abrir menu")}},
+            actions={IconButton({nav.navigate("17") {launchSingleTop=true}}) {Icon(Icons.Outlined.Tune,"Personalizar")}
+                IconButton({vm.refresh();workspaceVm.loadHealth()},enabled=!busy && !healthState.busy) {Icon(Icons.Default.Refresh,"Atualizar dados")}})
+    },bottomBar={if(!isRecord) NavigationBar {
+        listOf(Triple(0,"Jornada",Icons.Outlined.AutoAwesome),Triple(3,"Saúde",Icons.Outlined.FavoriteBorder),
+            Triple(1,"Treino",Icons.Outlined.FitnessCenter),Triple(5,"Estudo",Icons.AutoMirrored.Outlined.MenuBook)).forEach { (index,label,icon) ->
+            val active=when {route.startsWith("health/") || route=="4" -> 3;route=="2" -> 1;route=="6" -> 5;route in listOf("9","10") -> 0;else -> route.toIntOrNull()}
+            NavigationBarItem(selected=active==index,
+                onClick={nav.navigate(index.toString()) {launchSingleTop=true;popUpTo("0")}},icon={Icon(icon,null)},label={Text(label)})
+        }
+    }}) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             when (val current = state) {
                 TrainingUiState.Loading -> LinearProgressIndicator(Modifier.fillMaxWidth())
                 TrainingUiState.SetupRequired -> Text("Configure a URL e a chave pública para conectar seu histórico.", Modifier.padding(16.dp))
-                is TrainingUiState.Error -> Text(current.message, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error)
+                is TrainingUiState.Error -> Row(Modifier.padding(horizontal=16.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    Text(current.message,Modifier.weight(1f),color=MaterialTheme.colorScheme.error)
+                    TextButton(vm::refresh,enabled=!busy) {Text("Tentar novamente")}
+                }
                 else -> {}
             }
+            if(route=="0" && healthState.healthFailed) Row(Modifier.padding(horizontal=16.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                Text("Diário indisponível. As metas de saúde aguardam conexão.",Modifier.weight(1f),color=MaterialTheme.colorScheme.error)
+                TextButton(workspaceVm::loadHealth,enabled=!healthState.busy) {Text("Tentar novamente")}
+            }
             NavHost(nav, startDestination = "0") {
-                composable("0") { Overview(rows, { nav.navigate(it.toString()) }, { exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}") }, generic) }
+                composable("0") { JourneyDashboard(rows,healthState.healthEntries,healthState.healthLoaded && !healthState.healthFailed,
+                    activityAvailable,generic,{nav.navigate(it.toString()) {launchSingleTop=true}},
+                    {exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}")}, {section -> nav.navigate("health/$section")}) }
                 composable("1") {
                     var section by rememberSaveable { mutableStateOf("Registrar") }
                     Column(Modifier.fillMaxSize()) {
@@ -104,7 +143,8 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
                 }
                 composable("2") { PhysicalCharts(rows, catalog) }
                 composable("3") { HealthPage(catalog, workspaceVm) }
-                composable("4") { HealthPage(catalog, workspaceVm) }
+                composable("4") { HealthPage(catalog, workspaceVm,2) }
+                composable("health/{section}") { entry -> HealthPage(catalog,workspaceVm,entry.arguments?.getString("section")?.toIntOrNull() ?: -1) }
                 composable("5") {
                     var section by rememberSaveable { mutableStateOf("Registrar") }
                     Column(Modifier.fillMaxSize()) {
@@ -127,6 +167,7 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
                 composable("9") { MonthlyJournal(rows) }
                 composable("10") { if (state is TrainingUiState.Ready || state is TrainingUiState.Empty) RanksPage(rows, catalog) }
                 (11..16).forEach { index -> composable(index.toString()) { WorkspacePage(workspaceVm,pages[index]) } }
+                composable("17") { PersonalizationPage(store,generic) }
                 composable("edit/{id}") { entry ->
                     val record = rows.firstOrNull { it.id == entry.arguments?.getString("id")?.toLongOrNull() }
                     if (record == null) Text("Registro não encontrado. Atualize o histórico.")
@@ -144,63 +185,6 @@ fun kind(row: TrainingRecord) = when(row.group) {
     "Nutrição" -> if (row.exercicio == "Água") "Saúde" else "Alimentação"
     "Métricas" -> if (row.exercicio == "Sono Diário") "Saúde" else "Peso"
     else -> "Treino"
-}
-@Composable fun Overview(rows: List<TrainingRecord>, navigate: (Int) -> Unit, registerExercise: (String) -> Unit, generic: Boolean = false) {
-    val p = calculateProgress(rows)
-    Page("Seu espaço de evolução") {
-        Panel("STATUS DO PERSONAGEM") {
-            Text("NÍVEL ${p.xp / 250 + 1}", style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary)
-            Text("${p.xp % 250} / 250 XP para o próximo nível")
-            LinearProgressIndicator(progress = { (p.xp % 250) / 250f }, modifier = Modifier.fillMaxWidth())
-            Text("◈ ${p.streak} dias de sequência  •  ${p.xp} XP no histórico",
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        OutlinedButton({ navigate(3) }, modifier=Modifier.fillMaxWidth()) { Text("Abrir diário de saúde") }
-        OutlinedButton({ navigate(10) }) { Text("Ver meus elos de físico e estudo") }
-        OutlinedButton({ navigate(9) },modifier=Modifier.fillMaxWidth()) { Text("Abrir calendário mensal") }
-        val todayProgress = calculateProgress(rows.filter { it.data.take(10) == today().toString() })
-        Panel("MISSÕES DIÁRIAS") {
-            Text("${if (todayProgress.workoutDays > 0) "✓" else "◇"} Treinar  ·  +30 XP")
-            Text("${if (todayProgress.studyDays > 0) "✓" else "◇"} Estudar  ·  +30 XP")
-            Text("Treino e estudo no mesmo dia: +15 XP", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("${todayProgress.xp} XP conquistados hoje", color = MaterialTheme.colorScheme.primary)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton({ navigate(1) }) { Text("Treinar") }
-                OutlinedButton({ navigate(5) }) { Text("Estudar") }
-            }
-        }
-        val todayWorkouts = rows.filter { it.data.take(10) == today().toString() && it.isWorkout() }
-        Panel("CHECK-UP DE HOJE") {
-            if (!generic) {
-            Goal("Mewing com borracha", todayWorkouts.filter { it.exercicio == "Mewing com borracha" }
-                .sumOf { it.repeticoes.toDouble() }, 400, "rep")
-            TextButton({registerExercise("Mewing com borracha")}) {Text("Registrar Mewing com borracha")}
-            }
-            Goal("Flexões", todayWorkouts.filter { it.exercicio == "Flexão" }
-                .sumOf { it.repeticoes.toDouble() }, if (generic) 10 else 50, "rep")
-            TextButton({registerExercise("Flexão")}) {Text("Registrar Flexão")}
-            Goal("Agachamentos", todayWorkouts.filter { it.exercicio == "Agachamento" }
-                .sumOf { it.repeticoes.toDouble() }, if (generic) 15 else 50, "rep")
-            TextButton({registerExercise("Agachamento")}) {Text("Registrar Agachamento")}
-            Goal("Caminhada ou corrida", todayWorkouts.filter { it.exercicio == "Caminhada" || it.exercicio == "Corrida" }
-                .sumOf { it.distanceKm }, if (generic) 1 else 5, "km", 2)
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                TextButton({registerExercise("Caminhada")}) {Text("Caminhada")}
-                TextButton({registerExercise("Corrida")}) {Text("Corrida")}
-            }
-        }
-        val start = today().minusDays((today().dayOfWeek.value - 1).toLong())
-        val week = rows.filter { it.data >= start.toString() && it.data <= today().toString() }
-        Panel("Esta semana") {
-            Text("${week.filter { it.isWorkout() && (it.repeticoes > 0 || it.durationMinutes > 0 || it.distanceKm > 0 || it.number("isometria_segundos") > 0) }.map { it.data }.distinct().size} dias de treino")
-            Text("%.1f minutos de estudo".format(week.filter { it.group == "Estudos" }.sumOf { it.studyMinutes() + it.number("tempo_video") }))
-            Text("%.0f questões".format(week.filter { it.group == "Estudos" && it.extra("fonte_questoes") != "Anki" }.sumOf { it.number("q_certas") + it.number("q_erradas") }))
-        }
-        Text("Registros recentes", style = MaterialTheme.typography.titleLarge)
-        if (rows.isEmpty()) Text("Registre sua primeira atividade para começar.")
-        rows.take(5).forEach { row -> Panel(row.exercicio) { Text("${row.data} • ${kind(row)}") } }
-    }
 }
 @Composable fun History(rows: List<TrainingRecord>, busy: Boolean, delete: (Long) -> Unit, edit: (TrainingRecord) -> Unit, fixedCategory: String? = null, modifier: Modifier = Modifier) {
     var search by rememberSaveable { mutableStateOf("") }

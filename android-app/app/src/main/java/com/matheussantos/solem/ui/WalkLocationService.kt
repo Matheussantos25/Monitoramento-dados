@@ -75,7 +75,11 @@ class WalkLocationService : Service() {
             val seconds = (point.elapsedRealtimeNanos - last.elapsedRealtimeNanos) / 1e9
             if (step in 2.0..250.0 && seconds > 0 && step / seconds <= 8.0) {
                 state.value = state.value.copy(meters = state.value.meters + step)
-                (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIFICATION, notification())
+                // Foreground tracking keeps running even if notifications are disabled.
+                if (Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                    (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIFICATION, notification())
+                }
             }
         }
         previous = point

@@ -25,6 +25,7 @@ data class WorkspaceState(val initialized: Boolean = false, val signedIn: Boolea
     val accountId: String = "", val generic: Boolean = true,
     val items: List<PersonalItem> = emptyList(), val photos: List<ProgressPhoto> = emptyList(),
     val healthEntries: List<HealthEntry> = emptyList(),
+    val healthLoaded: Boolean = false, val healthFailed: Boolean = false,
     val photoData: Map<String, ByteArray> = emptyMap(), val message: String? = null, val failed: Boolean = false)
 class WorkspaceViewModel(application: Application): AndroidViewModel(application) {
     private fun accountState(): Pair<String, Boolean> {
@@ -75,7 +76,8 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
         else repo.client.auth.signInWith(Email) { this.email=email.trim(); this.password=password }
         val logged = repo.client.auth.currentUserOrNull() != null
         val (id, generic) = accountState()
-        mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic,items=emptyList(),message=if(!logged) "Confira seu e-mail para confirmar o cadastro e depois entre." else null) }
+        mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic,items=emptyList(),photos=emptyList(),photoData=emptyMap(),healthEntries=emptyList(),healthLoaded=false,healthFailed=false,
+            message=if(!logged) "Confira seu e-mail para confirmar o cadastro e depois entre." else null) }
         if(logged) load()
     }
     private suspend fun load() { val rows = repo.list(); mutableState.update { it.copy(items=rows) } }
@@ -93,15 +95,21 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
         done(saved)
     }
     fun archive(item: PersonalItem) = action { repo.archive(item,!item.archived); load() }
-    fun loadHealth() = action { mutableState.update { it.copy(healthEntries=healthRepo.list()) } }
+    fun loadHealth() = action {
+        try { val rows=healthRepo.list();mutableState.update { it.copy(healthEntries=rows,healthLoaded=true,healthFailed=false) } }
+        catch(e:CancellationException) {throw e}
+        catch(e:Exception) {mutableState.update { it.copy(healthLoaded=true,healthFailed=true) };throw e}
+    }
     fun saveHealth(day: String, time: String, kind: String, details: JsonObject, id: String? = null, onSaved: () -> Unit = {}) = action {
         healthRepo.save(day, time, kind, details, id)
         onSaved() // Clear a photo draft only after the write succeeds, before refresh.
-        mutableState.update { it.copy(healthEntries=healthRepo.list(), message="Diário privado atualizado.") }
+        val rows=healthRepo.list()
+        mutableState.update { it.copy(healthEntries=rows,healthLoaded=true,healthFailed=false,message="Diário privado atualizado.") }
     }
     fun deleteHealth(id: String) = action {
         healthRepo.delete(id)
-        mutableState.update { it.copy(healthEntries=healthRepo.list(), message="Registro removido do diário privado.") }
+        val rows=healthRepo.list()
+        mutableState.update { it.copy(healthEntries=rows,healthLoaded=true,healthFailed=false,message="Registro removido do diário privado.") }
     }
     fun loadPhotos() = action { mutableState.update { it.copy(photos=photoRepo.list()) } }
     fun loadPhotoBytes(selected: List<ProgressPhoto>) = action {

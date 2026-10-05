@@ -1,4 +1,20 @@
-# Solem Android — 0.10.2
+# Solem Android — 0.11.0
+
+## Interface RPG de saúde (0.11.0)
+
+Novo painel azul-escuro com nível/XP, elo físico, missões reais do dia, ritmo semanal e sessões recentes. Navegação inferior dá acesso direto a Jornada, Saúde, Treino e Estudo; o menu continua oferecendo toda a biblioteca, gráficos, calendário e financeiro.
+
+Em **Personalizar**, ajuste nome, tema escuro/claro/sistema, destaque Glacial/Âmbar/Rubi, metas e missões visíveis, animações/som e seções do painel. Preferências são salvas localmente por ID de conta neste aparelho: não sincronizam com o site nem com outro celular. Restaurar preferências não apaga registros. Sua conta preservada mantém seus padrões; novas contas continuam genéricas.
+
+Missões somam registros individuais, sem duplicar sessões pelo ID. Água e sono usam apenas o diário privado, nunca a tabela compartilhada. Falha de carregamento não vira um zero fictício. As metas são pessoais, não prescrições médicas, e não alteram regras de XP/elos nem punem dias de descanso. Promoções de nível, físico e tópicos de estudo aparecem em qualquer tela após sincronização; o primeiro carregamento cria uma referência e não celebra o histórico inteiro. O maior nível/elo celebrado fica salvo por conta no aparelho para evitar repetir efeitos após edições ou reabertura.
+
+Saúde agora abre em um resumo com hidratação, refeições, sono, peso e fotos. Atalhos de +250/+500/+750 ml salvam registros independentes no dia selecionado. As categorias quebram em linhas no celular e o seletor de data usa o calendário nativo. Edição, fotos privadas e gráfico de peso permanecem disponíveis. Exercícios, alimentos e tópicos usam seletores inferiores com busca quando há muitas opções.
+
+Nenhuma nova tabela ou API paga foi adicionada. Ícone próprio adaptativo, incluindo versão monocromática, acompanha o APK. No Android 13+, o GPS oferece permissão opcional de notificações para mostrar o controle Parar na tela bloqueada. Sem ela, o serviço continua, mas o controle fica no app; atualizações de notificação checam a permissão para evitar falhas.
+
+Testes unitários cobrem metas, somas, isolamento do diário, tempo exato de estudo, validação e promoções. Para conferir visualmente no Android Studio, veja as prévias de `JourneyDashboardPreview.kt`. Compilação/testes não substituem a avaliação no aparelho real, com fonte ampliada e TalkBack.
+
+Validação desta versão: 43 testes unitários passando, APK debug compilado, assinatura verificada e lint sem erros bloqueantes. Permanecem avisos de manutenção (incluindo dependências e EXIF legado). Não havia aparelho/emulador disponível: fluxos visuais, permissões de notificação e o GPS com tela bloqueada precisam de conferência no celular.
 
 O reconhecimento de refeições por API foi removido. Alimentação manual, histórico e edição nutricional dos registros existentes continuam disponíveis. A função publicada retorna 410 para impedir que APKs antigos chamem o provedor pago. Consulte [status e alternativas locais](../REFEICOES-POR-FOTO.md).
 
@@ -10,10 +26,10 @@ Aplicativo nativo Kotlin / Compose / Material 3. Usa o mesmo projeto Supabase do
 
 | Área | Disponível no Android |
 |---|---|
-| Visão geral | XP, níveis, sequência, marcos, resumo semanal e registros recentes |
+| Visão geral | Painel RPG, XP, níveis, sequência, missões editáveis, elos, ritmo semanal e registros recentes |
 | Treino | Todos os exercícios do catálogo web, séries, repetições, carga, descanso, isometria, cardio, distância, humor e AMRAP de 20 minutos |
 | Evolução física | Filtros de período/exercício aplicados aos indicadores e gráficos, repetições, distância, cardio e isometria |
-| Saúde | Refeições por tipo/horário, água por volume × quantidade, peso/sono uma vez ao dia, gráfico de peso privado e fotos antes/depois |
+| Saúde | Resumo diário, registro rápido de água, refeições por tipo/horário, água por volume × quantidade, peso/sono uma vez ao dia, gráfico de peso privado e fotos antes/depois |
 | Estudar | Questões, vídeo-aula, decks Anki, disciplinas e tópicos do edital; bússola de estudos |
 | Foco | Pomodoro, cronômetro, pausa/reinício e vídeos motivacionais originais |
 | Simulados | Colar JSON, validar, conferir prévia e importar os dois formatos usados pela web |
