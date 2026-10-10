@@ -56,6 +56,7 @@ def require_login():
             password = st.text_input('Senha', type='password', max_chars=256)
             mode = st.radio('Conta', ['Entrar', 'Criar conta'], horizontal=True)
             submit = st.form_submit_button('Continuar', use_container_width=True)
+        st.caption('Novo no Solem: metas personalizáveis e estúdio de criação de vídeos.')
         if submit:
             if not email.strip() or not password:
                 st.error('Preencha e-mail e senha.')

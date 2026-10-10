@@ -8,7 +8,7 @@ from solem_progress import calculate_progress
 from solem_journal_ui import monthly_journal
 from solem_checkup import daily_checkup
 
-PAGES = ["Visão geral", "Treino", "Evolução física", "Saúde", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Configurações"]
+PAGES = ["Visão geral", "Treino", "Evolução física", "Saúde", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Criador", "Metas e aparência", "Configurações"]
 
 
 def apply_theme():
@@ -55,8 +55,8 @@ def shell(df, on_logout=None):
             for group, destinations in (
                 ("JORNADA", PAGES[:6]),
                 ("BIBLIOTECA", PAGES[6:11]),
-                ("PLANEJAMENTO", PAGES[11:13]),
-                ("CONTA", PAGES[13:]),
+                ("PLANEJAMENTO", PAGES[11:14]),
+                ("CONTA", PAGES[14:]),
             ):
                 st.caption(group)
                 for destination in destinations:
@@ -82,7 +82,7 @@ def overview(p, records=None, private_entries=None):
     if private_entries is None:
         private_entries = st.session_state.get("overview_health_entries")
     today = p["today"]
-    st.html('<div class="section-intro"><span class="eyebrow">SISTEMA / SUA JORNADA</span><h1>Progresso Geral</h1><p>Cada registro transforma constância em experiência.</p></div>')
+    st.html('<div class="section-intro journey-intro"><span class="eyebrow">SISTEMA / SUA JORNADA</span><h1>Progresso Geral</h1><p>Cada registro transforma constância em experiência.</p></div>')
     level_pct = max(0, min(100, p['level_xp'] / 250 * 100))
     st.html(f'''<section class="system-status" aria-label="Status do personagem">
         <div class="system-status__top"><span>STATUS DO PERSONAGEM</span><span>JORNADA EM CURSO</span></div>
@@ -93,7 +93,14 @@ def overview(p, records=None, private_entries=None):
         <div class="system-status__foot"><span>◈ {p['streak']} dias de sequência</span><span>+{p['today_xp']} XP hoje</span></div>
     </section>''')
     if records is not None:
-        goals = daily_checkup(records, private_entries, today, st.session_state.get("generic_account", False))
+        from solem_journey_ui import mission_summary
+        journey_data = st.session_state.get("journey_data")
+        goals = daily_checkup(records, private_entries, today, st.session_state.get("generic_account", False),
+                              st.session_state.get("journey_preferences"),
+                              journey_data["items"] if journey_data is not None else None)
+        mission_summary(goals)
+        if st.session_state.get("journey_error"):
+            st.warning("Não foi possível carregar suas metas salvas. Os valores padrão são exibidos temporariamente; abra Metas e aparência para tentar novamente.")
         available = [goal for goal in goals if goal["value"] is not None]
         done_count = sum(goal["done"] for goal in available)
         st.html(f'<div class="section-title checkup-title"><h2>Check-up de hoje</h2><span>{done_count} de {len(available)} metas acompanhadas</span></div>')
@@ -129,7 +136,14 @@ def overview(p, records=None, private_entries=None):
             st.caption("A água depende do diário privado. Não foi possível consultá-lo nesta sessão; os demais indicadores continuam disponíveis.")
         monthly_journal(records, today)
 
-    st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>TEMPO DE ESTUDO</span><strong>{int(p['study_minutes']//60)}<small>h </small>{int(p['study_minutes']%60):02}<small>min</small></strong></div><div><span>QUESTÕES RESOLVIDAS</span><strong>{p['questions']}<small> nesta semana</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP conquistados</small></strong></div></section>''')
+    if st.session_state.get("journey_personal"):
+        from solem_journey import creator_progress
+        data = st.session_state.get("journey_data")
+        creator = creator_progress(data["items"], today) if data is not None else None
+        created, published = (creator['week_created'], creator['week_published']) if creator else ('—', '—')
+        st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>VÍDEOS CRIADOS</span><strong>{created}<small> últimos 7 dias</small></strong></div><div><span>VÍDEOS PUBLICADOS</span><strong>{published}<small> últimos 7 dias</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP de jornada</small></strong></div></section>''')
+    else:
+        st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>TEMPO DE ESTUDO</span><strong>{int(p['study_minutes']//60)}<small>h </small>{int(p['study_minutes']%60):02}<small>min</small></strong></div><div><span>QUESTÕES RESOLVIDAS</span><strong>{p['questions']}<small> nesta semana</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP conquistados</small></strong></div></section>''')
 
     missions, rhythm = st.columns([1.65, 1], gap="medium")
     with missions:
@@ -139,6 +153,8 @@ def overview(p, records=None, private_entries=None):
             ("estudo", "Abra espaço para o foco", "Salve uma sessão de estudo ou revisão.", 30, "Estudar", "▤"),
             # O diário privado não entra na pontuação baseada na tabela compartilhada.
         ]:
+            if category == "estudo" and st.session_state.get("journey_personal"):
+                continue
             done = category in p["today_categories"]
             with st.container(key=f"mission_{category}"):
                 a, b = st.columns([4, 1], vertical_alignment="center")

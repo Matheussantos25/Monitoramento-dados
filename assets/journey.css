@@ -1,0 +1,34 @@
+/* Private missions layer. Extends the established dark-blue interface. */
+:root { --journey-accent: #83dcff; }
+.journey-intro { padding: 0 !important; margin: 8px 0 12px !important; }
+.journey-intro h1 { font-size: clamp(28px,3.5vw,42px); margin: 8px 0 12px; }
+.journey-intro p { margin: 0; }
+.system-status { display:grid; grid-template-columns:auto minmax(100px,1fr) auto; gap:8px 24px; padding:18px 22px; margin-bottom:0; }
+.system-status__top,.system-status__main p { display:none; }
+.system-status__main { grid-row:1 / 3; grid-column:1; margin:0; }
+.system-status__main strong { font-size:2.5rem; }
+.system-status__xp { grid-column:2; }
+.system-status > progress { grid-column:2; margin:0; }
+.system-status__foot { grid-column:3; grid-row:1 / 3; flex-direction:column; align-items:flex-end; justify-content:center; gap:5px; }
+.journey-command { margin: 1.5rem 0 1rem; padding: clamp(20px,3vw,36px); border: 1px solid #385470; border-left: 4px solid var(--journey-accent); border-radius: 16px; background: linear-gradient(120deg,#12253b,#0e1829); display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 22px; }
+.journey-command h2 { font-size: clamp(24px,3vw,34px); margin: 10px 0; letter-spacing: -.04em; }
+.journey-command p,.creator-rank p { color: #b6c6d9; margin: 0; line-height: 1.6; }
+.journey-score { display: flex; flex-direction: column; justify-content: center; text-align: right; gap: 8px; }
+.journey-score strong { font-size: 46px; color: var(--journey-accent); letter-spacing: -.05em; line-height: 1; }
+.journey-score span,.creator-rank small { color: #b6c6d9; font-size: 13px; }
+.journey-command > progress { grid-column: 1 / -1; }
+.journey-command progress,.creator-rank progress { width: 100%; height: 6px; border: none; border-radius: 20px; overflow: hidden; appearance: none; background: #2c405a; }
+.journey-command progress::-webkit-progress-bar,.creator-rank progress::-webkit-progress-bar { background: #2c405a; }
+.journey-command progress::-webkit-progress-value,.creator-rank progress::-webkit-progress-value,.checkup-card progress::-webkit-progress-value,.system-status progress::-webkit-progress-value { background: var(--journey-accent); }
+.journey-command progress::-moz-progress-bar,.creator-rank progress::-moz-progress-bar,.checkup-card progress::-moz-progress-bar { background: var(--journey-accent); }
+.creator-rank { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center; margin: 1rem 0 1.5rem; padding: 24px 0; border-top: 1px solid #293c55; border-bottom: 1px solid #293c55; }
+.creator-rank h3 { font-size: 25px; margin: 6px 0; color: var(--journey-accent); }
+.creator-rank__identity { display:flex; align-items:center; gap:16px; min-width:0; }
+.creator-rank__identity img { flex-shrink:0; filter:drop-shadow(0 0 12px #83dcff22); }
+.creator-rank progress { display: block; margin: 12px 0; }
+.creator-rank span { color: #c7d8eb; }
+.checkup-card__top small { color: var(--journey-accent); }
+.st-key-creator_promotion_audio,.st-key-legacy_rank_promotion_audio { display: none; }
+@media(max-width:640px) { .journey-command,.creator-rank { grid-template-columns: 1fr; gap: 18px; } .journey-score { text-align: left; } .journey-score strong { font-size: 36px; } }
+@media(max-width:640px) { .system-status { grid-template-columns:auto minmax(0,1fr); gap:8px 14px; } .system-status__foot { grid-column:1 / -1; grid-row:3; flex-direction:row; justify-content:space-between; } }
+@media(prefers-reduced-motion:reduce) { .journey-command *, .creator-rank *, .rank-promotion * { animation: none !important; transition: none !important; } .rank-promotion { display:none !important; } }

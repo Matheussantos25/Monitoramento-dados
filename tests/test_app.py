@@ -148,7 +148,7 @@ class AppTests(unittest.TestCase):
         self.app.session_state["solem_demo_records"].append({
             "id": 1001, "data": str(now_local().date()), "horario": "08:00:00",
             "grupo_muscular": "Pernas", "exercicio": "Agachamento",
-            "repeticoes": 60, "series": 1, "carga_kg": 0.0, "dados_extras": {}})
+            "repeticoes": 160, "series": 1, "carga_kg": 0.0, "dados_extras": {}})
         self.app.radio(key="solem_page").set_value("Treino").run()
         self.app.selectbox(key="treino_exercicio").set_value("Abdominal Levantada").run()
         self.app.radio(key="treino_formato").set_value(self.app.radio(key="treino_formato").options[1]).run()

@@ -320,6 +320,11 @@ if not IS_DEMO:
 else:
     GENERIC_ACCOUNT = os.environ.get("SOLEM_DEMO_PROFILE") == "generic"
 st.session_state["generic_account"] = GENERIC_ACCOUNT
+from solem_journey_ui import load_journey, theme as journey_theme
+PERSONAL_JOURNEY = (not GENERIC_ACCOUNT if IS_DEMO else
+                    str(account_user.email or "").strip().casefold() == DEFAULTS["preserved_email"])
+load_journey(PERSONAL_JOURNEY, GENERIC_ACCOUNT, IS_DEMO)
+journey_theme()
 if GENERIC_ACCOUNT:
     EXERCICIOS_PRESETADOS = DEFAULTS["EXERCICIOS_PRESETADOS"]
     TODOS_EXERCICIOS = sorted(ex for group in EXERCICIOS_PRESETADOS.values() for ex in group)
@@ -720,6 +725,14 @@ else:
 # --- INTERFACE MAIN ---
 pagina, progresso = shell(df_raw, on_logout=logout_private)
 
+if pagina == "Criador":
+    from solem_journey_ui import creator_page
+    creator_page()
+
+if pagina == "Metas e aparência":
+    from solem_journey_ui import settings_page
+    settings_page()
+
 if pagina in ("Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro"):
     from solem_workspace_ui import workspace_page
     workspace_page(pagina)
@@ -735,7 +748,8 @@ if pagina == "Visão geral":
     st.session_state["overview_health_entries"] = overview_health_entries
     overview(progresso, df_raw.to_dict("records"))
     from solem_ranks_ui import rank_panel
-    rank_panel(df_raw.to_dict("records"), TOPICOS_EDITAL, progresso['today'])
+    with st.expander("Elos de treino e estudo · seu histórico preservado", expanded=not PERSONAL_JOURNEY):
+        rank_panel(df_raw.to_dict("records"), TOPICOS_EDITAL, progresso['today'])
 
 if pagina == "Saúde":
     from solem_health_ui import health_page

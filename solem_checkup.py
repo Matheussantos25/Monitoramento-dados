@@ -6,7 +6,7 @@ to Supabase. ``None`` for private entries means unavailable, not zero intake.
 from solem_progress import category_of, extras_of, number, record_date
 
 
-def daily_checkup(records, private_entries, day, generic=False):
+def daily_checkup(records, private_entries, day, generic=False, preferences=None, creator_items=None):
     questions = 0
     study_minutes = 0.0
     exercise_totals = {"Mewing com borracha": 0, "Flexão": 0, "Agachamento": 0}
@@ -61,5 +61,15 @@ def daily_checkup(records, private_entries, day, generic=False):
         from solem_account import DEFAULTS
         goals = [{**goal, "target": DEFAULTS["checkup_targets"][goal["id"]]}
                  for goal in goals if goal["id"] != "mewing"]
+    if preferences is not None:
+        from solem_journey import creator_progress
+        stats = creator_progress(creator_items, day) if creator_items is not None else None
+        goals = list(goals) + [
+            {"id": key, "label": label, "value": stats[key] if stats is not None else None,
+             "target": 2, "unit": "vídeos", "page": "Criador"}
+            for key, label in (("created", "Vídeos criados"), ("published", "Vídeos publicados"))
+        ]
+        goals = [{**g, "target": preferences["targets"][g["id"]]}
+                 for g in goals if g["id"] in preferences["enabled"]]
     return [{**goal, "done": goal["value"] is not None and goal["value"] >= goal["target"]}
             for goal in goals]

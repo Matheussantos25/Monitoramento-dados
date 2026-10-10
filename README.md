@@ -4,6 +4,20 @@ Aplicativo Streamlit para acompanhar treinos, alimentação, peso e estudos. A i
 
 Reconhecimento de refeições por API removido. Registro manual e valores nutricionais já salvos permanecem disponíveis; nenhuma foto de comida é enviada a um serviço de IA. Consulte [status e alternativas locais](REFEICOES-POR-FOTO.md).
 
+## Missões personalizáveis e estúdio de criação (outubro de 2026)
+
+- **Metas e aparência**: escolha as missões do check-up, metas diárias, destaque ciano/violeta/âmbar e efeitos. As preferências são privadas e persistem na conta, não apenas no navegador.
+- Para a conta pessoal preservada, os novos padrões são **100 flexões, 100 agachamentos, 5 km e 2 vídeos criados + 2 publicados por dia**, mantendo água e a outra meta pessoal anterior. Questões e tempo de estudo saem apenas do check-up pessoal; seus registros, abas e XP continuam intactos. Outras contas mantêm seus padrões anteriores e podem ativar criação de conteúdo.
+- **Criador**: vários canais, vídeos nas etapas Ideia → Roteiro → Gravação → Edição → Pronto → Publicado, filtros, edição individual, lixeira/restauração e mapa de ideias editável. O canal pessoal inicial é **Canal principal · Gacha**. As metas de vídeos somam todos os canais.
+- A criação conta na data em que o vídeo ficou pronto; a publicação, na sua própria data. Cada registro rende 20 XP de criação e mais 30 XP de publicação, uma vez por etapa. A trilha do criador é separada dos pontos legados. Atualizar a página ou editar o título não dá XP extra. Arquivar/restaurar recalcula a trilha sem apagar o registro.
+- O painel preenche metas a partir dos registros, mostra progresso diário e celebra conclusão/promoções. Não aplica punições por descanso. O som depende das permissões de reprodução do navegador; movimento reduzido é respeitado.
+
+Execute [20261010_creator_journey.sql](supabase/migrations/20261010_creator_journey.sql) no mesmo Supabase antes de publicar esta versão. A migração aditiva foi aplicada em produção em 10/10/2026: `solem_journey_settings` e `solem_creator_items` têm RLS por `auth.uid()`, sem acesso anônimo ou exclusão definitiva pelo cliente. Não altera treinos, estudos, saúde ou investimentos existentes. Atualizações usam revisão otimista para não sobrescrever outra sessão silenciosamente. Falhas de carregamento são exibidas como indisponibilidade, não como atividade zero.
+
+Os vídeos são registrados manualmente: não há publicação automática no YouTube, conexão com redes sociais nem API de IA. O mapa é planejamento, não gera pontos. Esta etapa entrega o estúdio e as preferências na **web**; o APK existente mantém seu painel e preferências locais até uma integração Android futura com estas duas novas tabelas.
+
+Validação: `python -m pytest -q` inclui regressão das abas legadas, metas pessoais/genéricas, separação criação/publicação, edição, lixeira, restauração, concorrência e proteção contra progresso duplicado. Para conferir visualmente sem tocar no banco, use o modo de demonstração abaixo. Ao publicar, confirme o reinício do Streamlit para carregar todos os módulos atualizados.
+
 ## Executar com seu banco
 
 Use Python 3.12 ou compatível com as dependências do projeto:

@@ -3,6 +3,7 @@ import io
 import math
 import struct
 import wave
+from html import escape
 from pathlib import Path
 import base64
 import streamlit as st
@@ -24,7 +25,7 @@ def promotion_sound():
                 wav.writeframesraw(struct.pack('<h', int(4000 * envelope * math.sin(2 * math.pi * frequency * i / 16000))))
     return buffer.getvalue()
 
-def promotion_overlay(tier, label):
+def promotion_overlay(tier, label, title=None):
     data = (Path(__file__).parent / 'assets/ranks' / f'rank_{tier}.svg').read_bytes()
     source = base64.b64encode(data).decode()
     st.html(f'''<section class="rank-promotion" role="status" aria-live="polite">
@@ -34,8 +35,8 @@ def promotion_overlay(tier, label):
         <div class="rank-promotion__content">
             <span>PROMOÇÃO DE ELO</span>
             <img src="data:image/svg+xml;base64,{source}" alt="Insígnia {NAMES[tier]}" />
-            <h2>{NAMES[tier]}</h2>
-            <p>{label}</p>
+            <h2>{escape(title or NAMES[tier])}</h2>
+            <p>{escape(label)}</p>
         </div>
     </section>''')
 
@@ -56,9 +57,12 @@ def rank_panel(records, topics, today):
     if promoted:
         promoted_key, promoted_tier = max(promotions, key=lambda item: item[1])
         promoted_label = 'Elo físico' if promoted_key == 'physical' else f'{promoted_key[0]} · {promoted_key[1]}'
-        promotion_overlay(promoted_tier, promoted_label)
-        with st.container(key='rank_promotion_audio'):
-            st.audio(promotion_sound(), format='audio/wav', autoplay=True)
+        preferences = st.session_state.get('journey_preferences', {})
+        if preferences.get('effects', True):
+            promotion_overlay(promoted_tier, promoted_label)
+        if preferences.get('sound', True):
+            with st.container(key='legacy_rank_promotion_audio'):
+                st.audio(promotion_sound(), format='audio/wav', autoplay=True)
     art, detail = st.columns([1,4], vertical_alignment='center')
     with art:
         emblem(data['physical_tier'], 180)
