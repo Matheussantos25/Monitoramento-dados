@@ -3,7 +3,7 @@ import json
 from uuid import uuid4
 from datetime import date, time
 import streamlit as st
-from supabase import create_client
+from supabase import create_client, ClientOptions
 from solem_workspace import Workspace, KINDS, cents, brl, mind_nodes, public_key
 
 def safe_error(error):
@@ -24,11 +24,16 @@ def _private_client():
     if not url.startswith('https://') or not public_key(key):
         return None
     if 'private_client' not in st.session_state:
-        st.session_state.private_client = create_client(url, key)
+        # Browser SDK is the sole owner of refresh-token rotation.
+        st.session_state.private_client = create_client(url, key, options=ClientOptions(auto_refresh_token=False, persist_session=False))
     return st.session_state.private_client
 
 
 def logout_private():
+    if st.session_state.get('_auth_verified_access') or st.session_state.get('_auth_bridge'):
+        from solem_browser_auth import request_logout
+        request_logout()
+        return
     client = st.session_state.get('private_client')
     if client:
         try:
@@ -41,19 +46,23 @@ def logout_private():
     st.session_state.solem_page = 'Visão geral'
 
 
-def require_login():
+def require_login(browser=False):
     client = _private_client()
     if client is None:
         st.error('O acesso não está configurado. Adicione a URL e a chave pública do Supabase nos Secrets do Streamlit.')
         st.stop()
+    if browser:
+        from solem_browser_auth import require_browser_login
+        return require_browser_login(client, st.secrets['SUPABASE_URL'],
+            st.secrets.get('SUPABASE_PUBLISHABLE_KEY', '') or st.secrets.get('SUPABASE_KEY', ''))
     if client.auth.get_session():
         return client
     st.html('''<section class="auth-intro"><div class="auth-mark">✳</div><h1>Seu espaço começa aqui.</h1><p>Entre para acessar seu histórico, sua evolução e sua biblioteca pessoal em um único lugar.</p></section>''')
     _, center, _ = st.columns([1, 1.15, 1])
     with center:
         with st.form('private_login', clear_on_submit=True):
-            email = st.text_input('E-mail', max_chars=254)
-            password = st.text_input('Senha', type='password', max_chars=256)
+            email = st.text_input('E-mail', max_chars=254, autocomplete='username')
+            password = st.text_input('Senha', type='password', max_chars=256, autocomplete='current-password')
             mode = st.radio('Conta', ['Entrar', 'Criar conta'], horizontal=True)
             submit = st.form_submit_button('Continuar', use_container_width=True)
         st.caption('Novo no Solem: metas personalizáveis e estúdio de criação de vídeos.')

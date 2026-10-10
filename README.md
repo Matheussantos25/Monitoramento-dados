@@ -97,6 +97,37 @@ Os vídeos, prompts, cronômetros, importação de simulados e configurações e
 
 ## Testes
 
+### Lembrar o acesso neste computador
+
+Na tela de entrada, marque **Lembrar e-mail e manter conectado neste computador**
+e entre uma vez. No mesmo navegador/perfil, o Solem restaura o acesso ao reabrir.
+`Solem.bat` apenas abre o site no navegador padrão; não contém credenciais.
+**Sair** encerra a sessão deste navegador, mantendo o e-mail lembrado.
+**Esquecer este computador** também remove o e-mail e a preferência.
+Não use a opção em computadores compartilhados. Limpar os dados do site, usar
+janela privada ou revogar a sessão no Supabase pode exigir novo login.
+
+O SDK oficial do Supabase no navegador armazena a sessão em localStorage apenas
+com consentimento e renova o acesso. Sem consentimento (ou armazenamento bloqueado),
+usa memória. A senha não é persistida pelo Solem. Tokens locais são sensíveis:
+quem controla este perfil do navegador pode acessar a conta. O iframe não recebe
+HTML de usuários; dependências são fixadas e distribuídas localmente, sem CDN.
+Python recebe somente o access token e valida a identidade com o Supabase antes
+de liberar os dados. O refresh token fica com o SDK do navegador, evitando dois
+clientes disputando sua rotação. Auth/RLS e dados existentes não foram alterados.
+
+O componente já vem compilado. Para reconstruí-lo (Node.js 22+ recomendado):
+
+```sh
+cd assets/auth_login
+npm ci
+npm test
+npm run build
+```
+
+Versione o bundle, lockfile e licenças; nunca `node_modules` ou chaves privadas.
+Testes do controlador usam Supabase simulado; não criam contas nem acessam dados reais.
+
 ```sh
 python -m unittest discover -s tests -v
 ```

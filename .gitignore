@@ -6,6 +6,7 @@
 venv/
 __pycache__/
 *.pyc
+assets/auth_login/node_modules/
 
 # Android local configuration and signing credentials
 android-app/local.properties

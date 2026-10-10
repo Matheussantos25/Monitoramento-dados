@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {rememberStorage} from './remember-storage.js';
+const values=new Map(),local={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)},key='solem.auth.example.v1';
+let a=rememberStorage(local,key);a.choose(true,'person@example.com');a.setItem(key,'session-fixture');
+let reopened=rememberStorage(local,key);assert.equal(reopened.getItem(key),'session-fixture');assert.equal(reopened.email,'person@example.com');
+reopened.setItem(key,'rotated-session');assert.equal(a.getItem(key),'rotated-session');
+reopened.forgetSession();assert.equal(a.getItem(key),null);assert.equal(rememberStorage(local,key).getItem(key),null);assert.equal(reopened.email,'person@example.com');
+reopened.forgetAll();assert.equal(reopened.email,'');
+a=rememberStorage(local,key);a.choose(false,'other@example.com');a.setItem(key,'memory-only');assert.equal(a.getItem(key),'memory-only');assert.equal(rememberStorage(local,key).getItem(key),null);assert.equal(values.size,0);
+const blocked={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')},removeItem(){throw Error('blocked')}};
+const b=rememberStorage(blocked,key);b.choose(true,'person@example.com');b.setItem(key,'temporary');assert.equal(b.getItem(key),'temporary');assert.equal(b.blocked,true);assert.equal(rememberStorage(blocked,key).getItem(key),null);
+b.setItem('unrelated','never');assert.equal(b.getItem('unrelated'),null);assert.equal(rememberStorage(null,key).blocked,true);
+console.log('PASS: reopen, token rotation, sign-out, forget, opt-out and blocked storage');

@@ -314,7 +314,7 @@ logout_private = None
 GENERIC_ACCOUNT = False
 if not IS_DEMO:
     from solem_workspace_ui import require_login, logout_private
-    account_client = require_login()
+    account_client = require_login(browser=True)
     account_user = account_client.auth.get_session().user
     GENERIC_ACCOUNT = generic_account(account_user.email, account_user.created_at)
 else:

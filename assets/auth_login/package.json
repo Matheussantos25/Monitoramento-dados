@@ -1,0 +1,1 @@
+{"name":"solem-browser-login","private":true,"type":"module","scripts":{"build":"esbuild login.js --bundle --minify --format=iife --target=es2020 --outfile=login.bundle.js","test":"node storage.test.js && node controller.test.js"},"dependencies":{"@supabase/supabase-js":"2.117.3"},"devDependencies":{"esbuild":"0.28.2"}}
