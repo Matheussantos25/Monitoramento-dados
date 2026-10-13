@@ -97,6 +97,19 @@ Os vídeos, prompts, cronômetros, importação de simulados e configurações e
 
 ## Testes
 
+### Publicações simplificadas · outubro de 2026
+
+A Visão geral e a aba Publicações agora oferecem um checklist diário, somando
+todos os canais. Marcar cria uma publicação privada; desmarcar move só aquele
+registro para a lixeira recuperável. O alvo continua editável em Metas e aparência.
+Não há mais meta de criação, roteiro ou etapas obrigatórias. Registros antigos,
+anotações, datas de produção e o mapa anterior permanecem disponíveis no histórico.
+A simplificação não reescreve o XP antigo nem executa migrações de dados.
+IDs de operação evitam duplicação ao repetir um envio com resultado incerto.
+
+O ícone colorido de abas é gerado por `python tools/build_brand_icon.py`.
+Navegadores podem manter o favicon anterior em cache até recarregar a página.
+
 ### Lembrar o acesso neste computador
 
 Na tela de entrada, marque **Lembrar e-mail e manter conectado neste computador**

@@ -302,9 +302,9 @@ def obter_pior_topico(df_hist, disciplina):
 # --- CONFIGURAÇÕES DA PÁGINA ---
 st.set_page_config(
     page_title="Solem · Corpo & Mente",
-    page_icon="✳",
+    page_icon=str(Path(__file__).parent / "assets" / "solem-icon.png"),
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto"
 )
 
 apply_theme()
@@ -725,7 +725,7 @@ else:
 # --- INTERFACE MAIN ---
 pagina, progresso = shell(df_raw, on_logout=logout_private)
 
-if pagina == "Criador":
+if pagina == "Publicações":
     from solem_journey_ui import creator_page
     creator_page()
 

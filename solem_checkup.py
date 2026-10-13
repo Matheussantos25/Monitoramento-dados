@@ -66,8 +66,8 @@ def daily_checkup(records, private_entries, day, generic=False, preferences=None
         stats = creator_progress(creator_items, day) if creator_items is not None else None
         goals = list(goals) + [
             {"id": key, "label": label, "value": stats[key] if stats is not None else None,
-             "target": 2, "unit": "vídeos", "page": "Criador"}
-            for key, label in (("created", "Vídeos criados"), ("published", "Vídeos publicados"))
+             "target": 2, "unit": "vídeos", "page": "Publicações"}
+            for key, label in (("published", "Vídeos publicados"),)
         ]
         goals = [{**g, "target": preferences["targets"][g["id"]]}
                  for g in goals if g["id"] in preferences["enabled"]]

@@ -65,6 +65,7 @@ private fun missionIcon(id: String): ImageVector = when(id) {
         if(!activityAvailable && it.destination != 3) it.copy(value=null) else it
     }
     val done = missions.count { it.complete }
+    val coverage = if(missions.isEmpty()) 0f else missions.sumOf { it.fraction.toDouble() }.toFloat()/missions.size
     val todayProgress = calculateProgress(rows.filter { it.data.take(10) == day.toString() })
     val rank = calculateRanks(rows, emptyMap(), day)
     Page(if(settings.nickname.isBlank()) "Progresso geral" else "Sua jornada, ${settings.nickname}") {
@@ -74,17 +75,25 @@ private fun missionIcon(id: String): ImageVector = when(id) {
             IconButton({navigate(17)}) { Icon(Icons.Outlined.Tune,"Personalizar painel") }
         }
         Surface(shape=MaterialTheme.shapes.extraLarge, color=MaterialTheme.colorScheme.surfaceContainer) {
-            Row(Modifier.fillMaxWidth().padding(22.dp), horizontalArrangement=Arrangement.spacedBy(18.dp), verticalAlignment=Alignment.CenterVertically) {
-                JourneyRing((p.xp%250)/250f, if(activityAvailable) "${p.xp/250+1}" else "…", "nível")
+          Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+            Text("MISSÕES / HOJE",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(14.dp), verticalAlignment=Alignment.CenterVertically) {
+                JourneyRing(coverage, "${(coverage*100).toInt()}%", "do dia")
                 Column(Modifier.weight(1f), verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                    Text("Corpo & mente",style=MaterialTheme.typography.titleLarge)
-                    Text(if(activityAvailable) "${p.xp%250} / 250 XP" else "Carregando jornada", color=MaterialTheme.colorScheme.primary,
-                        style=MaterialTheme.typography.titleMedium, fontFamily=FontFamily.Monospace)
-                    Text(if(activityAvailable) "${p.streak} dias de sequência" else "Aguardando histórico",
-                        style=MaterialTheme.typography.bodyMedium)
-                    Text("Descansar não apaga sua evolução.", style=MaterialTheme.typography.bodySmall, color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if(missions.isNotEmpty() && done==missions.size) "Dia conquistado." else "Uma missão\nde cada vez.",style=MaterialTheme.typography.headlineMedium)
+                    Text("$done / ${missions.size} concluídas",color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.labelLarge)
+                    if(missions.any {it.value==null}) Text("Progresso parcial · aguardando dados",style=MaterialTheme.typography.bodySmall)
                 }
             }
+            HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                Text(if(activityAvailable) "NÍVEL ${p.xp/250+1}" else "NÍVEL —",style=MaterialTheme.typography.labelLarge)
+                Text(if(activityAvailable) "${p.xp%250} / 250 XP" else "Sincronizando",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
+            }
+            LinearProgressIndicator(progress={if(activityAvailable) (p.xp%250)/250f else 0f},modifier=Modifier.fillMaxWidth(),drawStopIndicator={})
+            Text(if(activityAvailable) "${p.streak} dias de sequência · +${todayProgress.xp} XP hoje" else "Seu histórico aparece ao sincronizar.",
+                 style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+          }
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             QuickDestination("Treinar", Icons.Outlined.FitnessCenter, Modifier.weight(1f)) { navigate(1) }
@@ -108,7 +117,7 @@ private fun missionIcon(id: String): ImageVector = when(id) {
                 Text("Missões de hoje", style=MaterialTheme.typography.titleLarge)
                 Text("$done de ${missions.size} concluídas", color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            TextButton({navigate(17)}) {Text("Ajustar metas")}
+            IconButton({navigate(17)}) {Icon(Icons.Outlined.Tune,"Ajustar metas")}
         }
         if(missions.isEmpty()) Text("Suas missões estão ocultas. Ative as que combinam com sua rotina em Personalizar.")
         missions.forEach { mission ->
@@ -123,11 +132,8 @@ private fun missionIcon(id: String): ImageVector = when(id) {
         }
         Text("Metas pessoais, não prescrições de saúde. Elas não mudam as regras de XP ou dos elos.",
             style=MaterialTheme.typography.bodySmall, color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Panel("Experiência de hoje") {
-            Text(if(activityAvailable) "+${todayProgress.xp} XP" else "Aguardando histórico", style=MaterialTheme.typography.headlineMedium, color=MaterialTheme.colorScheme.primary)
-            Text("Treino: +30 XP · Estudo: +30 XP · Ambos no dia: +15 XP")
-            Text("Sem bônus por exagerar no volume ou alterar o peso.",style=MaterialTheme.typography.bodySmall)
-        }
+        Text("XP por constância: treino +30 · estudo +30 · ambos +15. Descansar não apaga sua evolução.",
+            style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(settings.showWeek) {
             Text("Seu ritmo nesta semana",style=MaterialTheme.typography.titleLarge)
             WeekRhythm(rows)
@@ -164,14 +170,19 @@ private fun missionIcon(id: String): ImageVector = when(id) {
                 }
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
                     Text(mission.title,style=MaterialTheme.typography.titleMedium)
-                    Text(mission.value?.let { "${formatOneDecimal(it)} / ${mission.target} ${mission.unit}" } ?: "Aguardando sincronização",
-                        style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text(mission.value?.let {formatOneDecimal(it)} ?: "—",
+                             style=MaterialTheme.typography.headlineMedium,fontFamily=FontFamily.Monospace)
+                        Text("/ ${mission.target} ${mission.unit}",style=MaterialTheme.typography.bodySmall,
+                             color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.padding(bottom=4.dp))
+                    }
                 }
                 Icon(if(mission.complete) Icons.Outlined.CheckCircle else Icons.Outlined.AddCircleOutline,
                     if(mission.complete) "Meta concluída. Abrir registros" else "Registrar atividade",tint=MaterialTheme.colorScheme.primary)
             }
-            LinearProgressIndicator(progress={progress},modifier=Modifier.fillMaxWidth().height(5.dp))
-            if(mission.complete) Text("Concluída · mantenha seu ritmo",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
+            LinearProgressIndicator(progress={progress},modifier=Modifier.fillMaxWidth().height(5.dp),drawStopIndicator={})
+            Text(when {mission.value==null -> "Aguardando sincronização";mission.complete -> "Concluída · ver registros";else -> "Registrar · continuar missão"},
+                 style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
         }
     }
 }

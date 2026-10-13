@@ -55,7 +55,8 @@ def preferences(saved=None, personal=False, generic=False):
     enabled = result["enabled"]
     if not isinstance(enabled, list) or any(k not in GOALS for k in enabled):
         raise ValueError("Seleção de metas inválida.")
-    result["enabled"] = list(dict.fromkeys(enabled))
+    # Keep legacy creation targets/data for compatibility; only posting is a mission now.
+    result["enabled"] = [key for key in dict.fromkeys(enabled) if key != "created"]
     if generic:
         result["enabled"] = [k for k in result["enabled"] if k != "mewing"]
     if result["accent"] not in ACCENTS or any(type(result[k]) is not bool for k in ("effects", "sound")):
@@ -157,8 +158,10 @@ class JourneyStore:
         if not result.data:
             raise ValueError("Suas metas mudaram em outra sessão. Atualize antes de salvar.")
 
-    def save_item(self, values, old=None):
+    def save_item(self, values, old=None, new_id=None):
         clean = validate_creator(values)
+        if new_id is not None:
+            new_id = str(UUID(str(new_id)))
         if self.demo_state is not None:
             state = self.demo_state[self.key]
             if clean["kind"] == "video" and not any(r["id"] == clean["channel_id"] and r["kind"] == "channel" and not r.get("archived") for r in state["items"]):
@@ -166,7 +169,9 @@ class JourneyStore:
             current = next((r for r in state["items"] if old and r["id"] == old["id"]), None)
             if old and (not current or current["revision"] != old["revision"]):
                 raise ValueError("Registro alterado. Atualize a página.")
-            row = dict(clean, id=old["id"] if old else str(uuid4()), archived=False, revision=(old or {}).get("revision", 0) + 1)
+            if new_id and any(r["id"] == new_id for r in state["items"]):
+                raise ValueError("Este registro já foi recebido. Atualize para conferir.")
+            row = dict(clean, id=old["id"] if old else new_id or str(uuid4()), archived=False, revision=(old or {}).get("revision", 0) + 1)
             if current:
                 state["items"][state["items"].index(current)] = row
             else:
@@ -174,7 +179,7 @@ class JourneyStore:
             return row
         query = self.client.table("solem_creator_items")
         result = (query.update(clean).eq("id", old["id"]).eq("revision", old["revision"]).execute()
-                  if old else query.insert(clean).execute())
+                  if old else query.insert(dict(clean, id=new_id) if new_id else clean).execute())
         if not result.data:
             raise ValueError("Registro alterado. Atualize a página.")
         return result.data[0]

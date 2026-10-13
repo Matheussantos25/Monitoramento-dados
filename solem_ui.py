@@ -8,7 +8,7 @@ from solem_progress import calculate_progress
 from solem_journal_ui import monthly_journal
 from solem_checkup import daily_checkup
 
-PAGES = ["Visão geral", "Treino", "Evolução física", "Saúde", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Criador", "Metas e aparência", "Configurações"]
+PAGES = ["Visão geral", "Treino", "Evolução física", "Saúde", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Publicações", "Metas e aparência", "Configurações"]
 
 
 def apply_theme():
@@ -119,7 +119,10 @@ def overview(p, records=None, private_entries=None):
                     st.html(f'''<div class="checkup-card"><span class="checkup-card__top">{escape(goal['label'])}<small>{label}</small></span>
                         <strong>{amount} <span>/ {target} {escape(goal['unit'])}</span></strong>
                         <progress value="{pct:.1f}" max="100" aria-label="{escape(goal['label'])}: {pct:.0f}%">{pct:.0f}%</progress></div>''')
-                    if goal["id"] == "cardio":
+                    if goal["id"] == "published":
+                        from solem_publications_ui import publication_checklist
+                        publication_checklist(compact=True)
+                    elif goal["id"] == "cardio":
                         walk, run = st.columns(2, gap="small")
                         with walk:
                             st.button("Caminhada", key="checkup_go_caminhada", on_click=navigate_checkup,
@@ -140,8 +143,8 @@ def overview(p, records=None, private_entries=None):
         from solem_journey import creator_progress
         data = st.session_state.get("journey_data")
         creator = creator_progress(data["items"], today) if data is not None else None
-        created, published = (creator['week_created'], creator['week_published']) if creator else ('—', '—')
-        st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>VÍDEOS CRIADOS</span><strong>{created}<small> últimos 7 dias</small></strong></div><div><span>VÍDEOS PUBLICADOS</span><strong>{published}<small> últimos 7 dias</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP de jornada</small></strong></div></section>''')
+        published = creator['week_published'] if creator else '—'
+        st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>VÍDEOS PUBLICADOS</span><strong>{published}<small> últimos 7 dias</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP de jornada</small></strong></div></section>''')
     else:
         st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>TEMPO DE ESTUDO</span><strong>{int(p['study_minutes']//60)}<small>h </small>{int(p['study_minutes']%60):02}<small>min</small></strong></div><div><span>QUESTÕES RESOLVIDAS</span><strong>{p['questions']}<small> nesta semana</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP conquistados</small></strong></div></section>''')
 

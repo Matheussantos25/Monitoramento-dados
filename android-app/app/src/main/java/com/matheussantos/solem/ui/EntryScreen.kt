@@ -54,15 +54,23 @@ import java.time.ZoneOffset
     var source by rememberSaveable { mutableStateOf(existing?.extra("fonte_questoes")?.ifBlank { catalog.sources.first() } ?: catalog.sources.first()) }
     var error by remember { mutableStateOf<String?>(null) }
     var success by remember { mutableStateOf(false) }
+    var showWhen by rememberSaveable { mutableStateOf(false) }
     val imported = existing?.extra("origem_importacao") == "simulado_json"
     val done = { success = true; error = null }
     val fields: @Composable ColumnScope.() -> Unit = {
-        Field("Data (AAAA-MM-DD)", date) { date = it; success = false }
-        Field("Horário (HH:MM:SS)", time) { time = it; success = false }
+        if(type == "Treino") {
+            AssistChip(onClick={showWhen=!showWhen},label={Text("${if(date==today().toString()) "Hoje" else date} · ${time.take(5)} · alterar horário")})
+        }
+        if(type != "Treino" || showWhen) {
+            Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.weight(1f)) {Field("Data (AAAA-MM-DD)", date) { date = it; success = false }}
+                Box(Modifier.weight(1f)) {Field("Horário (HH:MM:SS)", time) { time = it; success = false }}
+            }
+        }
         if (imported) Text("Registro de simulado: a edição aqui preserva resultados, tópicos e tempos exatos. É possível ajustar data e horário.")
         else when(type) {
             "Treino" -> {
-                Text(suggestTraining(rows), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(suggestTraining(rows), color = MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
                 if (existing == null) Choice("Formato", format, listOf("Exercício isolado", "Circuito AMRAP 20 min")) {
                     if (WalkLocationService.state.value.active) error = "Pare o GPS antes de mudar o formato do treino."
                     else format = it
@@ -83,11 +91,21 @@ import java.time.ZoneOffset
                     val workoutFields = catalog.workoutFields(exercise)
                     val stats = trainingMeasureSnapshot(rows, exercise, workoutFields)
                     if (existing == null && stats != null) {
-                        Panel("SEU HISTÓRICO · $exercise") {
+                        Panel("Seu histórico · $exercise") {
                             fun measured(value: Double) = if (stats.unit == "km") "%.2f km".format(value)
                                 else "%.1f %s".format(value, stats.unit)
-                            Text("Último treino: ${measured(stats.last)} · ${stats.lastDay}")
-                            Text("Recorde: ${measured(stats.record)} em um registro")
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Último treino",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(measured(stats.last),style=MaterialTheme.typography.titleLarge)
+                                    Text(stats.lastDay,style=MaterialTheme.typography.labelSmall)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text("Seu recorde",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(measured(stats.record),style=MaterialTheme.typography.titleLarge,color=MaterialTheme.colorScheme.primary)
+                                    Text("Em um registro",style=MaterialTheme.typography.labelSmall)
+                                }
+                            }
                             Text("Média do exercício: ${formatOneDecimal(stats.meanPerDay)} ${stats.unit} por dia treinado · ${stats.days} dias")
                             categorySnapshot(rows, catalog.group(exercise))?.let { category ->
                                 if (stats.unit == "rep") Text("Categoria ${catalog.group(exercise)}: %.1f rep por dia · %d dias".format(category.meanRepsPerDay,category.days))

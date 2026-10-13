@@ -75,6 +75,20 @@ O serviço GPS agora mede também a duração com o relógio monotônico do Andr
 
 ## Compilar e instalar
 
+### Interface 0.12.0
+
+Esta versão inclui o painel RPG com progresso das missões em anel, nível/XP
+compactos, elos, atalhos e missões acionáveis; navegação inferior e temas/metas
+personalizáveis em Personalizar. A seleção de exercícios usa painel inferior,
+busca tolerante a acentos e indicação da opção ativa. Data e horário do treino
+ficam recolhidos; último treino e recorde aparecem lado a lado. O novo ícone S
+tem fundo ciano para contraste. Registros existentes não são alterados.
+
+Instale o APK novo sobre o anterior para receber a interface: atualizar o site
+não atualiza APKs já instalados. Não desinstale o app caso haja conflito de assinatura.
+As preferências do Android continuam locais por conta/aparelho; o checklist de
+publicações desta atualização está no site. Nenhuma assinatura release nova foi criada.
+
 No PowerShell, dentro de `android-app`:
 
 ```powershell

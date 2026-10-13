@@ -14,6 +14,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import java.text.Normalizer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
 
@@ -73,13 +79,22 @@ import androidx.compose.ui.text.style.TextOverflow
     ModalBottomSheet(onDismissRequest=dismiss,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal=20.dp).imePadding(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(title,style=MaterialTheme.typography.titleLarge)
-            if(options.size>8) Field("Buscar",query) {query=it}
-            val filtered=options.filter {it.contains(query,ignoreCase=true)}
+            if(options.size>8) OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),
+                label={Text("Buscar $title")},leadingIcon={Icon(Icons.Outlined.Search,null)},singleLine=true,
+                shape=MaterialTheme.shapes.small)
+            fun normalized(value:String)=Normalizer.normalize(value,Normalizer.Form.NFD).replace(Regex("\\p{M}+"),"").lowercase(java.util.Locale.ROOT)
+            val filtered=options.filter {normalized(it).contains(normalized(query.trim()))}
+            Text("${filtered.size} opções · ${if(multiple) "selecione uma ou mais" else "toque para escolher"}",
+                style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(filtered.isEmpty()) Text("Nenhuma opção encontrada.",color=MaterialTheme.colorScheme.onSurfaceVariant)
             LazyColumn(Modifier.fillMaxWidth().heightIn(max=360.dp)) {
                 items(filtered,key={it}) {item ->
-                    ListItem(headlineContent={Text(item)},modifier=Modifier.clickable {select(item)},
-                        leadingContent={if(multiple) Checkbox(item in selected,null) else if(item in selected) Icon(Icons.Outlined.Check,null,tint=MaterialTheme.colorScheme.primary)})
+                    val chosen=item in selected
+                    ListItem(headlineContent={Text(item)},modifier=Modifier
+                        .semantics {this.selected=chosen}.clickable(role=if(multiple) Role.Checkbox else Role.RadioButton) {select(item)},
+                        colors=ListItemDefaults.colors(containerColor=if(chosen) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow),
+                        trailingContent={if(multiple) Checkbox(chosen,null) else Icon(if(chosen) Icons.Outlined.Check else Icons.Outlined.RadioButtonUnchecked,
+                            if(chosen) "Selecionado" else null,tint=if(chosen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)})
                 }
             }
             TextButton(dismiss,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text(if(multiple) "Concluir seleção" else "Fechar")}

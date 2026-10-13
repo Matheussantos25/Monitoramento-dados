@@ -70,7 +70,8 @@ def test_unavailable_creator_data_is_not_zero_and_custom_goals_apply():
     prefs = preferences(personal=True)
     prefs["targets"]["flexao"] = 120
     goals = {g["id"]: g for g in daily_checkup([], None, TODAY, preferences=prefs)}
-    assert goals["created"]["value"] is None and not goals["created"]["done"]
+    assert goals["published"]["value"] is None and not goals["published"]["done"]
+    assert "created" not in goals
     assert goals["water"]["value"] is None
     assert goals["flexao"]["target"] == 120
     assert "questions" not in goals and "study" not in goals
@@ -123,5 +124,19 @@ def test_multi_channel_goal_is_aggregate_and_not_per_render():
     repo.save_item(dict(video(channel), title="Episódio 2", stage="Publicado", published_on=str(TODAY)))
     for _ in range(3):
         goals = {g["id"]: g for g in daily_checkup([], [], TODAY, preferences=preferences(personal=True), creator_items=repo.load()["items"])}
-        assert goals["created"]["done"] and goals["published"]["done"]
-        assert goals["created"]["value"] == goals["published"]["value"] == 2
+        assert goals["published"]["done"]
+        assert goals["published"]["value"] == 2
+        assert "created" not in goals
+
+
+def test_post_retry_uses_same_id_and_preserves_legacy_creation_data():
+    from uuid import uuid4
+    repo, _, channel = setup_store()
+    operation = str(uuid4())
+    row = repo.save_item(dict(video(channel), stage="Publicado", published_on=str(TODAY)), new_id=operation)
+    with pytest.raises(ValueError):
+        repo.save_item(dict(video(channel), stage="Publicado", published_on=str(TODAY)), new_id=operation)
+    assert len([r for r in repo.load()["items"] if r["kind"] == "video"]) == 1
+    old = preferences({"enabled": ["created", "published"], "targets": {"created": 7}})
+    assert old["enabled"] == ["published"] and old["targets"]["created"] == 7
+    assert row["produced_on"] == str(TODAY)

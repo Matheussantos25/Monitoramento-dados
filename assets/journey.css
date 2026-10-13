@@ -32,3 +32,19 @@
 @media(max-width:640px) { .journey-command,.creator-rank { grid-template-columns: 1fr; gap: 18px; } .journey-score { text-align: left; } .journey-score strong { font-size: 36px; } }
 @media(max-width:640px) { .system-status { grid-template-columns:auto minmax(0,1fr); gap:8px 14px; } .system-status__foot { grid-column:1 / -1; grid-row:3; flex-direction:row; justify-content:space-between; } }
 @media(prefers-reduced-motion:reduce) { .journey-command *, .creator-rank *, .rank-promotion * { animation: none !important; transition: none !important; } .rank-promotion { display:none !important; } }
+
+/* Posting is a touch-friendly checklist, not a production form. */
+[class*="st-key-daily_posts"] [data-testid="stCheckbox"] label,
+[class*="st-key-quick_posts"] [data-testid="stCheckbox"] label {
+  min-height: 48px; padding: 8px 4px; align-items: center;
+}
+[class*="st-key-daily_posts"] [data-testid="stCheckbox"] p,
+[class*="st-key-quick_posts"] [data-testid="stCheckbox"] p {
+  font-size: 16px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere;
+}
+@media(max-width:640px) {
+  .st-key-publication_stats [data-testid="stHorizontalBlock"] { flex-wrap: nowrap; gap: 16px; }
+  .st-key-publication_stats [data-testid="stColumn"] { flex: 1 1 0; min-width: 0; }
+  .st-key-publication_stats [data-testid="stMetricValue"] { font-size: 28px; }
+  [data-testid="stCaptionContainer"] p { font-size: 13px; line-height: 1.6; color: #aebed2; }
+}
