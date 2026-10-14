@@ -149,3 +149,39 @@ Contas existentes continuam com os catálogos e histórico legados. O ViewModel 
 treino é separado por ID de conta para não reaproveitar a lista de outro login.
 Instale o novo APK para receber esta seleção; APKs antigos continuam com o catálogo
 antigo. Nenhuma chave privilegiada foi adicionada.
+
+## Confirmação de e-mail no Android — 0.12.2
+
+Cadastros feitos neste APK enviam `redirectUrl=com.matheussantos.solem://auth/callback`.
+O Supabase deve permitir exatamente esse destino em **Authentication > URL Configuration > Redirect URLs**.
+Mantenha também o endereço do Streamlit e seu Site URL atual. O template **Confirm sign up** deve
+usar `{{ .ConfirmationURL }}`; não substitua pelo Site URL nem desative a confirmação de e-mail.
+O destino Android foi adicionado ao projeto existente em 14/10/2026, sem alterar tabelas ou RLS.
+
+O Android trata tanto abertura a frio (`onCreate`) quanto retorno ao app aberto (`onNewIntent`).
+O cadastro usa PKCE: o código recebido só pode ser trocado com o verificador guardado pelo SDK
+na instalação que iniciou o cadastro. Antes de adotar a sessão, o app consulta o Auth e compara
+o e-mail verificado com o cadastro pendente. Uma conta já conectada nunca é trocada por um link.
+Senhas e URLs de confirmação não são persistidas nem registradas em logs pelo aplicativo.
+
+Instale o APK por cima do anterior. Para validar no celular:
+
+1. Crie uma conta de teste pelo APK atualizado e abra o e-mail **no mesmo celular**.
+2. Toque em confirmar; aceite “Abrir no Solem” se o navegador perguntar. Confira que a conta
+   abre sem os dados de outro usuário, com as opções iniciais de saúde/treino.
+3. Repita com outro cadastro de teste, fechando o app antes de tocar no link, para testar abertura a frio.
+4. Confira que link vencido/reutilizado ou conexão indisponível mostra orientação de login,
+   sem restaurar dados de uma conta anterior. Abrir um link estando conectado não troca a conta.
+5. Confirme que os cadastros feitos no site continuam retornando ao site.
+
+Links enviados antes da atualização não mudam de destino. Confirmação em outro dispositivo,
+reinstalação ou limpeza dos dados impede a troca automática PKCE; nesse caso, depois de
+confirmar, entre normalmente com e-mail e senha. Alguns leitores de e-mail/navegadores podem
+pedir para abrir o link no navegador externo antes de permitir abrir o app. O retorno usa um
+esquema próprio, não Android App Links HTTPS verificados; para estes, será necessário um domínio
+controlado com `assetlinks.json`. O serviço de e-mail padrão do Supabase tem limites de envio;
+esta mudança não remove esses limites nem configura SMTP.
+
+Os testes automatizados validam destino exato, rejeição de tokens/links inválidos e que nenhuma
+sessão é adotada sem identidade correspondente confirmada pelo servidor. A experiência completa
+no leitor de e-mail depende da validação em um celular real.

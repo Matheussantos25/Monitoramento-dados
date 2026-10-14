@@ -5,6 +5,7 @@ import com.matheussantos.solem.data.model.PersonalItem
 import com.matheussantos.solem.domain.*
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.FlowType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
@@ -18,7 +19,11 @@ import kotlinx.serialization.json.*
 class WorkspaceRepository {
     // The single authenticated client for this session, including legacy training.
     val client = createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY) {
-        install(Auth)
+        install(Auth) {
+            scheme = EmailConfirmation.SCHEME
+            host = EmailConfirmation.HOST
+            flowType = FlowType.PKCE
+        }
         install(Postgrest)
         install(Storage)
         install(Realtime)

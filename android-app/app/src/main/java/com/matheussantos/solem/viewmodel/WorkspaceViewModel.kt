@@ -20,6 +20,9 @@ import java.io.ByteArrayOutputStream
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.*
 import com.matheussantos.solem.domain.genericAccount
+import com.matheussantos.solem.domain.EmailConfirmation
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class WorkspaceState(val initialized: Boolean = false, val signedIn: Boolean = false, val busy: Boolean = false,
     val accountId: String = "", val generic: Boolean = true,
@@ -47,6 +50,10 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
     private val healthRepo get() = HealthRepository(repo.client)
     private val mutableState = MutableStateFlow(WorkspaceState())
     val state = mutableState.asStateFlow()
+    private val authMutex = Mutex()
+    private var restoreJob: Job? = null
+    private var confirmationJob: Job? = null
+    private val pendingSignup = application.getSharedPreferences("solem_pending_signup", android.content.Context.MODE_PRIVATE)
     private var authWatcher: Job? = null
     private fun watchSession() {
         authWatcher?.cancel()
@@ -64,7 +71,7 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
     init {
         if (!SupabaseProvider.isConfigured) {
             mutableState.value = WorkspaceState(initialized=true,message="Configure a URL e a chave pública do Supabase.",failed=true)
-        } else viewModelScope.launch {
+        } else restoreJob = viewModelScope.launch {
             try {
                 repo.client.auth.awaitInitialization()
                 if (repo.client.auth.currentSessionOrNull() != null) repo.client.auth.retrieveUserForCurrentSession(updateSession=true)
@@ -83,6 +90,7 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
         if (state.value.busy) return
         if (!SupabaseProvider.isConfigured) { mutableState.update { it.copy(initialized=true,message="Configure a URL e a chave pública do Supabase.",failed=true) }; return }
         viewModelScope.launch {
+            authMutex.withLock {
             mutableState.update { it.copy(busy=true,message=null,failed=false) }
             try { block() }
             catch (e: CancellationException) { throw e }
@@ -91,6 +99,7 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
                 mutableState.update { it.copy(initialized=true,signedIn=logged, items=if(logged) it.items else emptyList(), failed=true,
                     message=if(e is IllegalArgumentException) e.message else "Não foi possível concluir. Confira sua conexão e sessão. Se enviou PDF, tente baixá-lo antes de reenviar.") }
             } finally { mutableState.update { it.copy(busy=false) } }
+            }
         }
     }
     fun login(email: String, password: String, signup: Boolean) = action {
@@ -98,14 +107,59 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
         val generation = state.value.sessionGeneration + 1
         mutableState.value = WorkspaceState(initialized=true, busy=true, sessionGeneration=generation)
         if (repo.client.auth.currentSessionOrNull() != null) repo.client.auth.signOut()
-        if (signup) repo.client.auth.signUpWith(Email) { this.email=email.trim(); this.password=password }
+        if (signup) {
+            // Persist only the expected email, never the password or callback code.
+            pendingSignup.edit().putString("email", email.trim()).apply()
+            repo.client.auth.signUpWith(Email, redirectUrl=EmailConfirmation.REDIRECT_URL) {
+                this.email=email.trim(); this.password=password
+            }
+        }
         else repo.client.auth.signInWith(Email) { this.email=email.trim(); this.password=password }
         val logged = repo.client.auth.currentSessionOrNull() != null &&
             repo.client.auth.currentUserOrNull()?.email?.equals(email.trim(), ignoreCase=true) == true
         val (id, generic) = accountState()
         mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic,items=emptyList(),photos=emptyList(),photoData=emptyMap(),healthEntries=emptyList(),healthLoaded=false,healthFailed=false,
-            message=if(!logged) "Confira seu e-mail para confirmar o cadastro e depois entre." else null) }
-        if(logged) { watchSession(); load() }
+            message=if(!logged) "Abra o e-mail neste celular e toque em confirmar. O link retornará ao Solem. Se o navegador perguntar, escolha abrir no aplicativo." else null) }
+        if(logged) { pendingSignup.edit().clear().apply(); watchSession(); load() }
+    }
+    fun confirmEmail(url: String) {
+        val callback = EmailConfirmation.parse(url)
+        if (callback == EmailConfirmation.Result.Ignore || confirmationJob?.isActive == true) return
+        confirmationJob = viewModelScope.launch {
+            restoreJob?.join() // Cold start: never race persisted-session initialization.
+            authMutex.withLock {
+                if (!SupabaseProvider.isConfigured || state.value.signedIn) return@withLock
+                val pendingEmail = pendingSignup.getString("email", null)
+                if (callback !is EmailConfirmation.Result.Code || pendingEmail.isNullOrBlank()) {
+                    mutableState.update { it.copy(initialized=true,failed=true,
+                        message="Não foi possível concluir pelo link. Se já confirmou o e-mail, entre com e-mail e senha. Para entrar automaticamente, abra o link no celular onde criou a conta.") }
+                    return@withLock
+                }
+                mutableState.value = WorkspaceState(initialized=true,busy=true,
+                    sessionGeneration=state.value.sessionGeneration+1,message="Confirmando seu acesso…")
+                try {
+                    // PKCE binds the code to this installation. Validate with Auth before
+                    // importing the session so a different account can never be adopted.
+                    EmailConfirmation.complete(callback.value, pendingEmail,
+                        exchange={ repo.client.auth.exchangeCodeForSession(it, saveSession=false) },
+                        verify={ session ->
+                            val user = repo.client.auth.retrieveUser(session.accessToken)
+                            session.copy(user=user) to user.email
+                        },
+                        adopt={ repo.client.auth.importSession(it) })
+                    val (id, generic) = accountState()
+                    mutableState.update { it.copy(signedIn=true,accountId=id,generic=generic,message="E-mail confirmado. Bem-vindo ao Solem!") }
+                    pendingSignup.edit().clear().apply()
+                    watchSession()
+                    try { load() }
+                    catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { mutableState.update { it.copy(failed=true,message="Acesso confirmado. Não foi possível carregar os dados; tente atualizar.") } }
+                } catch (e: CancellationException) { throw e }
+                catch (_: Exception) {
+                    mutableState.update { it.copy(failed=true,message="Não foi possível concluir pelo link. Ele pode ter expirado, já ter sido usado ou a conexão falhou. Se confirmou o e-mail, entre com e-mail e senha.") }
+                } finally { mutableState.update { it.copy(busy=false) } }
+            }
+        }
     }
     private suspend fun load() {
         val account = state.value.accountId
@@ -120,6 +174,7 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
         val generation = state.value.sessionGeneration + 1
         mutableState.value=WorkspaceState(initialized=true,busy=true,sessionGeneration=generation)
         authWatcher?.cancel()
+        pendingSignup.edit().clear().apply()
         runCatching { repo.client.auth.signOut() }
         repo.client.auth.clearSession() // Also clear persisted credentials if revocation failed offline.
         runCatching { repo.client.close() }
