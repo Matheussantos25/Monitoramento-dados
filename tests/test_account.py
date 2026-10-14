@@ -13,8 +13,9 @@ def test_only_new_accounts_get_generic_defaults_and_private_activities():
     assert generic_account("new@example.test", "2026-10-03T23:00:00Z")
     assert generic_account("new@example.test", "2026-10-03T20:00:00-03:00")
     assert generic_account("new@example.test", None)
-    assert activity_table(False) == "treinos"
-    assert activity_table(True) == "solem_activities"
+    assert activity_table(" MSDOF25@GMAIL.COM ") == "treinos"
+    for email in (None, "", "existing@example.test", "new@example.test"):
+        assert activity_table(email) == "solem_activities"
 
 
 def test_generic_content_does_not_expose_personal_presets():
@@ -32,7 +33,21 @@ def test_legacy_goals_remain_identical_and_generic_has_no_mewing():
     assert original["water"]["target"] == 3000
     assert original["questions"]["target"] == 150
     assert "mewing" not in generic
-    assert generic["questions"]["target"] == 10
+    assert set(generic) == {"water", "flexao", "agachamento", "cardio"}
+
+
+def test_old_preferences_cannot_reenable_personal_modules_for_new_accounts():
+    from solem_journey import preferences, GOALS
+    prefs = preferences({"enabled": list(GOALS)}, generic=True)
+    assert set(prefs["enabled"]) == {"water", "flexao", "agachamento", "cardio"}
+    assert all(g["value"] == 0 for g in daily_checkup([], [], date.today(), generic=True, preferences=prefs, creator_items=[]))
+
+
+def test_minimal_pages_and_owner_navigation():
+    from solem_account import visible_pages
+    pages = ["Visão geral", "Treino", "Saúde", "Estudar", "Publicações", "Financeiro"]
+    assert visible_pages(pages, True) == ["Visão geral", "Treino", "Saúde"]
+    assert visible_pages(pages, False) == pages
 
 
 def test_custom_study_topics_do_not_mutate_defaults():

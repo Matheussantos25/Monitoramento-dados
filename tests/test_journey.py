@@ -29,7 +29,7 @@ def test_personal_targets_do_not_change_other_accounts_or_legacy_history():
     assert not {"questions", "study"} & set(personal["enabled"])
     assert "mewing" not in generic["enabled"]
     assert generic["targets"]["flexao"] == 10
-    assert {"questions", "study"} <= set(generic["enabled"])
+    assert not {"questions", "study", "created", "published"} & set(generic["enabled"])
     history = [dict(data=str(TODAY), grupo_muscular="Pernas", exercicio="Agachamento", repeticoes=60)]
     original = deepcopy(history)
     before = calculate_progress(history, TODAY)

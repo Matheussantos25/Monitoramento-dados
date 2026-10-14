@@ -98,7 +98,7 @@ private fun missionIcon(id: String): ImageVector = when(id) {
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             QuickDestination("Treinar", Icons.Outlined.FitnessCenter, Modifier.weight(1f)) { navigate(1) }
             QuickDestination("Água", Icons.Outlined.WaterDrop, Modifier.weight(1f)) { healthSection(1) }
-            QuickDestination("Estudar", Icons.AutoMirrored.Outlined.MenuBook, Modifier.weight(1f)) { navigate(5) }
+            if(!generic) QuickDestination("Estudar", Icons.AutoMirrored.Outlined.MenuBook, Modifier.weight(1f)) { navigate(5) }
             QuickDestination("Refeição", Icons.Outlined.Restaurant, Modifier.weight(1f)) { healthSection(0) }
         }
         Surface(onClick={navigate(10)}, shape=MaterialTheme.shapes.large, color=MaterialTheme.colorScheme.primaryContainer) {
@@ -107,7 +107,7 @@ private fun missionIcon(id: String): ImageVector = when(id) {
                 Column(Modifier.weight(1f), verticalArrangement=Arrangement.spacedBy(5.dp)) {
                     Text(if(activityAvailable) "Elo físico · ${rankNames[rank.tier]}" else "Seu elo físico",style=MaterialTheme.typography.titleMedium)
                     Text(if(activityAvailable) "${rank.reps} repetições no histórico" else "Aguardando histórico",style=MaterialTheme.typography.bodySmall)
-                    Text("Ver físico e estudos", style=MaterialTheme.typography.labelLarge, color=MaterialTheme.colorScheme.primary)
+                    Text(if(generic) "Ver evolução física" else "Ver físico e estudos", style=MaterialTheme.typography.labelLarge, color=MaterialTheme.colorScheme.primary)
                 }
                 Icon(Icons.Outlined.ChevronRight, "Abrir elos")
             }
@@ -132,7 +132,7 @@ private fun missionIcon(id: String): ImageVector = when(id) {
         }
         Text("Metas pessoais, não prescrições de saúde. Elas não mudam as regras de XP ou dos elos.",
             style=MaterialTheme.typography.bodySmall, color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("XP por constância: treino +30 · estudo +30 · ambos +15. Descansar não apaga sua evolução.",
+        Text(if(generic) "XP por constância: +30 por dia de treino. Descansar não apaga sua evolução." else "XP por constância: treino +30 · estudo +30 · ambos +15. Descansar não apaga sua evolução.",
             style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(settings.showWeek) {
             Text("Seu ritmo nesta semana",style=MaterialTheme.typography.titleLarge)

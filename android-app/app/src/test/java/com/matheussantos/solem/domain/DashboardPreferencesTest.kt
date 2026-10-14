@@ -22,6 +22,9 @@ class DashboardPreferencesTest {
         assertFalse(missions(settings=generic,generic=true).containsKey("mewing"))
         assertTrue(missions().containsKey("mewing"))
         assertFalse(missions(settings=generic.copy(hidden=emptySet()),generic=true).containsKey("mewing"))
+        assertEquals(setOf("water", "flexao", "agachamento", "walk", "sleep"),
+            missions(settings=generic.copy(hidden=emptySet()), generic=true).keys)
+        assertTrue(missions(settings=generic,generic=true).values.all { it.value == 0.0 })
     }
     @Test fun validationChecksBoundsAndModes() {
         assertEquals("Matheus",DashboardPreferences(nickname=" Matheus ").validated().nickname)

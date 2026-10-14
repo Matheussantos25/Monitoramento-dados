@@ -24,7 +24,7 @@ data class DashboardPreferences(
     companion object {
         fun defaults(generic: Boolean) = if (generic) DashboardPreferences(
             pushups = 10, squats = 15, walkKm = 1, questions = 20,
-            studyMinutes = 30, hidden = setOf("sleep", "mewing")
+            studyMinutes = 30, hidden = setOf("sleep", "mewing", "questions", "study")
         ) else DashboardPreferences()
     }
 }
@@ -60,7 +60,7 @@ fun dailyMissions(records: List<TrainingRecord>, health: List<HealthEntry>, sett
         DailyMission("study", "Tempo de estudo", study.sumOf { nonnegative(it.studyMinutes()) + nonnegative(it.number("tempo_video")) }, settings.studyMinutes, "min", 5),
         DailyMission("mewing", "Mewing com borracha", reps("Mewing com borracha"), settings.mewing, "rep", 1, "Mewing com borracha"),
         DailyMission("sleep", "Sono registrado", if (healthAvailable) sleep ?: 0.0 else null, settings.sleepMinutes, "min", 3)
-    ).filter { it.id !in settings.hidden && (!generic || it.id != "mewing") }
+    ).filter { it.id !in settings.hidden && (!generic || fitnessMission(it.id)) }
 }
 
 data class PromotionCheckpoint(val level: Int, val physicalTier: Int, val topicTiers:Map<String,Int> = emptyMap())

@@ -22,7 +22,8 @@ def monthly_journal(records, today, private_entries=None):
     if private_entries is None:
         private_entries = st.session_state.get("overview_health_entries")
     st.subheader('Diário de consistência')
-    st.caption('Um mês de cada vez. Estudos e treinos reais, sem penalizar seus dias de descanso.')
+    generic = st.session_state.get("generic_account", False)
+    st.caption('Um mês de cada vez. Treinos reais, sem penalizar seus dias de descanso.' if generic else 'Um mês de cada vez. Estudos e treinos reais, sem penalizar seus dias de descanso.')
     a,b = st.columns([1,2])
     with a:
         year = st.number_input('Ano', min_value=1900, max_value=2200, value=today.year, step=1, key='journal_year')
@@ -32,7 +33,7 @@ def monthly_journal(records, today, private_entries=None):
     study_days = sum(d['study'] for d in days.values())
     workout_days = sum(d['workout'] for d in days.values())
     hours = sum(d['study_minutes'] for d in days.values())/60
-    st.html(f'<div class="journal-summary"><span><b>{study_days}</b> dias de estudo</span><span><b>{workout_days}</b> dias de treino</span><span><b>{hours:.1f} h</b> estudadas</span></div>')
+    st.html(f'<div class="journal-summary"><span><b>{workout_days}</b> dias de treino</span></div>' if generic else f'<div class="journal-summary"><span><b>{study_days}</b> dias de estudo</span><span><b>{workout_days}</b> dias de treino</span><span><b>{hours:.1f} h</b> estudadas</span></div>')
     calendar_days = []
     for day, item in days.items():
         events = daily_events(records, private_entries, day) if day <= today else []
@@ -41,5 +42,5 @@ def monthly_journal(records, today, private_entries=None):
                               "health": any(event["kind"] in ("Saúde", "Alimentação", "Peso") for event in events),
                               "events": events})
     journal_calendar(year, month, today, calendar_days)
-    st.caption('Toque em um dia para ver os registros. E = estudou · T = treinou · + = saúde.')
-    st.caption('Tempo de estudo inclui vídeo-aulas e Anki. Não estimamos duração de exercícios registrados apenas por repetições. Registros futuros e sessões vazias não contam como prática.')
+    st.caption('Toque em um dia para ver os registros. T = treinou · + = saúde.' if generic else 'Toque em um dia para ver os registros. E = estudou · T = treinou · + = saúde.')
+    st.caption('Não estimamos duração de exercícios registrados apenas por repetições. Registros futuros e sessões vazias não contam como prática.' if generic else 'Tempo de estudo inclui vídeo-aulas e Anki. Não estimamos duração de exercícios registrados apenas por repetições. Registros futuros e sessões vazias não contam como prática.')

@@ -334,7 +334,7 @@ if GENERIC_ACCOUNT:
     FONTES_QUESTOES = DEFAULTS["FONTES_QUESTOES"]
     ROTA_ESTRATEGICA = list(TOPICOS_EDITAL)
     PESOS_DISCIPLINA = {subject: 1 for subject in DISCIPLINAS_ESTUDO}
-ACTIVITY_TABLE = activity_table(GENERIC_ACCOUNT) if not IS_DEMO else "treinos"
+ACTIVITY_TABLE = activity_table(account_user.email) if not IS_DEMO else "treinos"
 
 # --- BANCO DE DADOS ---
 @st.cache_resource
@@ -348,7 +348,8 @@ if IS_DEMO:
     st.caption("DEMONSTRAÇÃO · Dados fictícios. Alterações ficam apenas nesta sessão.")
 else:
     try:
-        supabase = account_client if GENERIC_ACCOUNT else init_connection()
+        # Always use the active user's JWT. Never query personal history anonymously.
+        supabase = account_client
     except Exception:
         st.error("Não foi possível conectar ao banco. Verifique a configuração de conexão do app.")
         st.stop()

@@ -27,11 +27,23 @@ class AccountProfileTest {
         assertTrue("Mewing com borracha" in old.exercises)
         assertFalse("Mewing com borracha" in generic.exercises)
         assertFalse("Massagem Facial" in generic.exercises)
+        assertEquals(setOf("Agachamento", "Flexão", "Caminhada", "Corrida"), generic.exercises.toSet())
         assertFalse("FGV" in generic.sources)
         assertTrue("Programação" in generic.subjects)
         val own = generic.withStudyTopics(listOf(com.matheussantos.solem.data.model.TrainingRecord(
             1, "2026-10-04", "12:00:00", "Estudos", "Design", extras=buildJsonObject { put("topico_edital", "Tipografia") })))
         assertEquals(listOf("Tipografia"), own.topics["Design"])
         assertFalse("Design" in old.subjects)
+    }
+    @Test fun historicalDateNeverGrantsAccessToMainHistory() {
+        assertEquals("treinos", activityTable(" MSDOF25@GMAIL.COM ", owner))
+        listOf(null, "", "old@example.test", "new@example.test").forEach {
+            assertEquals("solem_activities", activityTable(it, owner))
+        }
+        assertFalse(genericAccount("old@example.test", "2026-09-01T00:00:00Z", owner, cutoff))
+        assertEquals("solem_activities", activityTable("old@example.test", owner))
+    }
+    @Test fun fitnessNavigationDoesNotExposeStudyLibraryOrFinance() {
+        assertEquals(setOf(0,1,2,3,4,8,9,10,17), (0..17).filter(::fitnessPage).toSet())
     }
 }

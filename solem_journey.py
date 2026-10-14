@@ -29,7 +29,7 @@ def defaults(personal=False, generic=False):
     if generic:
         from solem_account import DEFAULTS
         targets.update(DEFAULTS["checkup_targets"])
-        enabled.remove("mewing")
+        enabled = [key for key in enabled if key in ("water", "flexao", "agachamento", "cardio")]
     if personal:
         targets.update(flexao=100, agachamento=100)
         enabled = [key for key in enabled if key not in ("questions", "study")]
@@ -58,7 +58,7 @@ def preferences(saved=None, personal=False, generic=False):
     # Keep legacy creation targets/data for compatibility; only posting is a mission now.
     result["enabled"] = [key for key in dict.fromkeys(enabled) if key != "created"]
     if generic:
-        result["enabled"] = [k for k in result["enabled"] if k != "mewing"]
+        result["enabled"] = [k for k in result["enabled"] if k in ("water", "flexao", "agachamento", "cardio")]
     if result["accent"] not in ACCENTS or any(type(result[k]) is not bool for k in ("effects", "sound")):
         raise ValueError("Preferências de aparência inválidas.")
     if len(result["strategy"]) > 10000:

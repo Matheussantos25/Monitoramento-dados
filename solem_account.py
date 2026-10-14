@@ -22,8 +22,18 @@ def generic_account(email, created_at):
         return True
 
 
-def activity_table(generic):
-    return "solem_activities" if generic else "treinos"
+def activity_table(email):
+    """Legacy history belongs only to the preserved account, never to an age cohort.
+
+    The email comes from the authenticated user, not form input. RLS independently
+    pins the legacy table to that user's immutable ID (legacy-owner-isolation.sql).
+    """
+    return "treinos" if str(email or "").strip().casefold() == DEFAULTS["preserved_email"] else "solem_activities"
+
+
+def visible_pages(pages, generic):
+    allowed = {"Visão geral", "Treino", "Evolução física", "Saúde", "Metas e aparência", "Configurações"}
+    return [page for page in pages if not generic or page in allowed]
 
 
 def personal_study_topics(topics, records):

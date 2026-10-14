@@ -38,12 +38,14 @@ def navigate_checkup(page, exercise=None):
 
 
 def shell(df, on_logout=None):
+    from solem_account import visible_pages
+    available = visible_pages(PAGES, st.session_state.get("generic_account", False))
     progress = calculate_progress(df.to_dict("records"))
-    if st.session_state.get('solem_page') not in PAGES:
+    if st.session_state.get('solem_page') not in available:
         st.session_state['solem_page'] = 'Visão geral'
     with st.sidebar:
         st.html('<div class="sidebar-brand">✳ <b>solem</b><small>SEU ESPAÇO PESSOAL</small></div>')
-        page = st.radio("Navegação principal", PAGES, key="solem_page", label_visibility="collapsed")
+        page = st.radio("Navegação principal", available, key="solem_page", label_visibility="collapsed")
         st.caption(f"Nível {progress['level']} · {progress['xp']} XP")
         if on_logout:
             st.divider()
@@ -58,6 +60,9 @@ def shell(df, on_logout=None):
                 ("PLANEJAMENTO", PAGES[11:14]),
                 ("CONTA", PAGES[14:]),
             ):
+                destinations = [dest for dest in destinations if dest in available]
+                if not destinations:
+                    continue
                 st.caption(group)
                 for destination in destinations:
                     st.button(destination, key=f"system_nav_{PAGES.index(destination)}",
@@ -145,6 +150,8 @@ def overview(p, records=None, private_entries=None):
         creator = creator_progress(data["items"], today) if data is not None else None
         published = creator['week_published'] if creator else '—'
         st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>VÍDEOS PUBLICADOS</span><strong>{published}<small> últimos 7 dias</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP de jornada</small></strong></div></section>''')
+    elif st.session_state.get("generic_account"):
+        st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP conquistados</small></strong></div></section>''')
     else:
         st.html(f'''<section class="weekly-stats" aria-label="Resumo da semana"><div><span>DIAS DE TREINO</span><strong>{p['week_workouts']:02}<small> nesta semana</small></strong></div><div><span>TEMPO DE ESTUDO</span><strong>{int(p['study_minutes']//60)}<small>h </small>{int(p['study_minutes']%60):02}<small>min</small></strong></div><div><span>QUESTÕES RESOLVIDAS</span><strong>{p['questions']}<small> nesta semana</small></strong></div><div><span>EXPERIÊNCIA DE HOJE</span><strong>+{p['today_xp']}<small> XP conquistados</small></strong></div></section>''')
 
@@ -156,7 +163,7 @@ def overview(p, records=None, private_entries=None):
             ("estudo", "Abra espaço para o foco", "Salve uma sessão de estudo ou revisão.", 30, "Estudar", "▤"),
             # O diário privado não entra na pontuação baseada na tabela compartilhada.
         ]:
-            if category == "estudo" and st.session_state.get("journey_personal"):
+            if category == "estudo" and (st.session_state.get("journey_personal") or st.session_state.get("generic_account")):
                 continue
             done = category in p["today_categories"]
             with st.container(key=f"mission_{category}"):
@@ -166,7 +173,7 @@ def overview(p, records=None, private_entries=None):
                 with b:
                     st.button("Ver registro" if done else "Começar →", key=f"go_{category}", on_click=navigate, args=(destination,), use_container_width=True)
         st.button("Abrir diário de saúde", key="go_health_private", on_click=navigate, args=("Saúde",), use_container_width=True)
-        st.caption("Corpo e mente no mesmo dia: +15 XP. O diário privado ainda não soma XP; descansar também faz parte do caminho.")
+        st.caption("Descansar também faz parte do caminho. O diário de saúde ainda não soma XP." if st.session_state.get("generic_account") else "Corpo e mente no mesmo dia: +15 XP. O diário privado ainda não soma XP; descansar também faz parte do caminho.")
     with rhythm:
         st.html('<div class="section-title"><h2>Seu ritmo</h2><span>Esta semana</span></div>')
         cells = ""

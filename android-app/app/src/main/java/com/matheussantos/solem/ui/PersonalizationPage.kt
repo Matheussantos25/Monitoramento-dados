@@ -29,7 +29,7 @@ import com.matheussantos.solem.domain.*
             PreferenceSwitch("Som de promoção", "Respeita o volume de mídia do aparelho",draft.sound) { draft=draft.copy(sound=it) }
         }
         Panel("Tela inicial") {
-            PreferenceSwitch("Ritmo da semana", "Seus dias de estudo e treino",draft.showWeek) { draft=draft.copy(showWeek=it) }
+            PreferenceSwitch("Ritmo da semana", if(generic) "Seus dias de treino" else "Seus dias de estudo e treino",draft.showWeek) { draft=draft.copy(showWeek=it) }
             PreferenceSwitch("Atividades recentes", "As últimas sessões do seu histórico",draft.showRecent) { draft=draft.copy(showRecent=it) }
         }
         Panel("Suas missões diárias") {
@@ -38,7 +38,7 @@ import com.matheussantos.solem.domain.*
                 "agachamento" to "Agachamentos · rep (1–10.000)","walk" to "Caminhada/corrida · km (1–100)",
                 "questions" to "Questões (1–5.000)","study" to "Estudo · min (1–1.440)",
                 "mewing" to "Mewing · rep (1–10.000)","sleep" to "Sono · min (1–960)")
-            labels.filter { !generic || it.first!="mewing" }.forEach { (id,label) ->
+            labels.filter { !generic || fitnessMission(it.first) }.forEach { (id,label) ->
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Checkbox(checked=id !in draft.hidden,onCheckedChange={enabled -> draft=draft.copy(hidden=if(enabled) draft.hidden-id else draft.hidden+id)})
                     OutlinedTextField(value=goals.getValue(id),onValueChange={goals=goals+(id to it.filter(Char::isDigit).take(5));feedback=null},

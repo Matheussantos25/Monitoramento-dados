@@ -16,7 +16,7 @@ import io.ktor.http.ContentType
 import kotlinx.serialization.json.*
 
 class WorkspaceRepository {
-    // Separate from the legacy training client: never changes its anonymous session.
+    // The single authenticated client for this session, including legacy training.
     val client = createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY) {
         install(Auth)
         install(Postgrest)

@@ -23,6 +23,7 @@ import com.matheussantos.solem.domain.genericAccount
 
 data class WorkspaceState(val initialized: Boolean = false, val signedIn: Boolean = false, val busy: Boolean = false,
     val accountId: String = "", val generic: Boolean = true,
+    val sessionGeneration: Int = 0,
     val items: List<PersonalItem> = emptyList(), val photos: List<ProgressPhoto> = emptyList(),
     val healthEntries: List<HealthEntry> = emptyList(),
     val healthLoaded: Boolean = false, val healthFailed: Boolean = false,
@@ -37,19 +38,40 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
     private var repository: WorkspaceRepository? = null
     private val repo get() = repository ?: WorkspaceRepository().also { repository=it }
     val trainingClient get() = repo.client
+    val trainingTable get(): String {
+        val defaults = Json.parseToJsonElement(getApplication<Application>().assets.open("account_defaults.json").bufferedReader().use { it.readText() }).jsonObject
+        return com.matheussantos.solem.domain.activityTable(repo.client.auth.currentUserOrNull()?.email,
+            defaults.getValue("preserved_email").jsonPrimitive.content)
+    }
     private val photoRepo get() = PhotoRepository(repo.client)
     private val healthRepo get() = HealthRepository(repo.client)
     private val mutableState = MutableStateFlow(WorkspaceState())
     val state = mutableState.asStateFlow()
+    private var authWatcher: Job? = null
+    private fun watchSession() {
+        authWatcher?.cancel()
+        val sessionClient = repo.client
+        authWatcher = viewModelScope.launch {
+            sessionClient.auth.sessionStatus.collect {
+                if (state.value.signedIn && sessionClient.auth.currentUserOrNull()?.id != state.value.accountId) {
+                    mutableState.value = WorkspaceState(initialized=true,
+                        sessionGeneration=state.value.sessionGeneration+1,
+                        message="Sessão encerrada. Entre novamente.")
+                }
+            }
+        }
+    }
     init {
         if (!SupabaseProvider.isConfigured) {
             mutableState.value = WorkspaceState(initialized=true,message="Configure a URL e a chave pública do Supabase.",failed=true)
         } else viewModelScope.launch {
             try {
                 repo.client.auth.awaitInitialization()
-                val logged = repo.client.auth.currentSessionOrNull() != null
+                if (repo.client.auth.currentSessionOrNull() != null) repo.client.auth.retrieveUserForCurrentSession(updateSession=true)
                 val (id, generic) = accountState()
+                val logged = repo.client.auth.currentSessionOrNull() != null && id.isNotBlank()
                 mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic) }
+                watchSession()
                 if (logged) load()
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) {
@@ -65,28 +87,44 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
             try { block() }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) {
-                val logged = repo.client.auth.currentSessionOrNull() != null
+                val logged = state.value.signedIn && repo.client.auth.currentUserOrNull()?.id == state.value.accountId
                 mutableState.update { it.copy(initialized=true,signedIn=logged, items=if(logged) it.items else emptyList(), failed=true,
                     message=if(e is IllegalArgumentException) e.message else "Não foi possível concluir. Confira sua conexão e sessão. Se enviou PDF, tente baixá-lo antes de reenviar.") }
             } finally { mutableState.update { it.copy(busy=false) } }
         }
     }
     fun login(email: String, password: String, signup: Boolean) = action {
+        // A failed sign-in or pending confirmation must never revive a previous account.
+        val generation = state.value.sessionGeneration + 1
+        mutableState.value = WorkspaceState(initialized=true, busy=true, sessionGeneration=generation)
+        if (repo.client.auth.currentSessionOrNull() != null) repo.client.auth.signOut()
         if (signup) repo.client.auth.signUpWith(Email) { this.email=email.trim(); this.password=password }
         else repo.client.auth.signInWith(Email) { this.email=email.trim(); this.password=password }
-        val logged = repo.client.auth.currentUserOrNull() != null
+        val logged = repo.client.auth.currentSessionOrNull() != null &&
+            repo.client.auth.currentUserOrNull()?.email?.equals(email.trim(), ignoreCase=true) == true
         val (id, generic) = accountState()
         mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic,items=emptyList(),photos=emptyList(),photoData=emptyMap(),healthEntries=emptyList(),healthLoaded=false,healthFailed=false,
             message=if(!logged) "Confira seu e-mail para confirmar o cadastro e depois entre." else null) }
-        if(logged) load()
+        if(logged) { watchSession(); load() }
     }
-    private suspend fun load() { val rows = repo.list(); mutableState.update { it.copy(items=rows) } }
+    private suspend fun load() {
+        val account = state.value.accountId
+        val generation = state.value.sessionGeneration
+        val rows = repo.list()
+        mutableState.update {
+            if(it.signedIn && it.accountId == account && it.sessionGeneration == generation) it.copy(items=rows) else it
+        }
+    }
     fun refresh() = action { load() }
     fun logout() = action {
+        val generation = state.value.sessionGeneration + 1
+        mutableState.value=WorkspaceState(initialized=true,busy=true,sessionGeneration=generation)
+        authWatcher?.cancel()
         runCatching { repo.client.auth.signOut() }
+        repo.client.auth.clearSession() // Also clear persisted credentials if revocation failed offline.
         runCatching { repo.client.close() }
         repository=null
-        mutableState.value=WorkspaceState(initialized=true,message="Sessão encerrada.")
+        mutableState.value=WorkspaceState(initialized=true,sessionGeneration=generation,message="Sessão encerrada.")
     }
     fun save(item: PersonalItem, old: PersonalItem?, done: (PersonalItem) -> Unit) = action {
         val saved = repo.save(item,old)

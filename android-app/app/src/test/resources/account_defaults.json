@@ -2,13 +2,9 @@
   "new_accounts_since": "2026-10-03T23:00:00Z",
   "preserved_email": "msdof25@gmail.com",
   "EXERCICIOS_PRESETADOS": {
-    "Abdominal": ["Abdominal", "Prancha"],
-    "Bíceps": ["Rosca direta", "Barra Fixa (Supinada)"],
-    "Cardio": ["Bike", "Caminhada", "Corrida", "Pular Corda", "Subida Escada (Andares)"],
-    "Costas": ["Barra Fixa (Pronada)", "Puxada Alta", "Remada Baixa"],
-    "Peitoral": ["Flexão", "Supino"],
-    "Pernas": ["Agachamento", "Afundo", "Elevação de panturrilha"],
-    "Ombros": ["Desenvolvimento", "Elevação lateral"]
+    "Cardio": ["Caminhada", "Corrida"],
+    "Peitoral": ["Flexão"],
+    "Pernas": ["Agachamento"]
   },
   "TOPICOS_EDITAL": {
     "Programação": ["Fundamentos", "Estruturas de dados", "Desenvolvimento web", "Aplicativos", "Testes", "Banco de dados"],

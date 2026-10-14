@@ -8,7 +8,7 @@ import com.matheussantos.solem.ui.state.TrainingUiState
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
-class TrainingViewModel(private val repo: TrainingRepository = TrainingRepository()) : ViewModel() {
+class TrainingViewModel(private val repo: TrainingRepository) : ViewModel() {
     private val mutable = MutableStateFlow<TrainingUiState>(TrainingUiState.Loading)
     val state = mutable.asStateFlow()
     private val notice = MutableStateFlow<String?>(null)

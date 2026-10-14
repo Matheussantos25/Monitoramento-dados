@@ -42,7 +42,17 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
     SolemTheme(settings) { Surface(Modifier.fillMaxSize()) { when {
         !auth.initialized -> Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }
         !auth.signedIn -> WorkspacePage(workspaceVm)
-        else -> key(auth.accountId) { AuthenticatedSolemApp(workspaceVm, auth.accountId, auth.generic,store) }
+        else -> key(auth.accountId, auth.sessionGeneration) {
+            // Activity-scoped ViewModels otherwise survive logout and retain old rows/jobs.
+            val sessionStore = remember { androidx.lifecycle.ViewModelStore() }
+            val owner = remember { object : androidx.lifecycle.ViewModelStoreOwner {
+                override val viewModelStore = sessionStore
+            } }
+            DisposableEffect(owner) { onDispose { sessionStore.clear() } }
+            CompositionLocalProvider(androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner provides owner) {
+                AuthenticatedSolemApp(workspaceVm, auth.accountId, auth.generic,store)
+            }
+        }
     } } }
     }
 }
@@ -52,8 +62,7 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
     val vm: TrainingViewModel = viewModel(key="training-$accountId", factory=object : androidx.lifecycle.ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T = TrainingViewModel(
-            if (generic) com.matheussantos.solem.data.repository.TrainingRepository(workspaceVm.trainingClient, "solem_activities")
-            else com.matheussantos.solem.data.repository.TrainingRepository()
+            com.matheussantos.solem.data.repository.TrainingRepository(workspaceVm.trainingClient, workspaceVm.trainingTable, accountId)
         ) as T
     })
     val context = LocalContext.current
@@ -81,7 +90,9 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
         ModalDrawerSheet {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
                 Text("✳ solem",Modifier.padding(16.dp),style=MaterialTheme.typography.headlineMedium)
-                listOf("JORNADA" to listOf(0,1,2,3,5,6,9,10), "BIBLIOTECA" to listOf(11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(17,8)).forEach { (group, indices) ->
+                listOf("JORNADA" to listOf(0,1,2,3,5,6,9,10), "BIBLIOTECA" to listOf(11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(17,8))
+                    .map { (group, indices) -> group to indices.filter { !generic || fitnessPage(it) } }
+                    .filter { it.second.isNotEmpty() }.forEach { (group, indices) ->
                     Text(group,Modifier.padding(16.dp,12.dp),style=MaterialTheme.typography.labelSmall)
                     indices.forEach { index -> NavigationDrawerItem(label={Text(pages[index])},selected=backStack?.destination?.route==index.toString(),onClick={
                         nav.navigate(index.toString()) {launchSingleTop=true;popUpTo("0")}
@@ -106,7 +117,8 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
                 IconButton({vm.refresh();workspaceVm.loadHealth()},enabled=!busy && !healthState.busy) {Icon(Icons.Default.Refresh,"Atualizar dados")}})
     },bottomBar={if(!isRecord) NavigationBar {
         listOf(Triple(0,"Jornada",Icons.Outlined.AutoAwesome),Triple(3,"Saúde",Icons.Outlined.FavoriteBorder),
-            Triple(1,"Treino",Icons.Outlined.FitnessCenter),Triple(5,"Estudo",Icons.AutoMirrored.Outlined.MenuBook)).forEach { (index,label,icon) ->
+            Triple(1,"Treino",Icons.Outlined.FitnessCenter),Triple(5,"Estudo",Icons.AutoMirrored.Outlined.MenuBook))
+            .filter { !generic || fitnessPage(it.first) }.forEach { (index,label,icon) ->
             val active=when {route.startsWith("health/") || route=="4" -> 3;route=="2" -> 1;route=="6" -> 5;route in listOf("9","10") -> 0;else -> route.toIntOrNull()}
             NavigationBarItem(selected=active==index,
                 onClick={nav.navigate(index.toString()) {launchSingleTop=true;popUpTo("0")}},icon={Icon(icon,null)},label={Text(label)})
@@ -145,7 +157,7 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
                 composable("3") { HealthPage(catalog, workspaceVm) }
                 composable("4") { HealthPage(catalog, workspaceVm,2) }
                 composable("health/{section}") { entry -> HealthPage(catalog,workspaceVm,entry.arguments?.getString("section")?.toIntOrNull() ?: -1) }
-                composable("5") {
+                if (!generic) composable("5") {
                     var section by rememberSaveable { mutableStateOf("Registrar") }
                     Column(Modifier.fillMaxSize()) {
                         Row(Modifier.padding(horizontal=20.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -155,8 +167,8 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
                         else History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }, "Estudo", Modifier.weight(1f))
                     }
                 }
-                composable("6") { StudyCharts(rows, catalog) }
-                composable("7") { PromptsPage(workspaceVm, generic) }
+                if (!generic) composable("6") { StudyCharts(rows, catalog) }
+                if (!generic) composable("7") { PromptsPage(workspaceVm, generic) }
                 composable("8") { History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }) }
                 composable("new-workout/{exercise}") { entry ->
                     EntryScreen("Treino", catalog, rows, busy=busy,
@@ -164,9 +176,9 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
                         batch={ value, done -> vm.insertBatch(value, done) },
                         initialExercise=entry.arguments?.getString("exercise")?.let(Uri::decode))
                 }
-                composable("9") { MonthlyJournal(rows) }
+                composable("9") { MonthlyJournal(rows, generic) }
                 composable("10") { if (state is TrainingUiState.Ready || state is TrainingUiState.Empty) RanksPage(rows, catalog) }
-                (11..16).forEach { index -> composable(index.toString()) { WorkspacePage(workspaceVm,pages[index]) } }
+                if (!generic) (11..16).forEach { index -> composable(index.toString()) { WorkspacePage(workspaceVm,pages[index]) } }
                 composable("17") { PersonalizationPage(store,generic) }
                 composable("edit/{id}") { entry ->
                     val record = rows.firstOrNull { it.id == entry.arguments?.getString("id")?.toLongOrNull() }

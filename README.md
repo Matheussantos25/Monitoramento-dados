@@ -2,6 +2,14 @@
 
 Aplicativo Streamlit para acompanhar treinos, alimentação, peso e estudos. A interface inclui uma visão geral com experiência (XP), níveis, sequência de dias ativos e atalhos para os registros.
 
+## Isolamento de contas — 0.12.1
+
+- O histórico legado `treinos` pertence somente à conta preservada. A data de cadastro continua controlando compatibilidade visual, **nunca** propriedade dos registros. Todas as outras contas usam `solem_activities`, com RLS por `user_id = auth.uid()`; saúde usa RLS por `owner_id`.
+- Web e Android usam o cliente autenticado também para o histórico legado. Não existe mais cliente anônimo de treino no APK. Sessões Android restauradas são verificadas com Auth; logout descarta ViewModels e consultas antigas.
+- Novas contas iniciam vazias, com treino/saúde, agachamento, flexão, caminhada e corrida; sem módulos de estudo, publicações ou biblioteca. Preferências antigas não reativam essas missões. A conta principal mantém seus registros, catálogo e módulos.
+- Após publicar os clientes, aplicar `supabase/legacy-owner-isolation.sql`: uma política **restritiva** fixa o histórico antigo ao UUID da conta preservada, bloqueando anônimos e outras contas mesmo diante da antiga política permissiva. Não modifica nenhum registro. APKs antigos que consultavam anonimamente precisam ser atualizados.
+- Validar no banco: mesma contagem antes/depois para o proprietário, zero linhas de `treinos` com JWT de outra conta e como `anon`; nenhuma linha privada de outro usuário. Não usar credenciais administrativas para testar RLS.
+
 Reconhecimento de refeições por API removido. Registro manual e valores nutricionais já salvos permanecem disponíveis; nenhuma foto de comida é enviada a um serviço de IA. Consulte [status e alternativas locais](REFEICOES-POR-FOTO.md).
 
 ## Missões personalizáveis e estúdio de criação (outubro de 2026)

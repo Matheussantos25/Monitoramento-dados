@@ -39,20 +39,20 @@ import java.util.Locale
     }
 }
 
-@Composable fun MonthlyJournal(rows: List<TrainingRecord>) {
+@Composable fun MonthlyJournal(rows: List<TrainingRecord>, generic: Boolean = false) {
     var monthText by rememberSaveable { mutableStateOf(YearMonth.from(today()).toString()) }
     val month = YearMonth.parse(monthText)
     val days = remember(rows,monthText) { monthlyJournal(rows,month) }
     Page("Diário de consistência") {
-        Text("Um mês de cada vez. Veja os dias em que você estudou e treinou.")
+        Text(if(generic) "Um mês de cada vez. Veja seus dias de treino." else "Um mês de cada vez. Veja os dias em que você estudou e treinou.")
         Row(verticalAlignment=Alignment.CenterVertically) {
             TextButton({ monthText=month.minusMonths(1).toString() },enabled=month.year>1900) { Text("Anterior") }
             Text(month.format(DateTimeFormatter.ofPattern("MMMM yyyy",Locale.forLanguageTag("pt-BR"))),Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
             TextButton({ monthText=month.plusMonths(1).toString() },enabled=month.year<2200) { Text("Próximo") }
         }
         TextButton({monthText=YearMonth.from(today()).toString()}) {Text("Voltar a este mês")}
-        Text("${days.count { it.study }} dias de estudo · ${days.count { it.workout }} dias de treino",style=MaterialTheme.typography.titleMedium)
-        Text("%.1f horas estudadas".format(days.sumOf { it.studyMinutes }/60))
+        Text(if(generic) "${days.count { it.workout }} dias de treino" else "${days.count { it.study }} dias de estudo · ${days.count { it.workout }} dias de treino",style=MaterialTheme.typography.titleMedium)
+        if(!generic) Text("%.1f horas estudadas".format(days.sumOf { it.studyMinutes }/60))
         Row { listOf("S","T","Q","Q","S","S","D").forEach { Text(it,Modifier.weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.Center) } }
         val offset = month.atDay(1).dayOfWeek.value-1
         val count = ((offset+days.size+6)/7)*7
@@ -73,8 +73,8 @@ import java.util.Locale
                 }
             }
         }
-        Text("E = estudou · T = treinou.",style=MaterialTheme.typography.bodySmall)
-        Text("Inclui Anki e vídeo-aulas. Não estimamos duração a partir de repetições. Registros futuros e sessões vazias não contam como prática.",style=MaterialTheme.typography.bodySmall)
+        Text(if(generic) "T = treinou." else "E = estudou · T = treinou.",style=MaterialTheme.typography.bodySmall)
+        Text(if(generic) "Não estimamos duração a partir de repetições. Registros futuros e sessões vazias não contam como prática." else "Inclui Anki e vídeo-aulas. Não estimamos duração a partir de repetições. Registros futuros e sessões vazias não contam como prática.",style=MaterialTheme.typography.bodySmall)
     }
 }
 private val sixtyCell = 60.dp

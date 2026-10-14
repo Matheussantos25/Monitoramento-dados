@@ -113,7 +113,7 @@ def settings_page():
         return
     prefs = st.session_state["journey_preferences"]
     data = st.session_state["journey_data"]
-    allowed = [k for k in GOALS if k != "created" and (k != "mewing" or not st.session_state.get("generic_account"))]
+    allowed = [k for k in GOALS if k != "created" and (not st.session_state.get("generic_account") or k in ("water", "flexao", "agachamento", "cardio"))]
     with st.form("journey_settings_form"):
         enabled = st.multiselect("Missões que aparecem no check-up", allowed,
                                  default=prefs["enabled"], format_func=lambda k: GOALS[k][0], key="journey_enabled")
