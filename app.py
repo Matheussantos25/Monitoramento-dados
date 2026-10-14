@@ -16,7 +16,7 @@ from solem_health import (training_measure_stats, training_category_stats, train
                           workout_fields, format_one_decimal, now_local)
 from solem_gps import gps_distance_tracker
 from solem_workout_timer import workout_timer, apply_timing_event
-from solem_account import DEFAULTS, generic_account, activity_table, personal_study_topics
+from solem_account import DEFAULTS, generic_account, personal_study_topics
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
 def safe_get(val, key, default=None):
@@ -334,7 +334,10 @@ if GENERIC_ACCOUNT:
     FONTES_QUESTOES = DEFAULTS["FONTES_QUESTOES"]
     ROTA_ESTRATEGICA = list(TOPICOS_EDITAL)
     PESOS_DISCIPLINA = {subject: 1 for subject in DISCIPLINAS_ESTUDO}
-ACTIVITY_TABLE = activity_table(account_user.email) if not IS_DEMO else "treinos"
+# Keep this compatibility-critical choice in the entrypoint. Streamlit can retain
+# an imported module from a previous deployment whose activity_table took a bool:
+# passing an email to that function silently selected the empty private table.
+ACTIVITY_TABLE = "treinos" if IS_DEMO or PERSONAL_JOURNEY else "solem_activities"
 
 # --- BANCO DE DADOS ---
 @st.cache_resource
@@ -350,6 +353,10 @@ else:
     try:
         # Always use the active user's JWT. Never query personal history anonymously.
         supabase = account_client
+        active_session = account_client.auth.get_session()
+        if not active_session or str(active_session.user.id) != str(account_user.id):
+            raise ValueError("Sessão não corresponde ao usuário ativo.")
+        supabase.postgrest.auth(active_session.access_token)
     except Exception:
         st.error("Não foi possível conectar ao banco. Verifique a configuração de conexão do app.")
         st.stop()
@@ -706,6 +713,13 @@ except Exception:
     st.error("Não foi possível carregar seu histórico. Tente novamente em instantes.")
     if st.button("Tentar novamente"):
         st.rerun()
+    st.stop()
+
+if not IS_DEMO and PERSONAL_JOURNEY and df_raw.empty:
+    # The preserved account has existing history: an empty RLS response is not
+    # evidence it was deleted. Never present a misleading reset dashboard.
+    st.error("Seu histórico principal não foi carregado. Isso não significa que os registros foram apagados. Saia e entre novamente para renovar o acesso.")
+    st.button("Sair e renovar acesso", on_click=logout_private, key="history_renew_login")
     st.stop()
 
 if not df_raw.empty:
