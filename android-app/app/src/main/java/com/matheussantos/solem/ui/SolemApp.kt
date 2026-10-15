@@ -41,7 +41,7 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
     CompositionLocalProvider(LocalDashboardPreferences provides settings) {
     SolemTheme(settings) { Surface(Modifier.fillMaxSize()) { when {
         !auth.initialized -> Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }
-        !auth.signedIn -> WorkspacePage(workspaceVm)
+        !auth.signedIn -> LoginScreen(workspaceVm)
         else -> key(auth.accountId, auth.sessionGeneration) {
             // Activity-scoped ViewModels otherwise survive logout and retain old rows/jobs.
             val sessionStore = remember { androidx.lifecycle.ViewModelStore() }

@@ -14,6 +14,8 @@ import com.matheussantos.solem.data.repository.WorkspaceRepository
 import com.matheussantos.solem.domain.MAX_PDF_BYTES
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.providers.builtin.OTP
+import io.github.jan.supabase.auth.OtpType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.io.ByteArrayOutputStream
@@ -21,12 +23,14 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.*
 import com.matheussantos.solem.domain.genericAccount
 import com.matheussantos.solem.domain.EmailConfirmation
+import com.matheussantos.solem.domain.EmailAccess
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 data class WorkspaceState(val initialized: Boolean = false, val signedIn: Boolean = false, val busy: Boolean = false,
     val accountId: String = "", val generic: Boolean = true,
     val sessionGeneration: Int = 0,
+    val emailChallenge: String = "", val resendAvailableAt: Long = 0L, val emailSending: Boolean = false,
     val items: List<PersonalItem> = emptyList(), val photos: List<ProgressPhoto> = emptyList(),
     val healthEntries: List<HealthEntry> = emptyList(),
     val healthLoaded: Boolean = false, val healthFailed: Boolean = false,
@@ -77,7 +81,9 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
                 if (repo.client.auth.currentSessionOrNull() != null) repo.client.auth.retrieveUserForCurrentSession(updateSession=true)
                 val (id, generic) = accountState()
                 val logged = repo.client.auth.currentSessionOrNull() != null && id.isNotBlank()
-                mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic) }
+                val pendingEmail = if (!logged && pendingSignup.getString("mode", null) == "otp") pendingSignup.getString("email", "").orEmpty() else ""
+                mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic,
+                    emailChallenge=pendingEmail,resendAvailableAt=pendingSignup.getLong("resend_at", 0L)) }
                 watchSession()
                 if (logged) load()
             } catch (e: CancellationException) { throw e }
@@ -86,7 +92,7 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
             }
         }
     }
-    private fun action(block: suspend () -> Unit) {
+    private fun action(errorMessage: String? = null, block: suspend () -> Unit) {
         if (state.value.busy) return
         if (!SupabaseProvider.isConfigured) { mutableState.update { it.copy(initialized=true,message="Configure a URL e a chave pública do Supabase.",failed=true) }; return }
         viewModelScope.launch {
@@ -97,16 +103,19 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
             catch (e: Exception) {
                 val logged = state.value.signedIn && repo.client.auth.currentUserOrNull()?.id == state.value.accountId
                 mutableState.update { it.copy(initialized=true,signedIn=logged, items=if(logged) it.items else emptyList(), failed=true,
-                    message=if(e is IllegalArgumentException) e.message else "Não foi possível concluir. Confira sua conexão e sessão. Se enviou PDF, tente baixá-lo antes de reenviar.") }
-            } finally { mutableState.update { it.copy(busy=false) } }
+                    message=errorMessage ?: if(e is IllegalArgumentException) e.message else "Não foi possível concluir. Confira sua conexão e sessão. Se enviou PDF, tente baixá-lo antes de reenviar.") }
+            } finally { mutableState.update { it.copy(busy=false,emailSending=false) } }
             }
         }
     }
-    fun login(email: String, password: String, signup: Boolean) = action {
+    fun login(email: String, password: String, signup: Boolean) = action("Não foi possível entrar. Confira e-mail, senha e conexão. Você também pode entrar com um código por e-mail.") {
         // A failed sign-in or pending confirmation must never revive a previous account.
         val generation = state.value.sessionGeneration + 1
         mutableState.value = WorkspaceState(initialized=true, busy=true, sessionGeneration=generation)
-        if (repo.client.auth.currentSessionOrNull() != null) repo.client.auth.signOut()
+        if (repo.client.auth.currentSessionOrNull() != null) {
+            try { repo.client.auth.signOut() }
+            finally { withContext(NonCancellable) { repo.client.auth.clearSession() } }
+        }
         if (signup) {
             // Persist only the expected email, never the password or callback code.
             pendingSignup.edit().putString("email", email.trim()).apply()
@@ -122,6 +131,63 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
             message=if(!logged) "Abra o e-mail neste celular e toque em confirmar. O link retornará ao Solem. Se o navegador perguntar, escolha abrir no aplicativo." else null) }
         if(logged) { pendingSignup.edit().clear().apply(); watchSession(); load() }
     }
+    fun requestEmailAccess(rawEmail: String) = action("Não foi possível enviar o código agora. Confira a conexão ou aguarde alguns minutos e tente novamente.") {
+        if (state.value.signedIn) return@action
+        val email = EmailAccess.normalizeEmail(rawEmail)
+        require(EmailAccess.validEmail(email))
+        if (EmailAccess.resendSeconds(state.value.resendAvailableAt, System.currentTimeMillis()) > 0) {
+            mutableState.update { it.copy(message="Aguarde um minuto entre os envios.") }
+            return@action
+        }
+        // The same request signs in an existing user OR creates an unconfirmed account.
+        // Never probe for account existence or initialize/overwrite personal records here.
+        val resendAt = System.currentTimeMillis() + EmailAccess.RESEND_DELAY_MS
+        mutableState.value = WorkspaceState(initialized=true,busy=true,emailSending=true,
+            emailChallenge=state.value.emailChallenge.takeIf { it == email }.orEmpty(),
+            sessionGeneration=state.value.sessionGeneration+1,resendAvailableAt=resendAt)
+        if (repo.client.auth.currentSessionOrNull() != null) {
+            try { repo.client.auth.signOut() }
+            finally { withContext(NonCancellable) { repo.client.auth.clearSession() } }
+        }
+        pendingSignup.edit().putString("email",email).putString("mode","sending").putLong("resend_at",resendAt).apply()
+        repo.client.auth.signInWith(OTP, redirectUrl=EmailConfirmation.REDIRECT_URL) {
+            this.email=email
+            createUser=true
+        }
+        pendingSignup.edit().putString("mode","otp").apply()
+        mutableState.update { it.copy(emailChallenge=email,message=null) }
+    }
+    fun verifyEmailAccess(rawCode: String) = action("Não foi possível confirmar. Confira o código mais recente e a conexão. Se ele expirou, solicite outro.") {
+        if (state.value.signedIn) return@action
+        val email = state.value.emailChallenge
+        require(EmailAccess.validCode(rawCode))
+        require(EmailConfirmation.matchesPendingAccount(pendingSignup.getString("email",null),email))
+        try {
+            repo.client.auth.verifyEmailOtp(type=OtpType.Email.EMAIL,email=email,token=rawCode.trim())
+            val user = repo.client.auth.retrieveUserForCurrentSession(updateSession=true)
+            require(EmailConfirmation.matchesPendingAccount(email,user.email))
+        } catch (e: Exception) {
+            // The SDK imports successful verification automatically; don't expose it in
+            // the UI until its identity has been checked against the requested email.
+            withContext(NonCancellable) {
+                if (repo.client.auth.currentSessionOrNull()!=null) repo.client.auth.clearSession()
+            }
+            throw e
+        }
+        val (id, generic) = accountState()
+        pendingSignup.edit().clear().apply()
+        mutableState.value = WorkspaceState(initialized=true,signedIn=true,busy=true,accountId=id,generic=generic,
+            sessionGeneration=state.value.sessionGeneration+1)
+        watchSession()
+        try { load() }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { mutableState.update { it.copy(failed=true,message="Você entrou. Não foi possível carregar os dados; tente atualizar.") } }
+    }
+    fun changeAccessEmail() {
+        if (state.value.busy || state.value.signedIn) return
+        pendingSignup.edit().remove("email").remove("mode").apply()
+        mutableState.update { it.copy(emailChallenge="",message=null,failed=false) }
+    }
     fun confirmEmail(url: String) {
         val callback = EmailConfirmation.parse(url)
         if (callback == EmailConfirmation.Result.Ignore || confirmationJob?.isActive == true) return
@@ -132,7 +198,7 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
                 val pendingEmail = pendingSignup.getString("email", null)
                 if (callback !is EmailConfirmation.Result.Code || pendingEmail.isNullOrBlank()) {
                     mutableState.update { it.copy(initialized=true,failed=true,
-                        message="Não foi possível concluir pelo link. Se já confirmou o e-mail, entre com e-mail e senha. Para entrar automaticamente, abra o link no celular onde criou a conta.") }
+                        message="Não foi possível concluir pelo link. Informe seu e-mail para receber um novo código, ou entre com sua senha existente. Abra o link no celular onde solicitou o acesso.") }
                     return@withLock
                 }
                 mutableState.value = WorkspaceState(initialized=true,busy=true,
@@ -148,7 +214,7 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
                         },
                         adopt={ repo.client.auth.importSession(it) })
                     val (id, generic) = accountState()
-                    mutableState.update { it.copy(signedIn=true,accountId=id,generic=generic,message="E-mail confirmado. Bem-vindo ao Solem!") }
+                    mutableState.update { it.copy(signedIn=true,accountId=id,generic=generic,emailChallenge="",resendAvailableAt=0L,message="E-mail confirmado. Bem-vindo ao Solem.") }
                     pendingSignup.edit().clear().apply()
                     watchSession()
                     try { load() }
@@ -156,7 +222,7 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
                     catch (_: Exception) { mutableState.update { it.copy(failed=true,message="Acesso confirmado. Não foi possível carregar os dados; tente atualizar.") } }
                 } catch (e: CancellationException) { throw e }
                 catch (_: Exception) {
-                    mutableState.update { it.copy(failed=true,message="Não foi possível concluir pelo link. Ele pode ter expirado, já ter sido usado ou a conexão falhou. Se confirmou o e-mail, entre com e-mail e senha.") }
+                    mutableState.update { it.copy(emailChallenge=pendingEmail,failed=true,message="Não foi possível concluir pelo link. Ele pode ter expirado, já ter sido usado ou a conexão falhou. Tente o código do e-mail ou solicite outro.") }
                 } finally { mutableState.update { it.copy(busy=false) } }
             }
         }

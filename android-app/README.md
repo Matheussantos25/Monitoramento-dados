@@ -185,3 +185,42 @@ esta mudança não remove esses limites nem configura SMTP.
 Os testes automatizados validam destino exato, rejeição de tokens/links inválidos e que nenhuma
 sessão é adotada sem identidade correspondente confirmada pelo servidor. A experiência completa
 no leitor de e-mail depende da validação em um celular real.
+
+## Entrada única por e-mail — 0.12.3
+
+A tela inicial do Android agora usa **Continuar com e-mail**. O mesmo pedido ao
+Supabase (`signInWith(OTP)`, `createUser=true`) atende contas existentes e novas,
+sem consultar publicamente se um endereço está cadastrado. Só depois de verificar
+o código/link e a identidade no Auth o painel é liberado. Não há limpeza,
+migração ou recriação de dados pessoais no fluxo. **Entrar com senha** continua
+disponível para contas que já possuem senha.
+
+O redesign mantém Compose/Material 3 e o tema existente, separando formulário,
+confirmação, espera e erros. Há teclado de e-mail/números, rolagem com teclado
+aberto, correção do endereço, reenvio com espera de 60 segundos, fonte escalável
+e prévias Compose para telas de 390 dp e 360 dp com fonte ampliada. A limitação de
+reenvio local é apenas UX; os limites reais continuam no Supabase. Senha/código
+não usam `rememberSaveable`; apenas e-mail/etapa pendente são lembrados.
+
+Em **Authentication > Emails**, os modelos **Confirm sign up** e **Magic link or OTP**
+usam o conteúdo versionado em `supabase/email-templates/access.html`, com assunto
+`Seu acesso ao Solem`. Ambos preservam `{{ .ConfirmationURL }}` e incluem
+`{{ .Token }}`, para manter compatibilidade com os cadastros web/Android anteriores.
+Os dois modelos foram configurados em 14/10/2026.
+
+**Pendência de entrega pública:** o dashboard informa que este projeto usa o SMTP
+padrão de testes. Segundo a [documentação do Supabase](https://supabase.com/docs/guides/auth/auth-smtp),
+ele envia apenas para endereços autorizados da equipe, com limites baixos de envio.
+Para permitir acesso por e-mail de usuários externos, configure um provedor SMTP
+próprio diretamente no dashboard. Não coloque credenciais de SMTP no APK/repositório
+e não desative confirmação de e-mail para contornar essa limitação.
+
+O Streamlit mantém sua tela de login atual. Uma conta criada sem senha pelo APK
+usa o código/link no Android; o acesso web por código ainda precisa ser adicionado
+se for desejado o mesmo fluxo lá. Contas existentes com senha não são afetadas.
+
+Validação: build debug e 60 testes unitários passaram. Não havia aparelho/emulador
+configurado para validar visualmente a tela e o recebimento real do e-mail. Antes
+de distribuir, teste conta existente (histórico preservado), nova conta autorizada
+(vazia), código incorreto/vencido, reenvio, troca de endereço, restauração após
+fechar o app e teclado/fonte ampliada. Não use dados reais em testes destrutivos.
