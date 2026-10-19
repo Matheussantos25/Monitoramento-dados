@@ -39,8 +39,14 @@ def test_overview_and_training_render_with_legacy_module(monkeypatch):
     app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py"),
                            default_timeout=40).run()
     assert not app.exception
-    app.radio(key="solem_page").set_value("Treino").run()
-    assert not app.exception
     assert app.number_input(key="workout_calendar_year").value >= 2026
     app.selectbox(key="workout_calendar_month").set_value(9).run()
     assert not app.exception
+    app.radio(key="solem_page").set_value("Treino").run()
+    assert not app.exception
+    assert not any(w.key == "workout_calendar_year" for w in app.number_input)
+    assert not any(e.label == "Plano semanal e calendário de treino" for e in app.expander)
+    assert app.selectbox(key="treino_exercicio") is not None
+    app.radio(key="solem_page").set_value("Visão geral").run()
+    assert not app.exception
+    assert app.number_input(key="workout_calendar_year") is not None
