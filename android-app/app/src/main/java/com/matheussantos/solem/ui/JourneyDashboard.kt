@@ -57,7 +57,7 @@ private fun missionIcon(id: String): ImageVector = when(id) {
 
 @Composable fun JourneyDashboard(rows: List<TrainingRecord>, health: List<HealthEntry>, healthAvailable: Boolean,
     activityAvailable: Boolean, generic: Boolean, navigate: (Int) -> Unit,
-    registerExercise: (String) -> Unit, healthSection: (Int) -> Unit) {
+    registerExercise: (String) -> Unit, healthSection: (Int) -> Unit, openWorkoutPlan: () -> Unit = {}) {
     val settings = LocalDashboardPreferences.current
     val day = today()
     val p = calculateProgress(rows)
@@ -95,6 +95,8 @@ private fun missionIcon(id: String): ImageVector = when(id) {
                  style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
           }
         }
+        WorkoutProgressBars(rows,generic,activityAvailable)
+        Button(openWorkoutPlan,modifier=Modifier.fillMaxWidth()) {Text("Plano semanal e calendário de treino")}
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             QuickDestination("Treinar", Icons.Outlined.FitnessCenter, Modifier.weight(1f)) { navigate(1) }
             QuickDestination("Água", Icons.Outlined.WaterDrop, Modifier.weight(1f)) { healthSection(1) }

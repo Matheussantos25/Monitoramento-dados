@@ -142,6 +142,9 @@ def overview(p, records=None, private_entries=None):
                                   on_click=navigate_checkup, args=(goal["page"], exercise), use_container_width=True)
         if private_entries is None:
             st.caption("A água depende do diário privado. Não foi possível consultá-lo nesta sessão; os demais indicadores continuam disponíveis.")
+        from solem_training_plan_ui import training_plan_panel
+        training_plan_panel(records, today, st.session_state.get("journey_preferences"),
+                            st.session_state.get("generic_account", False))
         monthly_journal(records, today)
 
     if st.session_state.get("journey_personal"):

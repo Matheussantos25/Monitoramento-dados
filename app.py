@@ -781,6 +781,10 @@ if pagina == "Treino":
         st.session_state["treino_formato"] = "🏋️ Exercício Isolado (Convencional)"
         st.session_state["treino_exercicio"] = checkup_exercise
     section_intro('CORPO EM MOVIMENTO', 'Seu treino começa aqui.', 'Registre o que você fez e acompanhe sua evolução, uma sessão por vez.')
+    with st.expander("Plano semanal e calendário de treino"):
+        from solem_training_plan_ui import training_plan_panel
+        training_plan_panel(df_raw.to_dict("records"), now_local().date(),
+                            st.session_state.get("journey_preferences"), GENERIC_ACCOUNT)
     st.info(training_recommendation(df_raw.to_dict("records"), now_local().date())["message"] +
             " É uma sugestão baseada apenas no histórico, não um plano clínico ou prescrição.")
     modo_insercao = st.radio("Selecione o formato do treino:", ["🏋️ Exercício Isolado (Convencional)", "🔥 Circuito AMRAP 20' (5 Barras / 10 Flexões / 15 Agachamentos)"], horizontal=True, key="treino_formato")

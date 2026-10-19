@@ -9,6 +9,6 @@ _calendar = components.declare_component(
 )
 
 
-def journal_calendar(year, month, today, days):
+def journal_calendar(year, month, today, days, key_prefix="journal_calendar"):
     _calendar(year=year, month=month, today=today.isoformat(), days=days,
-              key=f"journal_calendar_{year}_{month}", default=None)
+              key=f"{key_prefix}_{year}_{month}", default=None)

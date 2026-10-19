@@ -26,6 +26,18 @@ fun sleepMinutes(bed: String, wake: String): Int {
     return minutes
 }
 
+data class SleepPeriod(val bedDay: LocalDate, val wakeDay: LocalDate, val minutes: Int)
+fun sleepPeriod(day: LocalDate, bed: String, wake: String, mode: String = "auto"): SleepPeriod {
+    require(mode in listOf("auto", "same", "previous"))
+    val start = LocalTime.parse(bed)
+    val end = LocalTime.parse(wake)
+    val previous = mode == "previous" || (mode == "auto" && start > end)
+    val bedDay = if(previous) day.minusDays(1) else day
+    val minutes = ChronoUnit.MINUTES.between(bedDay.atTime(start), day.atTime(end)).toInt()
+    require(minutes in 1..960) { "Confira as datas e horários: duração de 1 minuto a 16 horas." }
+    return SleepPeriod(bedDay, day, minutes)
+}
+
 data class TrainingSnapshot(val last: TrainingRecord, val record: TrainingRecord, val days: Int, val meanRepsPerDay: Double)
 
 data class TrainingMeasureSnapshot(val unit: String, val last: Double, val record: Double,

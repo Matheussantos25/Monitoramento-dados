@@ -16,6 +16,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.OTP
 import io.github.jan.supabase.auth.OtpType
+import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.io.ByteArrayOutputStream
@@ -63,12 +64,8 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
         authWatcher?.cancel()
         val sessionClient = repo.client
         authWatcher = viewModelScope.launch {
-            sessionClient.auth.sessionStatus.collect {
-                if (state.value.signedIn && sessionClient.auth.currentUserOrNull()?.id != state.value.accountId) {
-                    mutableState.value = WorkspaceState(initialized=true,
-                        sessionGeneration=state.value.sessionGeneration+1,
-                        message="Sessão encerrada. Entre novamente.")
-                }
+            sessionClient.auth.sessionStatus.collect { status ->
+                mutableState.update { it.afterAuthStatus(status) }
             }
         }
     }
@@ -78,17 +75,33 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
         } else restoreJob = viewModelScope.launch {
             try {
                 repo.client.auth.awaitInitialization()
-                if (repo.client.auth.currentSessionOrNull() != null) repo.client.auth.retrieveUserForCurrentSession(updateSession=true)
+                // The SDK restores/persists and refreshes credentials. A temporary
+                // network failure is not a reason to discard that login. Wait for
+                // a definitive result if a cold-start refresh is still retrying.
+                repo.client.auth.sessionStatus.onEach { status ->
+                    if (status is SessionStatus.RefreshFailure) mutableState.update {
+                        it.copy(message="Aguardando conexão para recuperar seu acesso…")
+                    }
+                }.first {
+                    it is SessionStatus.Authenticated || it is SessionStatus.NotAuthenticated
+                }
                 val (id, generic) = accountState()
                 val logged = repo.client.auth.currentSessionOrNull() != null && id.isNotBlank()
                 val pendingEmail = if (!logged && pendingSignup.getString("mode", null) == "otp") pendingSignup.getString("email", "").orEmpty() else ""
-                mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic,
+                mutableState.update { it.copy(initialized=true,signedIn=logged,accountId=id,generic=generic,message=null,
                     emailChallenge=pendingEmail,resendAvailableAt=pendingSignup.getLong("resend_at", 0L)) }
                 watchSession()
-                if (logged) load()
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) {
                 mutableState.value = WorkspaceState(initialized=true,message="Não foi possível restaurar sua sessão. Entre novamente.",failed=true)
+            }
+            // Loading app data must never turn a restored session into a logout.
+            if (state.value.signedIn) {
+                try { load() }
+                catch (e: CancellationException) { throw e }
+                catch (_: Exception) {
+                    mutableState.update { it.copy(failed=true,message="Você continua conectado. Não foi possível carregar os dados; tente atualizar quando a conexão voltar.") }
+                }
             }
         }
     }
@@ -101,8 +114,7 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
             try { block() }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) {
-                val logged = state.value.signedIn && repo.client.auth.currentUserOrNull()?.id == state.value.accountId
-                mutableState.update { it.copy(initialized=true,signedIn=logged, items=if(logged) it.items else emptyList(), failed=true,
+                mutableState.update { it.afterAuthStatus(repo.client.auth.sessionStatus.value).copy(initialized=true, failed=true,
                     message=errorMessage ?: if(e is IllegalArgumentException) e.message else "Não foi possível concluir. Confira sua conexão e sessão. Se enviou PDF, tente baixá-lo antes de reenviar.") }
             } finally { mutableState.update { it.copy(busy=false,emailSending=false) } }
             }

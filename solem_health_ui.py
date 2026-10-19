@@ -2,7 +2,7 @@
 from datetime import datetime
 import streamlit as st
 import plotly.graph_objects as go
-from solem_health import MEAL_TYPES, meal_food_options, now_local, private_weight_history, sleep_minutes
+from solem_health import MEAL_TYPES, meal_food_options, now_local, private_weight_history, sleep_period
 from solem_health_private import delete_entry, list_entries, save_entry
 from solem_ui import section_intro
 
@@ -183,18 +183,27 @@ def health_page(client, healthy_options, occasional_options, demo=False):
             st.info("Registre o peso para acompanhar a evolução aqui.")
 
     with sleep_tab:
-        st.caption("O dia selecionado é o dia em que você acordou. Um registro por dia.")
+        st.caption("Selecione o dia em que acordou. Dormir de madrugada, como 02h–08h, conta na mesma data. Um registro por dia, sempre editável.")
         previous = sleep["details"] if sleep else {}
-        with st.form("health_sleep"):
-            bed = st.time_input("Horário em que dormiu", value=_time(previous.get("dormir"), "23:00"), key="sleep_bed")
-            wake = st.time_input("Horário em que acordou", value=_time(previous.get("acordar"), "07:00"), key="sleep_wake")
-            submitted = st.form_submit_button("Salvar edição do sono" if sleep else "Salvar sono", use_container_width=True)
+        # Date + persisted value scopes widgets: switching days must not retain
+        # the previous day's draft, nor hide the saved bedtime after a rerun.
+        scope = f"sleep_{day}_{previous.get('dormir', '')}_{previous.get('acordar', '')}"
+        bed = st.time_input("Horário em que dormiu", value=_time(previous.get("dormir"), "23:00"), key=scope + "_bed")
+        wake = st.time_input("Horário em que acordou", value=_time(previous.get("acordar"), "07:00"), key=scope + "_wake")
+        mode = st.radio("Quando começou o sono?", ["auto", "same", "previous"],
+                        format_func=lambda key: {"auto": "Automático pelos horários", "same": "Na mesma data em que acordei", "previous": "Na noite anterior"}[key], key=scope + "_mode")
+        period, error = None, None
+        try: period = sleep_period(day, bed.strftime("%H:%M"), wake.strftime("%H:%M"), mode)
+        except ValueError as exc: error = str(exc)
+        if period:
+            st.info(f"Dormiu: {datetime.fromisoformat(period['dormiu_em']):%d/%m/%Y} às {period['dormir']} · "
+                    f"Acordou: {day:%d/%m/%Y} às {period['acordar']} · "
+                    f"{period['duracao_min'] // 60}h {period['duracao_min'] % 60:02}min")
+        elif error: st.warning(error)
+        submitted = st.button("Salvar edição do sono" if sleep else "Salvar sono", key=scope + "_save", use_container_width=True, disabled=period is None)
         if submitted:
-            try: minutes = sleep_minutes(bed.strftime("%H:%M"), wake.strftime("%H:%M"))
-            except ValueError as error: st.error(str(error))
-            else: _save(client, day, "00:00:00", "sleep",
-                        {"dormir": bed.strftime("%H:%M"), "acordar": wake.strftime("%H:%M"), "duracao_min": minutes},
-                        "Sono atualizado." if sleep else "Sono registrado.", old=sleep, demo=demo)
+            _save(client, day, wake.strftime("%H:%M:%S"), "sleep", period,
+                  "Sono atualizado." if sleep else "Sono registrado.", old=sleep, demo=demo)
         if sleep: st.caption("Duração calculada dos horários informados, sem monitoramento automático.")
 
     with photo_tab:

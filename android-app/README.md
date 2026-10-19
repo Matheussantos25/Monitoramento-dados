@@ -224,3 +224,77 @@ configurado para validar visualmente a tela e o recebimento real do e-mail. Ante
 de distribuir, teste conta existente (histórico preservado), nova conta autorizada
 (vazia), código incorreto/vencido, reenvio, troca de endereço, restauração após
 fechar o app e teclado/fonte ampliada. Não use dados reais em testes destrutivos.
+
+## Permanência do login ao alternar aplicativos — 0.12.4
+
+O Auth 3.5.0 emite `SessionStatus.Initializing` ao colocar o processo Android em
+segundo plano, pausando a renovação automática, e recarrega a sessão ao retornar.
+O APK confundia esse estado temporário (que também faz `currentUserOrNull()`
+retornar `null`) com logout. Agora o painel e seu escopo por conta permanecem
+intactos durante essa pausa e durante falhas recuperáveis de renovação.
+
+`NotAuthenticated` ou uma identidade diferente continuam limpando o estado
+privado. Eventos tardios não abrem uma conta desconectada nem pulam a verificação
+de e-mail. O botão Sair continua removendo as credenciais persistidas mesmo
+quando a chamada remota falha. A restauração usa o armazenamento e a renovação
+do SDK; falhas ao buscar registros não são tratadas como falhas de login.
+Nenhuma tabela, RLS ou dado de usuário foi alterado.
+
+Regressão automatizada em `WorkspaceSessionTest`: alternância repetida entre
+`Authenticated → Initializing → Authenticated`, falha de rede e recuperação,
+erro de ação durante a pausa, logout explícito, perda definitiva da sessão,
+troca de identidade, identidade ausente e evento tardio após sair.
+
+Validação manual no celular (instale sobre o APK anterior, sem desinstalar):
+
+1. Entre e confira o histórico. Abra outro app por pelo menos 10 segundos e
+   volte; repita na tela de treino e com a tela bloqueada/desbloqueada.
+2. Repita com a rede desligada; a tela não deve voltar ao login. Ao reconectar,
+   aguarde a renovação do SDK e use Atualizar se os dados estiverem desatualizados.
+3. Feche e reabra o processo. Com sessão expirada e sem rede, aguarde a conexão
+   para recuperar o acesso; o app não deve apagar as credenciais por esse motivo.
+4. Use Sair, inclusive sem rede, e reabra: o login deve ser solicitado. Entrar
+   em outra conta não deve mostrar registros da conta anterior.
+
+Build debug 0.12.4 (versionCode 27) concluído e 68 testes unitários passaram,
+incluindo os 8 testes novos de continuidade da sessão. A assinatura debug foi
+verificada e permanece igual à versão anterior, permitindo atualizar sem
+desinstalar. Não havia aparelho conectado; os testes não substituem essa
+validação de lifecycle em aparelho real.
+
+## Sono e plano complementar — 0.13.0
+
+Disponível no Android e no Streamlit. O dia do sono é a data em que a pessoa
+acordou. Dormir às 02:00 e acordar às 08:00 no mesmo dia registra 6 horas;
+23:00–07:00 usa a noite anterior. Também é possível escolher explicitamente
+a mesma data ou a noite anterior. Datas e duração aparecem antes de salvar.
+Os campos opcionais `dormiu_em` e `acordou_em` ficam no JSON existente do diário
+privado. Registros antigos continuam legíveis; nenhuma migração é necessária.
+
+O plano complementar da conta pessoal preserva todas as metas base. Segunda,
+quinta e sábado trabalham core; terça e sexta incluem barra; quarta e domingo
+são recuperação sem meta extra. Não se exige usar as duas horas disponíveis.
+A sugestão não promete definição abdominal, perda localizada de gordura ou
+avaliação de capacidade máxima. Peso corporal não determina carga segura.
+
+A definição versionada está em `assets/weekly_training_plan.json`, sincronizada
+para os assets e testes Android por `tools/sync_web_assets.py`. Cada semana usa
+apenas os 28 dias anteriores à segunda-feira: com pelo menos dois dias medidos,
+a meta usa 70% da mediana diária, arredondada e limitada pelo catálogo; caso
+contrário usa o ponto inicial conservador. É uma heurística de organização,
+não uma fórmula validada de prescrição/progressão. Registros da própria semana
+não elevam sua meta; editar registros anteriores pode recalcular a referência.
+
+As barras Base e Plano são independentes, com participação igual por objetivo
+e limite de 100% por exercício. O calendário específico mostra somente sessões
+de treino, sem estudos ou saúde. Recuperação não é falha nem 100% automático;
+dias futuros não têm resultado e datas anteriores a 19/10/2026 não recebem meta
+complementar retroativa. O percentual histórico da base usa as metas atuais.
+Contas genéricas não recebem o plano pessoal. Não há gravação ao abrir painéis.
+
+Validação: 134 testes Python e 75 testes Android passaram, incluindo cálculo
+de sono, troca de data/edição, fronteiras de semana, deduplicação, atualização
+de registros individuais, recuperação e separação das metas. Interface web
+conferida em desktop e viewport móvel. O APK debug 0.13.0 (versionCode 28)
+deve ser instalado sobre o anterior; não desinstale para atualizar. Não havia
+dispositivo Android conectado para validação visual e de ciclo de vida real.

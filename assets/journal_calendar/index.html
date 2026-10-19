@@ -26,6 +26,9 @@
     .day.future { opacity: .64; }
     .day b { font-size: 14px; font-variant-numeric: tabular-nums; }
     .day small { display: block; color: #afc1d4; font-size: 10px; line-height: 1.25; }
+    .day.training { min-height: 110px; gap: 5px; }
+    .day.training small { overflow-wrap: anywhere; }
+    .day progress { width: 100%; height: 5px; accent-color: #83dcff; }
     .badges { position: absolute; top: 10px; right: 9px; display: flex; gap: 3px; }
     .badges span { color: #83dcff; font-size: 10px; font-weight: 800; }
     .focus { display: none; margin: 18px 0 4px; padding: clamp(18px, 3vw, 30px);
@@ -50,6 +53,10 @@
     .event strong { display: block; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
     .event small { color: #afc1d4; display: block; font-size: 11px; margin-top: 4px; overflow-wrap: anywhere; }
     @media (max-width: 650px) { .grid { gap: 4px; } .weekday { padding: 6px 0; font-size: 10px; }
+      .day.training { padding: 5px 3px; gap: 5px; min-height: 90px; }
+      .day.training small { font-size: 9px; white-space: nowrap; overflow-wrap: normal; }
+      .day.training .caption, .day.training .plan-status { display: none; }
+      .day.training .badges { right: 3px; }
       .outside { min-height: 65px; } .day { padding: 7px; min-height: 65px; gap: 7px; }
       .day b { font-size: 12px; } .day small { font-size: 9px; }
       .badges { top: 8px; right: 5px; } .badges span { font-size: 8px; }
@@ -100,6 +107,9 @@
       text.append(title, node("p", "", day.events.length
         ? `${day.events.length} ${day.events.length === 1 ? "atividade registrada" : "atividades registradas"}`
         : "Nenhuma atividade registrada neste dia."));
+      if (Object.hasOwn(day, "base_pct")) {
+        text.append(node("p", "", `Base: ${day.base_pct == null ? "—" : day.base_pct + "%"} · Plano: ${day.plan_pct == null ? day.plan_status : day.plan_pct + "%"}`));
+      }
       const close = node("button", "close", "×");
       close.type = "button";
       close.setAttribute("aria-label", "Fechar detalhes do dia");
@@ -144,10 +154,23 @@
         if (day.workout) badges.append(node("span", "", "T"));
         if (day.health) badges.append(node("span", "", "+"));
         button.append(badges);
+        const training = Object.hasOwn(day, "base_pct");
         const caption = day.study ? `${Math.round(day.study_minutes)} min estudo` :
-          day.workout ? "Treino" : day.health ? "Saúde" : day.date > data.today ? "Futuro" : "Descanso";
-        button.append(node("small", "", caption));
-        button.setAttribute("aria-label", `${day.date.slice(8,10)}/${day.date.slice(5,7)}/${day.date.slice(0,4)}: ${caption}. Abrir detalhes`);
+          day.workout ? "Treino" : day.health ? "Saúde" : day.date > data.today ? "Futuro" : training ? "Sem registro" : "Descanso";
+        button.append(node("small", "caption", caption));
+        if (Object.hasOwn(day, "base_pct")) {
+          button.classList.add("training");
+          for (const [label, value] of [["Base", day.base_pct], ["Plano", day.plan_pct]]) {
+            button.append(node("small", "", `${label[0]} ${value == null ? "—" : value + "%"}`));
+            if (value != null) {
+              const bar = node("progress"); bar.max = 100; bar.value = value;
+              bar.setAttribute("aria-label", `${label}: ${value}%`); button.append(bar);
+            }
+          }
+          if (day.plan_pct == null && day.plan_status !== "Futuro") button.append(node("small", "plan-status", day.plan_status === "Recuperação" ? "Recup." : day.plan_status));
+        }
+        const progressLabel = training ? ` Base ${day.base_pct == null ? "indisponível" : day.base_pct + "%"}; plano ${day.plan_pct == null ? day.plan_status : day.plan_pct + "%"}.` : "";
+        button.setAttribute("aria-label", `${day.date.slice(8,10)}/${day.date.slice(5,7)}/${day.date.slice(0,4)}: ${caption}.${progressLabel} Abrir detalhes`);
         button.addEventListener("click", () => openFocus(day, button, data));
         entries.push(button);
       }

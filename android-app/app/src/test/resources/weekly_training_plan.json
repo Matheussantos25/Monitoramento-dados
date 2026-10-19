@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "starts_on": "2026-10-19",
+  "lookback_days": 28,
+  "history_factor": 0.7,
+  "exercises": {
+    "core": {"exercise": "Abdominal Levantada", "unit": "rep", "field": "repeticoes", "minimum": 12, "maximum": 30, "step": 2, "sets": 2, "rest_seconds": 90},
+    "plank": {"exercise": "Prancha", "unit": "seg", "field": "isometria_segundos", "minimum": 30, "maximum": 60, "step": 10, "sets": 2, "rest_seconds": 90},
+    "pull": {"exercise": "Barra Fixa (Pronada)", "unit": "rep", "field": "repeticoes", "minimum": 4, "maximum": 12, "step": 2, "sets": 2, "rest_seconds": 120}
+  },
+  "days": [
+    {"title": "Core · controle", "exercises": ["core", "plank"], "minutes": "10–20 min"},
+    {"title": "Costas · técnica", "exercises": ["pull"], "minutes": "10–15 min"},
+    {"title": "Recuperação", "exercises": [], "minutes": "Sem volume extra"},
+    {"title": "Core · estabilidade", "exercises": ["core", "plank"], "minutes": "10–20 min"},
+    {"title": "Costas · controle", "exercises": ["pull"], "minutes": "10–15 min"},
+    {"title": "Core · consistência", "exercises": ["core", "plank"], "minutes": "10–20 min"},
+    {"title": "Recuperação", "exercises": [], "minutes": "Sem volume extra"}
+  ]
+}

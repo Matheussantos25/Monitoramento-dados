@@ -40,7 +40,13 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
     val settings by store.state.collectAsStateWithLifecycle()
     CompositionLocalProvider(LocalDashboardPreferences provides settings) {
     SolemTheme(settings) { Surface(Modifier.fillMaxSize()) { when {
-        !auth.initialized -> Box(Modifier.fillMaxSize(),contentAlignment=androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }
+        !auth.initialized -> Column(Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally,
+            verticalArrangement=Arrangement.Center) {
+            CircularProgressIndicator()
+            Spacer(Modifier.height(16.dp))
+            Text(auth.message ?: "Recuperando seu acesso…")
+        }
         !auth.signedIn -> LoginScreen(workspaceVm)
         else -> key(auth.accountId, auth.sessionGeneration) {
             // Activity-scoped ViewModels otherwise survive logout and retain old rows/jobs.
@@ -82,7 +88,7 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
     }
     val activityAvailable=state is TrainingUiState.Ready || state is TrainingUiState.Empty
     val route=backStack?.destination?.route.orEmpty()
-    val isRecord=route.startsWith("edit/") || route.startsWith("new-workout/")
+    val isRecord=route.startsWith("edit/") || route.startsWith("new-workout/") || route=="workout-plan"
     val catalog = remember(generic, rows) { Catalog(context, generic).withStudyTopics(rows) }
     LaunchedEffect(message) { message?.let { snack.showSnackbar(it); vm.consumeMessage() } }
     JourneyPromotionHost(rows,catalog,activityAvailable,store)
@@ -109,7 +115,7 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
         }
     }) {
     Scaffold(snackbarHost = { SnackbarHost(snack) }, topBar = {
-        TopAppBar(title={Text(if(route.startsWith("health/")) "Saúde" else pages.getOrNull(route.toIntOrNull() ?: -1) ?: "Registro",
+        TopAppBar(title={Text(if(route=="workout-plan") "Plano de treino" else if(route.startsWith("health/")) "Saúde" else pages.getOrNull(route.toIntOrNull() ?: -1) ?: "Registro",
             maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)},
             navigationIcon={if(isRecord) IconButton({nav.popBackStack()}) {Icon(Icons.AutoMirrored.Filled.ArrowBack,"Voltar")}
                 else IconButton({scope.launch {drawer.open()}}) {Icon(Icons.Default.Menu,"Abrir menu")}},
@@ -141,15 +147,18 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
             NavHost(nav, startDestination = "0") {
                 composable("0") { JourneyDashboard(rows,healthState.healthEntries,healthState.healthLoaded && !healthState.healthFailed,
                     activityAvailable,generic,{nav.navigate(it.toString()) {launchSingleTop=true}},
-                    {exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}")}, {section -> nav.navigate("health/$section")}) }
+                    {exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}")}, {section -> nav.navigate("health/$section")},
+                    {nav.navigate("workout-plan")}) }
+                composable("workout-plan") { WorkoutPlanPage(rows,generic,activityAvailable) { exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}") } }
                 composable("1") {
                     var section by rememberSaveable { mutableStateOf("Registrar") }
                     Column(Modifier.fillMaxSize()) {
                         Row(Modifier.padding(horizontal=20.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                            listOf("Registrar", "Registros").forEach { option -> FilterChip(selected=section==option, onClick={section=option}, label={Text(option)}) }
+                            listOf("Registrar", "Registros", "Plano").forEach { option -> FilterChip(selected=section==option, onClick={section=option}, label={Text(option)}) }
                         }
                         if (section == "Registrar") EntryScreen("Treino", catalog, rows, busy = busy,
                             save = { id, value, done -> vm.save(id, value, done) }, batch = { value, done -> vm.insertBatch(value, done) })
+                        else if(section == "Plano") WorkoutPlanPage(rows,generic,activityAvailable) { exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}") }
                         else History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }, "Treino", Modifier.weight(1f))
                     }
                 }

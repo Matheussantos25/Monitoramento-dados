@@ -102,6 +102,26 @@ def sleep_minutes(bedtime, wake):
     return minutes
 
 
+def sleep_period(day, bedtime, wake, start_mode="auto"):
+    """Anchor sleep to the waking date, including sleep starting after midnight.
+
+    Legacy entries without dates use the same clock-based inference on display.
+    Explicit same/previous-day choices reject impossible periods instead of wrapping.
+    """
+    day = date.fromisoformat(str(day))
+    bed_time = datetime.strptime(bedtime, "%H:%M").time()
+    wake_time = datetime.strptime(wake, "%H:%M").time()
+    if start_mode not in ("auto", "same", "previous"):
+        raise ValueError("Escolha quando o sono começou.")
+    previous = start_mode == "previous" or (start_mode == "auto" and bed_time > wake_time)
+    bed_day = day - timedelta(days=int(previous))
+    minutes = int((datetime.combine(day, wake_time) - datetime.combine(bed_day, bed_time)).total_seconds() / 60)
+    if not 1 <= minutes <= 960:
+        raise ValueError("Confira as datas e horários: o sono deve durar entre 1 minuto e 16 horas.")
+    return dict(dormir=bedtime, acordar=wake, duracao_min=minutes,
+                dormiu_em=str(bed_day), acordou_em=str(day))
+
+
 def training_stats(records, exercise):
     rows = [row for row in records if row.get("exercicio") == exercise and
             row.get("grupo_muscular") not in ("Nutrição", "Métricas", "Estudos") and

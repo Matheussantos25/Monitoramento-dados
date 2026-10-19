@@ -233,22 +233,32 @@ private fun contextAssets(context: android.content.Context) = context.assets.ope
 }
 
 @Composable private fun DailySleep(day: LocalDate, previous: HealthEntry?, busy: Boolean, vm: WorkspaceViewModel) {
-    var bed by rememberSaveable(day, previous?.id) { mutableStateOf(previous?.text("dormir")?.ifBlank { "23:00" } ?: "23:00") }
-    var wake by rememberSaveable(day, previous?.id) { mutableStateOf(previous?.text("acordar")?.ifBlank { "07:00" } ?: "07:00") }
-    var error by remember { mutableStateOf<String?>(null) }
-    Text("O dia em foco é o dia em que você acordou. Um registro por dia.")
+    var bed by rememberSaveable(day, previous?.id, previous?.text("dormir")) { mutableStateOf(previous?.text("dormir")?.ifBlank { "23:00" } ?: "23:00") }
+    var wake by rememberSaveable(day, previous?.id, previous?.text("acordar")) { mutableStateOf(previous?.text("acordar")?.ifBlank { "07:00" } ?: "07:00") }
+    var mode by rememberSaveable(day, previous?.id) { mutableStateOf("Automático pelos horários") }
+    var error by remember(day) { mutableStateOf<String?>(null) }
+    Text("O dia em foco é o dia em que acordou. Dormir às 02h e acordar às 08h conta na mesma data.")
     Field("Dormiu (HH:MM)", bed) { bed = it }
     Field("Acordou (HH:MM)", wake) { wake = it }
+    Choice("Quando começou o sono?", mode, listOf("Automático pelos horários", "Na mesma data", "Na noite anterior")) { mode = it }
+    val period = runCatching { sleepPeriod(day,bed,wake,when(mode) {"Na mesma data" -> "same"; "Na noite anterior" -> "previous"; else -> "auto"}) }.getOrNull()
+    val dateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    if(period != null) Panel("Seu período de sono") {
+        Text("Dormiu · ${period.bedDay.format(dateFormat)} às $bed")
+        Text("Acordou · ${period.wakeDay.format(dateFormat)} às $wake")
+        Text("${period.minutes / 60}h ${period.minutes % 60}min", style=MaterialTheme.typography.headlineSmall)
+    } else Text("Confira os horários e a data de início. Duração permitida: 1 minuto a 16 horas.", color=MaterialTheme.colorScheme.error)
     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     Button(onClick = {
         try {
-            val minutes = sleepMinutes(bed, wake)
+            val checked = requireNotNull(period)
             error = null
-            vm.saveHealth(day.toString(), "00:00:00", "sleep", buildJsonObject {
-                put("dormir", bed); put("acordar", wake); put("duracao_min", minutes)
+            vm.saveHealth(day.toString(), LocalTime.parse(wake).format(clockFormat), "sleep", buildJsonObject {
+                put("dormir", bed); put("acordar", wake); put("duracao_min", checked.minutes)
+                put("dormiu_em", checked.bedDay.toString()); put("acordou_em", checked.wakeDay.toString())
             }, previous?.id)
         } catch (_: Exception) { error = "Confira os horários; duração máxima de 16 horas." }
-    }, enabled = !busy) { Text(if (previous == null) "Salvar sono" else "Salvar edição do sono") }
+    }, enabled = !busy && period != null) { Text(if (previous == null) "Salvar sono" else "Salvar edição do sono") }
     Text("Duração calculada dos horários, sem monitoramento automático.",
         color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
