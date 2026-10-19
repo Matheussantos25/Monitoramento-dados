@@ -83,26 +83,45 @@ def test_sleep_form_saves_morning_sleep_on_correct_day_and_switches_cleanly():
     import os
     from unittest.mock import patch
     from streamlit.testing.v1 import AppTest
-    from datetime import time
     with patch.dict(os.environ, {"SOLEM_DEMO": "1"}):
         app = AppTest.from_file(str(Path(__file__).resolve().parents[1]/"app.py"), default_timeout=40).run()
         app.radio(key="solem_page").set_value("Saúde").run()
         app.date_input(key="health_day").set_value(DAY).run()
-        next(t for t in app.time_input if t.label == "Horário em que dormiu").set_value(time(2)).run()
-        next(t for t in app.time_input if t.label == "Horário em que acordou").set_value(time(8)).run()
+        next(t for t in app.text_input if t.label == "Horário em que dormiu").set_value("02:00").run()
+        next(t for t in app.text_input if t.label == "Horário em que acordou").set_value("08:00").run()
+        next(r for r in app.radio if r.label == "Quando começou o sono?").set_value("same").run()
         next(b for b in app.button if b.label == "Salvar sono").click().run()
         assert not app.exception
         saved = next(r for r in app.session_state["demo_health_entries"] if r["kind"] == "sleep")
         assert saved["day"] == "2026-10-19" and saved["details"]["duracao_min"] == 360
         assert saved["details"]["dormiu_em"] == "2026-10-19"
         app.date_input(key="health_day").set_value(DAY-timedelta(days=1)).run()
-        assert next(t for t in app.time_input if t.label == "Horário em que dormiu").value == time(23)
+        assert next(t for t in app.text_input if t.label == "Horário em que dormiu").value == "23:00"
         app.date_input(key="health_day").set_value(DAY).run()
-        assert next(t for t in app.time_input if t.label == "Horário em que dormiu").value == time(2)
-        next(t for t in app.time_input if t.label == "Horário em que dormiu").set_value(time(1)).run()
+        assert next(t for t in app.text_input if t.label == "Horário em que dormiu").value == "02:00"
+        next(t for t in app.text_input if t.label == "Horário em que dormiu").set_value("01:00").run()
         next(b for b in app.button if b.label == "Salvar edição do sono").click().run()
         assert len(app.session_state["demo_health_entries"]) == 1
         assert app.session_state["demo_health_entries"][0]["details"]["duracao_min"] == 420
+
+
+def test_sleep_text_accepts_midnight_and_any_minute_rejects_invalid(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setenv("SOLEM_DEMO", "1")
+    app = AppTest.from_file(str(Path(__file__).resolve().parents[1]/"app.py"), default_timeout=40).run()
+    app.radio(key="solem_page").set_value("Saúde").run()
+    app.date_input(key="health_day").set_value(DAY).run()
+    next(r for r in app.radio if r.label == "Quando começou o sono?").set_value("same").run()
+    for bedtime in ("00:00", "01:00", "02:07"):
+        next(t for t in app.text_input if t.label == "Horário em que dormiu").set_value(bedtime).run()
+        assert not app.exception
+        assert not next(b for b in app.button if b.label == "Salvar sono").disabled
+    for invalid in ("", "24:00", "02:60", "abc"):
+        next(t for t in app.text_input if t.label == "Horário em que dormiu").set_value(invalid).run()
+        assert not app.exception
+        assert next(b for b in app.button if b.label == "Salvar sono").disabled
+        assert any("HH:MM" in w.value for w in app.warning)
+    assert app.session_state["demo_health_entries"] == []
 
 
 def test_plan_shortcut_prefills_exercise_and_does_not_write_fake_activity():

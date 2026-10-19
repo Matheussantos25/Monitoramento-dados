@@ -196,13 +196,22 @@ def health_page(client, healthy_options, occasional_options, demo=False):
         # Date + persisted value scopes widgets: switching days must not retain
         # the previous day's draft, nor hide the saved bedtime after a rerun.
         scope = f"sleep_{day}_{previous.get('dormir', '')}_{previous.get('acordar', '')}"
-        bed = st.time_input("Horário em que dormiu", value=_time(previous.get("dormir"), "23:00"), key=scope + "_bed")
-        wake = st.time_input("Horário em que acordou", value=_time(previous.get("acordar"), "07:00"), key=scope + "_wake")
+        st.caption("Digite em formato 24 horas e pressione Enter ou toque fora do campo. Meia-noite = 00:00; duas da madrugada = 02:00. Aceita qualquer minuto, não apenas intervalos de 15 minutos.")
+        bed_text = st.text_input("Horário em que dormiu", value=_time(previous.get("dormir"), "23:00").strftime("%H:%M"),
+                                 placeholder="Ex.: 02:00", max_chars=5, key=scope + "_bed_text")
+        wake_text = st.text_input("Horário em que acordou", value=_time(previous.get("acordar"), "07:00").strftime("%H:%M"),
+                                  placeholder="Ex.: 08:00", max_chars=5, key=scope + "_wake_text")
         mode = st.radio("Quando começou o sono?", ["auto", "same", "previous"],
                         format_func=lambda key: {"auto": "Automático pelos horários", "same": "Na mesma data em que acordei", "previous": "Na noite anterior"}[key], key=scope + "_mode")
         period, error = None, None
-        try: period = sleep_period(day, bed.strftime("%H:%M"), wake.strftime("%H:%M"), mode)
-        except ValueError as exc: error = str(exc)
+        try:
+            bed = datetime.strptime(bed_text.strip(), "%H:%M").time()
+            wake = datetime.strptime(wake_text.strip(), "%H:%M").time()
+        except ValueError:
+            error = "Digite horários entre 00:00 e 23:59 no formato HH:MM, por exemplo 02:00 e 08:00."
+        else:
+            try: period = sleep_period(day, bed.strftime("%H:%M"), wake.strftime("%H:%M"), mode)
+            except ValueError as exc: error = str(exc)
         if period:
             st.info(f"Dormiu: {datetime.fromisoformat(period['dormiu_em']):%d/%m/%Y} às {period['dormir']} · "
                     f"Acordou: {day:%d/%m/%Y} às {period['acordar']} · "
