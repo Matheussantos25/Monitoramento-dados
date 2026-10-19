@@ -298,3 +298,17 @@ de registros individuais, recuperação e separação das metas. Interface web
 conferida em desktop e viewport móvel. O APK debug 0.13.0 (versionCode 28)
 deve ser instalado sobre o anterior; não desinstale para atualizar. Não havia
 dispositivo Android conectado para validação visual e de ciclo de vida real.
+
+## Alimentação — 0.13.1
+
+Batata-doce foi incluída no catálogo habitual e nas sugestões de todas as refeições.
+Em Saúde → Alimentação, selecione o tipo e marque “Sem refeição — não comi” para
+registrar explicitamente uma refeição não realizada. Pode editar esse registro
+depois, inclusive para informar alimentos consumidos. Um formulário vazio sem
+essa seleção continua inválido. O marcador `sem_refeicao` é booleano no JSON
+privado existente; não exige SQL nem altera registros anteriores.
+
+Registros sem refeição não contêm alimentos/nutrição e não entram no contador de
+refeições consumidas ou nas estimativas nutricionais. Não geram XP. A opção é
+somente um registro, não uma recomendação para pular refeições. Web e Android
+mantêm o mesmo formato. Testes: 139 Python e 78 Android; APK debug compilado.

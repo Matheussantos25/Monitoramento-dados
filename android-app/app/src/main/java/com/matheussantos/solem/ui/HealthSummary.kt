@@ -44,7 +44,7 @@ import java.util.Locale
         }
     }
     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-        HealthTile("Refeições",if(available) "${rows.count {it.kind=="meal"}}" else "—","Abrir alimentação",Icons.Outlined.Restaurant,Modifier.weight(1f)) {select(0)}
+        HealthTile("Refeições",if(available) "${rows.count {it.kind=="meal" && !it.skippedMeal}}" else "—","Abrir alimentação",Icons.Outlined.Restaurant,Modifier.weight(1f)) {select(0)}
         HealthTile("Sono",sleep?.let {"${it.toInt()/60}h ${it.toInt()%60}m"} ?: "—","Registrar descanso",Icons.Outlined.Bedtime,Modifier.weight(1f)) {select(3)}
     }
     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {

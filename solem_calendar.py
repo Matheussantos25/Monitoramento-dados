@@ -96,6 +96,7 @@ def daily_events(records, private_entries, day):
             foods = [food for key in ("saudaveis", "ocasionais")
                      for food in (details.get(key) if isinstance(details.get(key), list) else [])]
             label, title, detail = "Saúde", str(details.get("tipo_refeicao") or "Refeição"), ", ".join(map(str, foods))
+            if details.get("sem_refeicao") is True: detail = "Sem refeição — não comi"
         elif kind == "sleep":
             minutes = int(number(details.get("duracao_min")))
             label, title, detail = "Saúde", "Sono", f"{minutes // 60} h {minutes % 60:02} min" if minutes else "Sono registrado"

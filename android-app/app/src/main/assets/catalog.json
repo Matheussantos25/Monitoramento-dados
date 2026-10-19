@@ -71,7 +71,8 @@
     "Castanhas",
     "Cuscuz com leite",
     "Inhame",
-    "Sopa"
+    "Sopa",
+    "Batata-doce"
   ],
   "ALIMENTOS_BESTEIROL": [
     "Refrigerante",
@@ -268,7 +269,8 @@
       "Queijo",
       "Café",
       "Mamão",
-      "Cuscuz"
+      "Cuscuz",
+      "Batata-doce"
     ],
     "Almoço": [
       "Arroz",
@@ -281,7 +283,8 @@
       "Legumes",
       "Peixe",
       "Batata",
-      "Ovo"
+      "Ovo",
+      "Batata-doce"
     ],
     "Lanche da tarde": [
       "Pão",
@@ -296,7 +299,8 @@
       "Maçã",
       "Whey",
       "Castanhas",
-      "Cuscuz"
+      "Cuscuz",
+      "Batata-doce"
     ],
     "Jantar": [
       "Cuscuz com leite",
@@ -310,7 +314,8 @@
       "Salada",
       "Ovo",
       "Macarrão",
-      "Peixe"
+      "Peixe",
+      "Batata-doce"
     ]
   },
   "WORKOUT_FIELD_PROFILES": {

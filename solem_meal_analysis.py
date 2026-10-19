@@ -53,6 +53,8 @@ def day_nutrition(meals):
     totals = dict.fromkeys(NUTRIENTS, 0.0)
     counted, partial = 0, False
     for row in meals:
+        if row.get("details", {}).get("sem_refeicao") is True:
+            continue
         result = row.get("details", {}).get("nutrition")
         if not result:
             partial = True

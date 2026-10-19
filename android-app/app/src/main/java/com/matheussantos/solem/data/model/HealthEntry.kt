@@ -12,6 +12,7 @@ import kotlinx.serialization.json.JsonPrimitive
     val kind: String,
     val details: JsonObject = JsonObject(emptyMap())
 ) {
+    val skippedMeal: Boolean get() = kind == "meal" && text("sem_refeicao") == "true"
     fun text(key: String): String = (details[key] as? JsonPrimitive)?.content.orEmpty()
     fun number(key: String): Double = text(key).toDoubleOrNull() ?: 0.0
 }

@@ -47,7 +47,8 @@ def health_page(client, healthy_options, occasional_options, demo=False):
     sleep = next((row for row in selected if row["kind"] == "sleep"), None)
     water = sum(int(row["details"].get("volume_ml", 0)) * int(row["details"].get("quantidade", 0)) for row in water_rows)
     cols = st.columns(4)
-    cols[0].metric("Refeições", len(meals))
+    consumed_meals = [row for row in meals if row["details"].get("sem_refeicao") is not True]
+    cols[0].metric("Refeições", len(consumed_meals))
     cols[1].metric("Água registrada", f"{water:,} ml".replace(",", "."))
     cols[2].metric("Peso", f"{float(weight['details']['kg']):g} kg" if weight else "—")
     cols[3].metric("Sono", f"{sleep['details']['duracao_min']} min" if sleep else "—")
@@ -55,32 +56,37 @@ def health_page(client, healthy_options, occasional_options, demo=False):
 
     with food_tab:
         from solem_meal_photo_ui import daily_metrics, nutrient_metrics, review_meal
-        daily_metrics(meals)
+        daily_metrics(consumed_meals)
         st.caption("Adicione quantas refeições precisar no mesmo dia. A classificação é apenas para facilitar o registro.")
         meal_type = st.selectbox("Tipo de refeição", MEAL_TYPES, key="new_meal_type")
+        skipped = st.checkbox("Sem refeição — não comi", key=f"meal_skipped_new_{day}_{meal_type}")
+        if skipped: st.caption("Registra que você não fez essa refeição. Não conta como refeição consumida nem gera pontos.")
         with st.form("health_meal", clear_on_submit=True):
             meal_time = st.time_input("Horário da refeição", value=now_local().time().replace(second=0, microsecond=0))
             a, b = st.columns(2)
             with a:
-                healthy = st.multiselect("Alimentos habituais", meal_food_options(meal_type, healthy_options))
-                healthy_extra = st.text_input("Outro alimento habitual", max_chars=120)
+                healthy = st.multiselect("Alimentos habituais", meal_food_options(meal_type, healthy_options), disabled=skipped)
+                healthy_extra = st.text_input("Outro alimento habitual", max_chars=120, disabled=skipped)
             with b:
-                occasional = st.multiselect("Besteiras / alimentos ocasionais", occasional_options)
-                occasional_extra = st.text_input("Outro alimento ocasional", max_chars=120)
+                occasional = st.multiselect("Besteiras / alimentos ocasionais", occasional_options, disabled=skipped)
+                occasional_extra = st.text_input("Outro alimento ocasional", max_chars=120, disabled=skipped)
             submitted = st.form_submit_button("Salvar refeição", use_container_width=True)
         if submitted:
-            good = healthy + ([healthy_extra.strip()] if healthy_extra.strip() else [])
-            other = occasional + ([occasional_extra.strip()] if occasional_extra.strip() else [])
-            if not good and not other: st.error("Selecione ou descreva ao menos um alimento.")
+            good = [] if skipped else healthy + ([healthy_extra.strip()] if healthy_extra.strip() else [])
+            other = [] if skipped else occasional + ([occasional_extra.strip()] if occasional_extra.strip() else [])
+            if not skipped and not good and not other: st.error("Selecione um alimento ou marque Sem refeição.")
             else: _save(client, day, meal_time.strftime("%H:%M:%S"), "meal",
-                        {"tipo_refeicao": meal_type, "saudaveis": good, "ocasionais": other}, "Refeição registrada.", demo=demo)
+                        {"tipo_refeicao": meal_type, "saudaveis": good, "ocasionais": other, "sem_refeicao": skipped}, "Refeição registrada.", demo=demo)
         if not meals: st.info("Nenhuma refeição registrada neste dia.")
         for row in sorted(meals, key=lambda item: str(item["logged_at"])):
             details = row["details"]
             with st.container(border=True):
                 st.markdown(f"**{details.get('tipo_refeicao', 'Refeição')} · {str(row['logged_at'])[:5]}**")
-                st.caption(("Confirmados: " if details.get("nutrition") else "Habituais: ") + (", ".join(details.get("saudaveis", [])) or "—"))
-                st.caption("Ocasionais: " + (", ".join(details.get("ocasionais", [])) or "—"))
+                if details.get("sem_refeicao") is True:
+                    st.caption("Sem refeição — não comi.")
+                else:
+                    st.caption(("Confirmados: " if details.get("nutrition") else "Habituais: ") + (", ".join(details.get("saudaveis", [])) or "—"))
+                    st.caption("Ocasionais: " + (", ".join(details.get("ocasionais", [])) or "—"))
                 if details.get("nutrition"):
                     from solem_meal_analysis import nutrition
                     try: nutrient_metrics(nutrition(details["nutrition"]["items"]))
@@ -94,6 +100,8 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                     types = MEAL_TYPES if previous_type in MEAL_TYPES else (*MEAL_TYPES, previous_type)
                     edit_type = st.selectbox("Tipo de refeição", types, index=types.index(previous_type),
                                              key=f"meal_type_{row['id']}")
+                    edit_skipped = st.checkbox("Sem refeição — não comi", value=details.get("sem_refeicao") is True,
+                                               key=f"meal_skipped_{row['id']}")
                     with st.form(f"edit_meal_{row['id']}"):
                         edit_time = st.time_input("Horário da refeição", value=_time(row["logged_at"], "12:00"),
                                                   key=f"meal_time_{row['id']}")
@@ -102,21 +110,21 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                             old_good = details.get("saudaveis", [])
                             edit_good = st.multiselect("Alimentos habituais",
                                 meal_food_options(edit_type, healthy_options, old_good), default=old_good,
-                                key=f"meal_good_{row['id']}")
-                            new_good = st.text_input("Outro alimento habitual", max_chars=120)
+                                key=f"meal_good_{row['id']}", disabled=edit_skipped)
+                            new_good = st.text_input("Outro alimento habitual", max_chars=120, disabled=edit_skipped)
                         with b:
                             old_other = details.get("ocasionais", [])
                             edit_other = st.multiselect("Alimentos ocasionais",
                                 sorted(set(occasional_options) | set(old_other)), default=old_other,
-                                key=f"meal_other_{row['id']}")
-                            new_other = st.text_input("Outro alimento ocasional", max_chars=120)
+                                key=f"meal_other_{row['id']}", disabled=edit_skipped)
+                            new_other = st.text_input("Outro alimento ocasional", max_chars=120, disabled=edit_skipped)
                         edit_submitted = st.form_submit_button("Salvar edição", use_container_width=True)
                     if edit_submitted:
-                        good = edit_good + ([new_good.strip()] if new_good.strip() else [])
-                        other = edit_other + ([new_other.strip()] if new_other.strip() else [])
-                        if not good and not other: st.error("Selecione ou descreva ao menos um alimento.")
+                        good = [] if edit_skipped else edit_good + ([new_good.strip()] if new_good.strip() else [])
+                        other = [] if edit_skipped else edit_other + ([new_other.strip()] if new_other.strip() else [])
+                        if not edit_skipped and not good and not other: st.error("Selecione um alimento ou marque Sem refeição.")
                         else: _save(client, day, edit_time.strftime("%H:%M:%S"), "meal",
-                                    {"tipo_refeicao": edit_type, "saudaveis": good, "ocasionais": other},
+                                    {"tipo_refeicao": edit_type, "saudaveis": good, "ocasionais": other, "sem_refeicao": edit_skipped},
                                     "Refeição atualizada.", old=row, demo=demo)
                 if st.button("Remover refeição", key=f"meal_delete_{row['id']}"): _delete(client, row["id"], demo)
 

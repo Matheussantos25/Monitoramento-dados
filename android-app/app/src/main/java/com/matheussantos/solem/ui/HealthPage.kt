@@ -50,6 +50,7 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
     val day = runCatching { LocalDate.parse(dayText) }.getOrNull()
     val rows = if (day == null) emptyList() else state.healthEntries.filter { it.day == day.toString() }
     val dayMeals = rows.filter { it.kind == "meal" }
+    val consumedMeals = dayMeals.filterNot { it.skippedMeal }
     val water = rows.filter { it.kind == "water" }.sumOf {
         it.number("volume_ml").toInt() * it.number("quantidade").toInt()
     }
@@ -88,7 +89,7 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                 val references: List<MealReference> = remember {
                     mealJson.decodeFromString(contextAssets(context))
                 }
-                val calculated=dayMeals.mapNotNull { row ->
+                val calculated=consumedMeals.mapNotNull { row ->
                     runCatching { row.details["nutrition"]?.let { mealJson.decodeFromJsonElement<MealEstimate>(it) }
                         ?.let { calculateMeal(it.items,references) } }.getOrNull()
                 }
@@ -96,15 +97,18 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                     val totals=MealNutrients(calculated.sumOf { it.totals.kcal },calculated.sumOf { it.totals.protein },
                         calculated.sumOf { it.totals.carbs },calculated.sumOf { it.totals.fat },calculated.sumOf { it.totals.fiber })
                     MealNutritionSummary(MealEstimate(emptyList(),totals,calculated.sumOf { it.missing },
-                        calculated.size==dayMeals.size && calculated.all { it.complete }))
-                    Text("${calculated.size} de ${dayMeals.size} refeição(ões) com cálculo. Registros manuais não estão incluídos.")
+                        calculated.size==consumedMeals.size && calculated.all { it.complete }))
+                    Text("${calculated.size} de ${consumedMeals.size} refeição(ões) com cálculo. Registros manuais não estão incluídos.")
                 }
                 MealForm(day, catalog, state.busy, vm)
                 if (dayMeals.isEmpty()) Text("Nenhuma refeição registrada neste dia.")
                 dayMeals.sortedBy { it.loggedAt }.forEach { row ->
                     Panel("${row.text("tipo_refeicao")} · ${row.loggedAt.take(5)}") {
-                        Text("${if(row.details["nutrition"]!=null) "Confirmados" else "Habituais"}: ${foods(row, "saudaveis").ifBlank { "—" }}")
-                        Text("Ocasionais: ${foods(row, "ocasionais").ifBlank { "—" }}")
+                        if(row.skippedMeal) Text("Sem refeição — não comi.")
+                        else {
+                            Text("${if(row.details["nutrition"]!=null) "Confirmados" else "Habituais"}: ${foods(row, "saudaveis").ifBlank { "—" }}")
+                            Text("Ocasionais: ${foods(row, "ocasionais").ifBlank { "—" }}")
+                        }
                         val nutrition=runCatching { row.details["nutrition"]?.let { mealJson.decodeFromJsonElement<MealEstimate>(it) } }.getOrNull()
                         nutrition?.let { runCatching { calculateMeal(it.items,references) }.getOrNull()?.let { checked -> MealNutritionSummary(checked) } }
                         TextButton(onClick = { editingId = if (editingId == row.id) null else row.id }) {
@@ -113,7 +117,8 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                         if (editingId == row.id) {
                             if(nutrition!=null) key(row.id) { MealReview(day,catalog,vm,references,nutrition.items,state.busy,row,
                                 saved={editingId=null}) }
-                            else MealForm(day, catalog, state.busy, vm, row)
+                            if(nutrition!=null) Text("Edição manual abaixo substitui a análise; também permite marcar Sem refeição.")
+                            MealForm(day, catalog, state.busy, vm, row)
                         }
                         TextButton(onClick = { deleting = row }) { Text("Remover refeição") }
                     }
@@ -158,12 +163,19 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
 @Composable private fun MealForm(day: LocalDate, catalog: Catalog, busy: Boolean, vm: WorkspaceViewModel,
                                  previous: HealthEntry? = null) {
     var kind by rememberSaveable(previous?.id) { mutableStateOf(previous?.text("tipo_refeicao")?.ifBlank { "Almoço" } ?: "Almoço") }
+    var skipped by rememberSaveable(day, previous?.id, kind) { mutableStateOf(previous?.skippedMeal ?: false) }
     var time by rememberSaveable(previous?.id) { mutableStateOf(previous?.loggedAt ?: currentTime()) }
     var healthy by rememberSaveable(previous?.id) { mutableStateOf(previous?.let { foods(it, "saudaveis") } ?: "") }
     var occasional by rememberSaveable(previous?.id) { mutableStateOf(previous?.let { foods(it, "ocasionais") } ?: "") }
     var error by remember { mutableStateOf<String?>(null) }
     Choice("Tipo de refeição", kind, (catalog.mealTypes + kind).distinct()) { kind = it }
+    Row(verticalAlignment=Alignment.CenterVertically) {
+        Checkbox(checked=skipped,onCheckedChange={skipped=it},enabled=!busy)
+        Text("Sem refeição — não comi")
+    }
+    if(skipped) Text("Não conta como refeição consumida nem gera pontos.",style=MaterialTheme.typography.bodySmall)
     Field("Horário (HH:MM:SS)", time) { time = it }
+    if(!skipped) {
     MultiChoice("Alimentos habituais", splitFoods(healthy), catalog.mealFoods(kind, splitFoods(healthy))) {
         healthy = it.joinToString(", ")
     }
@@ -172,16 +184,13 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
         occasional = it.joinToString(", ")
     }
     Field("Outros ocasionais, separados por vírgula", occasional) { occasional = it }
+    }
     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     Button(onClick = {
-        if (splitFoods(healthy).isEmpty() && splitFoods(occasional).isEmpty()) error = "Informe ao menos um alimento."
+        if (!skipped && splitFoods(healthy).isEmpty() && splitFoods(occasional).isEmpty()) error = "Selecione um alimento ou marque Sem refeição."
         else try {
             val checked = LocalTime.parse(time).format(clockFormat)
-            val data = buildJsonObject {
-                put("tipo_refeicao", kind)
-                put("saudaveis", buildJsonArray { splitFoods(healthy).forEach { add(JsonPrimitive(it)) } })
-                put("ocasionais", buildJsonArray { splitFoods(occasional).forEach { add(JsonPrimitive(it)) } })
-            }
+            val data = manualMealDetails(kind, splitFoods(healthy), splitFoods(occasional), skipped)
             error = null
             vm.saveHealth(day.toString(), checked, "meal", data, previous?.id)
         } catch (_: Exception) { error = "Confira o horário da refeição." }
