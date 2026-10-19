@@ -3,7 +3,7 @@ from calendar import monthrange
 from datetime import date, timedelta
 import streamlit as st
 from solem_training_plan import plan_day, workout_day
-from solem_journal_component import journal_calendar
+import solem_journal_component
 
 
 def training_plan_panel(records, today, preferences=None, generic=False, calendar=True):
@@ -57,4 +57,9 @@ def workout_calendar(records, today, preferences=None, generic=False):
     with month_col: month = st.selectbox("Mês do treino", range(1, 13), index=today.month - 1, key="workout_calendar_month")
     days = [workout_day(records, date(year, month, n), preferences, generic, today)
             for n in range(1, monthrange(year, month)[1] + 1)]
-    journal_calendar(year, month, today, days, key_prefix="workout_calendar")
+    # The low-level component's keyword interface already existed before this
+    # panel. Cloud may retain the old four-argument journal_calendar wrapper
+    # after a deploy; do not require its newer key_prefix argument here.
+    solem_journal_component._calendar(
+        year=year, month=month, today=today.isoformat(), days=days,
+        key=f"workout_calendar_{year}_{month}", default=None)
