@@ -284,7 +284,8 @@
       "Peixe",
       "Batata",
       "Ovo",
-      "Batata-doce"
+      "Batata-doce",
+      "Cuscuz"
     ],
     "Lanche da tarde": [
       "Pão",
@@ -315,7 +316,8 @@
       "Ovo",
       "Macarrão",
       "Peixe",
-      "Batata-doce"
+      "Batata-doce",
+      "Cuscuz"
     ]
   },
   "WORKOUT_FIELD_PROFILES": {
