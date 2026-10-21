@@ -299,6 +299,12 @@ conferida em desktop e viewport móvel. O APK debug 0.13.0 (versionCode 28)
 deve ser instalado sobre o anterior; não desinstale para atualizar. Não havia
 dispositivo Android conectado para validação visual e de ciclo de vida real.
 
+## Guias de técnica — 0.14.0
+
+Guias vetoriais de técnica em Treino → Exercício
+isolado, detalhe das pegadas e reprodução opcional de seis segundos. Veja
+[`docs/exercise-guides.md`](../docs/exercise-guides.md) para escopo e testes.
+
 ## Alimentação — 0.13.1
 
 Batata-doce foi incluída no catálogo habitual e nas sugestões de todas as refeições.

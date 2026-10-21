@@ -88,6 +88,7 @@ import java.time.ZoneOffset
                             distance = "0"; rest = "60"; iso = "0"; measuredSeconds = null
                         }
                     }
+                    ExerciseGuide(exercise)
                     val workoutFields = catalog.workoutFields(exercise)
                     val stats = trainingMeasureSnapshot(rows, exercise, workoutFields)
                     if (existing == null && stats != null) {

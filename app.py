@@ -16,6 +16,7 @@ from solem_health import (training_measure_stats, training_category_stats, train
                           workout_fields, format_one_decimal, now_local)
 from solem_gps import gps_distance_tracker
 from solem_workout_timer import workout_timer, apply_timing_event
+from solem_exercise_guide import exercise_guide
 from solem_account import DEFAULTS, generic_account, personal_study_topics
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA ---
@@ -787,6 +788,7 @@ if pagina == "Treino":
     if modo_insercao == "🏋️ Exercício Isolado (Convencional)":
         exercicios_disponiveis = sorted(set(TODOS_EXERCICIOS) | set(df_treinos.get("exercicio", pd.Series(dtype=str)).dropna()))
         exercicio_input = st.selectbox("Exercício", exercicios_disponiveis, key="treino_exercicio")
+        exercise_guide(exercicio_input)
         if st.session_state.get("treino_exercicio_anterior") != exercicio_input:
             st.session_state["treino_exercicio_anterior"] = exercicio_input
             st.session_state["treino_distancia"] = 0.0
