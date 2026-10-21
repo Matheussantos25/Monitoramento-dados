@@ -17,7 +17,7 @@ def test_all_preset_exercises_have_explicit_guide_or_pending_reason():
 
 def test_offline_assets_identical_and_lightweight():
     source = (ROOT / "assets/exercise_guides.json").read_bytes()
-    assert len(source) < 25000
+    assert len(source) < 350000
     for relative in ("main/assets", "test/resources"):
         assert source == (ROOT / f"android-app/app/src/{relative}/exercise_guides.json").read_bytes()
 
@@ -25,9 +25,10 @@ def test_offline_assets_identical_and_lightweight():
 def test_grips_are_different_and_unknown_does_not_guess():
     pronated = guide_payload("Barra Fixa (Pronada)")
     supinated = guide_payload("Barra Fixa (Supinada)")
-    assert pronated["grip"]["marks"] != supinated["grip"]["marks"]
-    assert "dorso" in pronated["grip"]["caption"]
-    assert "palmas" in supinated["grip"]["caption"]
+    assert pronated["grip"]["shapes"] != supinated["grip"]["shapes"]
+    assert pronated["motion"] != supinated["motion"]
+    assert "dorso" in pronated["grip"]["caption"].lower()
+    assert "palmas" in supinated["grip"]["caption"].lower()
     assert guide_payload("Meu exercício <script>")["motion"] is None
     assert guide_payload("Abdominal Levantada")["guide"]["motion"] == "legraise"
     assert guide_payload("Remada em Pé na Polia")["guide"]["motion"] == "standingrow"
@@ -40,23 +41,29 @@ def test_vectors_valid_and_static_holds_static():
         if guide["motion"]:
             assert guide["motion"] in data["motions"]
     for motion in data["motions"].values():
-        assert 1 <= len(motion["frames"]) <= 2
+        assert len(motion["frames"]) in (1,9)
         for frame in motion["frames"]:
-            x,y,r = frame["head"]
-            assert r > 0 and r <= x <= 300-r and r <= y <= 230-r
-            for line in frame["lines"]:
-                assert len(line) >= 2
-                assert all(0 <= x <= 300 and 0 <= y <= 230 for x,y in line)
+            assert len(frame) == len(motion["shapes"])
+            for shape,coords in zip(motion["shapes"],frame):
+                assert all(-10 <= value <= 450 for value in coords)
+                if shape["kind"] == "ellipse":
+                    assert len(coords)==4 and coords[2]>0 and coords[3]>0
+                else:
+                    expected=sum({"M":2,"L":2,"Q":4,"C":6,"Z":0}[c] for c in shape["commands"])
+                    assert len(coords)==expected
+        assert all([len(c) for c in frame]==[len(c) for c in motion["frames"][0]] for frame in motion["frames"])
     for exercise in ("Prancha", "L-Sit", "Handstand (Parada de Mãos)"):
         assert len(guide_payload(exercise)["motion"]["frames"]) == 1
 
 
 def test_component_does_not_write_data_or_fetch_media():
-    source = (ROOT / "assets/exercise_guide/index.html").read_text(encoding="utf8")
+    source = "\n".join((ROOT / f"assets/exercise_guide/{name}").read_text(encoding="utf8") for name in ("index.html","guide.js","figure.js"))
     for forbidden in ("fetch(", "XMLHttpRequest", "streamlit:setComponentValue", "innerHTML", "<video", "<iframe"):
         assert forbidden not in source
     assert 'document.hidden' in source
     assert 'prefers-reduced-motion' in source
+    assert 'requestAnimationFrame' in source
+    assert 'opacity' not in (ROOT / "assets/exercise_guide/guide.js").read_text(encoding="utf8")
 
 
 def test_switching_guides_keeps_workout_records_unchanged():

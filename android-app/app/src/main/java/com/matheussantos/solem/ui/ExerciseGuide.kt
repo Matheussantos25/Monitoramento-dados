@@ -1,16 +1,17 @@
 package com.matheussantos.solem.ui
 
 import android.provider.Settings
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -23,7 +24,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.matheussantos.solem.domain.*
-import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 
 /** Local vectors only: no account data, WebView, network request or autoplay. */
@@ -42,7 +42,7 @@ import kotlinx.serialization.json.Json
     val motion = catalog.motions[guide.motion]
     val grip = catalog.grips[guide.grip]
     var expanded by remember(exercise) { mutableStateOf(false) }
-    var frame by remember(exercise) { mutableIntStateOf(0) }
+    var position by remember(exercise) { mutableFloatStateOf(0f) }
     var playing by remember(exercise) { mutableStateOf(false) }
     var reduced by remember { mutableStateOf(false) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -63,61 +63,64 @@ import kotlinx.serialization.json.Json
     }
     LaunchedEffect(playing, expanded, exercise, reduced) {
         if (playing && expanded && !reduced && motion != null && motion.frames.size > 1) {
-            frame = 0
-            repeat(4) { delay(1500); frame = (it + 1) % 2 }
+            val start = withFrameNanos { it }
+            var lastPaint = start - 34_000_000L
+            while(true) {
+                val now = withFrameNanos { it }
+                val elapsed = (now-start)/1_000_000L
+                if(now-lastPaint>=33_333_333L || elapsed>=8000L) {
+                    position=guidePhase(elapsed); lastPaint=now
+                }
+                if(elapsed>=8000L) break
+            }
+            position=0f
             playing = false
         }
     }
-    val blend by animateFloatAsState(frame.toFloat(), tween(if(reduced) 0 else 220), label="guide pose")
     val uriHandler = LocalUriHandler.current
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement=Arrangement.spacedBy(10.dp)) {
             TextButton(onClick={ expanded = !expanded; playing = false }, modifier=Modifier.fillMaxWidth()) {
-                Text(if(expanded) "Fechar guia · $exercise" else "Ver técnica e pegada · $exercise")
+                Text(if(expanded) "Fechar guia · $exercise" else "Ver execução e pegada · $exercise")
             }
             if(expanded) {
                 if(grip != null) {
-                    Text(grip.title, color=MaterialTheme.colorScheme.primary, style=MaterialTheme.typography.titleSmall)
-                    Canvas(Modifier.fillMaxWidth().height(100.dp).semantics {contentDescription=grip.title+". "+grip.caption}) {
-                        vectorArea(102f) {
-                            polyline(listOf(listOf(35f,35f),listOf(265f,35f)),Color(0xFF607A95),9f)
-                            grip.lines.forEach { polyline(it,Color(0xFFD3C6FF),4f) }
-                            grip.marks.forEach { polyline(it,Color(0xFF91E0FF),2f) }
+                    Text("Pegada ${grip.title.lowercase()}", color=MaterialTheme.colorScheme.primary, style=MaterialTheme.typography.titleMedium)
+                    Text(grip.instruction,style=MaterialTheme.typography.bodyMedium)
+                    Canvas(Modifier.fillMaxWidth().height(155.dp).semantics {contentDescription=grip.title+". "+grip.caption}) {
+                        vectorArea(360f,165f) {
+                            grip.shapes.forEach { drawVector(it.shape,it.coords) }
                         }
                     }
                     Text(grip.caption+" · vista de quem executa",style=MaterialTheme.typography.bodySmall)
                 }
                 if(motion != null) {
                     Text(guide.view, style=MaterialTheme.typography.labelMedium)
-                    Canvas(Modifier.fillMaxWidth().height(230.dp).semantics {
-                        contentDescription="$exercise: ${guide.labels.getOrNull(frame).orEmpty()}"
+                    Canvas(Modifier.fillMaxWidth().aspectRatio(1f).semantics {
+                        contentDescription="$exercise: ${motion.direction}"
                     }) {
-                        vectorArea(230f) {
-                            polyline(listOf(listOf(25f,218f),listOf(275f,218f)),Color(0xFF29415B),1f)
-                            motion.equipment.forEach {polyline(it,Color(0xFF607A95),4f)}
-                            motion.circles.forEach { drawCircle(Color(0xFF607A95),it[2],Offset(it[0],it[1]),style=Stroke(3f)) }
-                            motion.frames.forEachIndexed { index, pose ->
-                                val alpha = if(motion.frames.size==1) 1f else if(index==0) 1f-blend else blend
-                                pose.lines.forEachIndexed { n,line ->
-                                    polyline(line,(if(n%2==0) Color(0xFFD3EDFF) else Color(0xFF88D7F3)).copy(alpha=alpha),7f)
-                                }
-                                drawCircle(Color(0xFFD3EDFF).copy(alpha=alpha),pose.head[2],Offset(pose.head[0],pose.head[1]))
-                            }
+                        vectorArea(440f,440f) {
+                            motion.static.forEach { drawVector(it.shape,it.coords) }
+                            motion.sample(position).forEachIndexed { i,coords -> drawVector(motion.shapes[i],coords) }
                         }
                     }
-                    Text(guide.labels.getOrNull(frame) ?: "Postura ilustrativa", style=MaterialTheme.typography.titleSmall)
+                    Text(motion.direction, style=MaterialTheme.typography.titleSmall)
                     if(motion.frames.size>1) {
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                            FilterChip(selected=frame==0,onClick={playing=false; frame=0},label={Text("Início")})
-                            FilterChip(selected=frame==1,onClick={playing=false; frame=1},label={Text("Final")})
+                            FilterChip(selected=position<.02f,onClick={playing=false; position=0f},label={Text("Início")})
+                            FilterChip(selected=kotlin.math.abs(position-.5f)<.02f,onClick={playing=false; position=.5f},label={Text("Meio")})
+                            FilterChip(selected=position>.98f,onClick={playing=false; position=1f},label={Text("Final")})
                         }
+                        Text("Explore o movimento",style=MaterialTheme.typography.labelMedium)
+                        Slider(value=position,onValueChange={playing=false;position=it},modifier=Modifier.semantics {contentDescription="Posição do movimento"})
                         OutlinedButton(onClick={playing=!playing},enabled=!reduced,modifier=Modifier.fillMaxWidth()) {
-                            Text(if(reduced) "Use Início / Final" else if(playing) "Parar animação" else "Reproduzir · 6 segundos")
+                            Text(if(reduced) "Use os controles de posição" else if(playing) "Pausar movimento" else "Reproduzir movimento · 8 s")
                         }
-                        Text("Duas posições ilustrativas, não um vídeo de execução.",style=MaterialTheme.typography.bodySmall)
+                        Text("Movimento ilustrativo contínuo · 2 ciclos",style=MaterialTheme.typography.bodySmall)
                     }
                 }
                 guide.cues.forEach { Text("• $it",style=MaterialTheme.typography.bodyMedium) }
+                motion?.landmarks?.forEach { Text(it,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary) }
                 Text(guide.avoid,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
                 if(guide.source.startsWith("https://")) TextButton(onClick={uriHandler.openUri(guide.source)}) {Text("Referência de técnica ↗")}
                 Text(catalog.notice,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -126,12 +129,28 @@ import kotlinx.serialization.json.Json
     }
 }
 
-private fun DrawScope.vectorArea(height: Float, block: DrawScope.() -> Unit) {
-    val factor = minOf(size.width/300f, size.height/height)
-    withTransform({translate((size.width-300f*factor)/2f,0f);scale(factor,factor,pivot=Offset.Zero)},block)
+private fun DrawScope.vectorArea(width: Float, height: Float, block: DrawScope.() -> Unit) {
+    val factor = minOf(size.width/width, size.height/height)
+    withTransform({translate((size.width-width*factor)/2f,0f);scale(factor,factor,pivot=Offset.Zero)},block)
 }
-private fun DrawScope.polyline(points: List<List<Float>>, color: Color, width: Float) {
-    points.zipWithNext().forEach { (a,b) ->
-        drawLine(color,Offset(a[0],a[1]),Offset(b[0],b[1]),width,StrokeCap.Round)
+private fun DrawScope.drawVector(shape: GuideShape, coords: List<Float>) {
+    val fill=shape.fill.takeIf {it.isNotBlank()}?.let {Color(android.graphics.Color.parseColor(it))}
+    val stroke=shape.stroke.takeIf {it.isNotBlank()}?.let {Color(android.graphics.Color.parseColor(it))}
+    if(shape.kind=="ellipse") {
+        val top=Offset(coords[0]-coords[2],coords[1]-coords[3]);val dimensions=Size(coords[2]*2,coords[3]*2)
+        if(fill!=null)drawOval(fill,top,dimensions)
+        if(stroke!=null)drawOval(stroke,top,dimensions,style=Stroke(shape.width))
+    } else {
+        val path=Path();var index=0
+        fun next()=coords[index++]
+        shape.commands.forEach {command->when(command) {
+            'M'->path.moveTo(next(),next())
+            'L'->path.lineTo(next(),next())
+            'Q'->path.quadraticTo(next(),next(),next(),next())
+            'C'->path.cubicTo(next(),next(),next(),next(),next(),next())
+            'Z'->path.close()
+        }}
+        if(fill!=null)drawPath(path,fill)
+        if(stroke!=null)drawPath(path,stroke,style=Stroke(shape.width,cap=StrokeCap.Round,join=StrokeJoin.Round))
     }
 }

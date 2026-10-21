@@ -299,10 +299,11 @@ conferida em desktop e viewport móvel. O APK debug 0.13.0 (versionCode 28)
 deve ser instalado sobre o anterior; não desinstale para atualizar. Não havia
 dispositivo Android conectado para validação visual e de ciclo de vida real.
 
-## Guias de técnica — 0.14.0
+## Guias de técnica — 0.14.1
 
 Guias vetoriais de técnica em Treino → Exercício
-isolado, detalhe das pegadas e reprodução opcional de seis segundos. Veja
+isolado, figuras humanas, detalhe ampliado das pegadas e movimento contínuo
+opcional de oito segundos, com pausa e controle manual da posição. Veja
 [`docs/exercise-guides.md`](../docs/exercise-guides.md) para escopo e testes.
 
 ## Alimentação — 0.13.1
