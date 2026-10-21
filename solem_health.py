@@ -10,10 +10,10 @@ from solem_progress import extras_of, number, record_date
 
 MEAL_TYPES = ("Café da manhã", "Almoço", "Lanche da tarde", "Jantar", "Outra")
 MEAL_FOODS = {
-    "Café da manhã": ("Pão", "Pão integral", "Banana", "Ovo", "Ovos", "Ovos mexidos", "Aveia", "Iogurte", "Leite", "Queijo", "Café", "Mamão", "Cuscuz", "Batata-doce"),
-    "Almoço": ("Arroz", "Feijão", "Carne", "Frango", "Purê", "Macarrão", "Salada", "Legumes", "Peixe", "Batata", "Ovo", "Batata-doce", "Cuscuz"),
-    "Lanche da tarde": ("Pão", "Pão integral", "Banana", "Ovo", "Ovos", "Iogurte", "Aveia", "Leite", "Queijo", "Maçã", "Whey", "Castanhas", "Cuscuz", "Batata-doce"),
-    "Jantar": ("Cuscuz com leite", "Inhame", "Arroz", "Feijão", "Frango", "Carne", "Sopa", "Legumes", "Salada", "Ovo", "Macarrão", "Peixe", "Batata-doce", "Cuscuz"),
+    "Café da manhã": ("Pão", "Pão integral", "Banana", "Ovo", "Ovos", "Ovos mexidos", "Aveia", "Iogurte", "Leite", "Queijo", "Café", "Mamão", "Cuscuz", "Batata-doce", "Macaxeira"),
+    "Almoço": ("Arroz", "Feijão", "Carne", "Frango", "Purê", "Macarrão", "Salada", "Legumes", "Peixe", "Batata", "Ovo", "Batata-doce", "Cuscuz", "Macaxeira"),
+    "Lanche da tarde": ("Pão", "Pão integral", "Banana", "Ovo", "Ovos", "Iogurte", "Aveia", "Leite", "Queijo", "Maçã", "Whey", "Castanhas", "Cuscuz", "Batata-doce", "Macaxeira"),
+    "Jantar": ("Cuscuz com leite", "Inhame", "Arroz", "Feijão", "Frango", "Carne", "Sopa", "Legumes", "Salada", "Ovo", "Macarrão", "Peixe", "Batata-doce", "Cuscuz", "Macaxeira"),
 }
 
 

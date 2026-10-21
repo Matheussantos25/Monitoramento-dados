@@ -15,12 +15,15 @@ def test_sweet_potato_available_for_every_meal_on_web_and_android():
                    and any(isinstance(t, ast.Name) and t.id == "ALIMENTOS_SAUDAVEIS" for t in node.targets))
     android = json.loads((root / "android-app/app/src/main/assets/catalog.json").read_text(encoding="utf8"))
     assert "Batata-doce" in catalog and "Batata-doce" in android["ALIMENTOS_SAUDAVEIS"]
+    assert "Macaxeira" in catalog and "Macaxeira" in android["ALIMENTOS_SAUDAVEIS"]
     for meal in MEAL_TYPES:
         assert "Batata-doce" in meal_food_options(meal, catalog)
         assert "Cuscuz" in meal_food_options(meal, catalog)
+        assert "Macaxeira" in meal_food_options(meal, catalog)
         if meal in android["MEAL_FOODS"]:
             assert "Batata-doce" in android["MEAL_FOODS"][meal]
             assert "Cuscuz" in android["MEAL_FOODS"][meal]
+            assert "Macaxeira" in android["MEAL_FOODS"][meal]
 
 
 def test_skipped_meal_is_explicit_in_calendar_not_missing_nutrition():

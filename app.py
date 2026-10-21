@@ -84,7 +84,7 @@ TODOS_EXERCICIOS.sort()
 ALIMENTOS_SAUDAVEIS = ["Banana", "Uva", "Maçã", "Laranja", "Melão", "Melancia", "Mirtilo", "Ovo", "Frango", "Aveia", "Whey",
                        "Pão", "Pão integral", "Ovos", "Ovos mexidos", "Iogurte", "Leite", "Queijo", "Café", "Mamão", "Cuscuz",
                        "Arroz", "Feijão", "Carne", "Purê", "Macarrão", "Salada", "Legumes", "Peixe", "Batata",
-                       "Castanhas", "Cuscuz com leite", "Inhame", "Sopa", "Batata-doce"]
+                       "Castanhas", "Cuscuz com leite", "Inhame", "Sopa", "Batata-doce", "Macaxeira"]
 ALIMENTOS_SAUDAVEIS.sort()
 
 ALIMENTOS_BESTEIROL = ["Refrigerante", "Hambúrguer", "Pizza", "Lasanha", "Churros", "Pastel", "Coxinha", "Sorvete", "Batata Frita", "Sonho de Valsa", "Biscoito Recheado", "Chocotone"]
