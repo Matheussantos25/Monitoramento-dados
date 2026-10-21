@@ -33,9 +33,19 @@ import com.matheussantos.solem.ui.theme.SolemTheme
 
 val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Todos os registros", "Calendário", "Elos", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Personalizar")
 
+val LocalGpsAccount = staticCompositionLocalOf { "" }
+
 @Composable fun SolemApp(workspaceVm: WorkspaceViewModel = viewModel()) {
     val auth by workspaceVm.state.collectAsStateWithLifecycle()
     val context=LocalContext.current
+    val gpsSession by WalkLocationService.state.collectAsStateWithLifecycle()
+    LaunchedEffect(auth.initialized, auth.accountId, auth.signedIn, gpsSession.owner, gpsSession.active) {
+        val tracking=gpsSession
+        if(auth.initialized && tracking.active && (!auth.signedIn || tracking.owner!=auth.accountId)) {
+            context.startService(android.content.Intent(context,WalkLocationService::class.java)
+                .setAction(WalkLocationService.STOP).putExtra(WalkLocationService.OWNER,tracking.owner))
+        }
+    }
     val store=remember(auth.accountId,auth.generic) { PersonalizationStore(context,auth.accountId,auth.generic) }
     val settings by store.state.collectAsStateWithLifecycle()
     CompositionLocalProvider(LocalDashboardPreferences provides settings) {
@@ -55,7 +65,8 @@ val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Pe
                 override val viewModelStore = sessionStore
             } }
             DisposableEffect(owner) { onDispose { sessionStore.clear() } }
-            CompositionLocalProvider(androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner provides owner) {
+            CompositionLocalProvider(androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner provides owner,
+                LocalGpsAccount provides auth.accountId) {
                 AuthenticatedSolemApp(workspaceVm, auth.accountId, auth.generic,store)
             }
         }

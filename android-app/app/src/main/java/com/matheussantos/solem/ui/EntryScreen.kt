@@ -131,6 +131,7 @@ import java.time.ZoneOffset
                     if ("duracao_min" in workoutFields) Field("Duração (min)", duration, true) { duration = it; measuredSeconds = null }
                     if ("distancia_km" in workoutFields) Field("Distância (km)", distance, true) { distance = it }
                     if (exercise in listOf("Caminhada", "Corrida")) GpsDistanceTracker(
+                        exercise = exercise,
                         onDistance = { km -> distance = "%.3f".format(java.util.Locale.US, km) },
                         onFinished = { km, seconds ->
                             distance = "%.3f".format(java.util.Locale.US, km)
