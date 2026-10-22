@@ -23,20 +23,20 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
     Text("Gorduras ${amount(values.fat)} g · fibras ${amount(values.fiber)} g")
     if(estimate.missing>0) Text("${estimate.missing} alimento(s) não calculados. Sem correspondência ou porção não significa zero calorias.",
         color=MaterialTheme.colorScheme.error)
-    Text("Porções aproximadas, não medidas. Óleo, molhos e preparo podem alterar os valores.",style=MaterialTheme.typography.bodySmall)
+    Text("Cálculo pelo peso informado e pela referência nutricional. Óleo, molhos e preparo podem alterar os valores.",style=MaterialTheme.typography.bodySmall)
 }
 
 @Composable fun MealReview(day: LocalDate, catalog: Catalog, workspace: WorkspaceViewModel,
     references: List<MealReference>, initial: List<MealFood>, busy: Boolean,
-    previous: HealthEntry?=null, saved: () -> Unit={}) {
+    previous: HealthEntry?=null, saved: () -> Unit={}, weighed: Boolean=false) {
     var items by remember { mutableStateOf(initial) }
     var kind by rememberSaveable { mutableStateOf(previous?.text("tipo_refeicao") ?: "Almoço") }
     var time by rememberSaveable { mutableStateOf(previous?.loggedAt ?: LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))) }
     var confirmed by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val links=LocalUriHandler.current
-    Text("Confira seu prato",style=MaterialTheme.typography.titleLarge)
-    Text("A foto não mede o peso. Confira preparo e porção. Use 0 g quando não souber estimar.")
+    Text(if(weighed) "Refeição com balança" else "Confira seu prato",style=MaterialTheme.typography.titleLarge)
+    Text("Zere a balança com o prato vazio (tara). Pese só a parte consumida de cada alimento. Escolha o mesmo preparo: cru ou cozido. Inclua óleo e molhos. Use 0 g para deixar sem cálculo.")
     items.forEachIndexed { index,item ->
         key(items.size,index) { Panel(item.name.ifBlank { "Alimento" }) {
             Field("Alimento",item.name) { name -> items=items.mapIndexed { at,food -> if(at==index) food.copy(name=name.take(80)) else food }; confirmed=false }
@@ -44,10 +44,10 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
             val selected=references.firstOrNull { it.id==item.foodId }?.name ?: options.first()
             Choice("Referência nutricional / preparo",selected,options) { choice ->
                 val id=references.firstOrNull { it.name==choice }?.id.orEmpty()
-                items=items.mapIndexed { at,food -> if(at==index) food.copy(foodId=id) else food }; confirmed=false
+                items=items.mapIndexed { at,food -> if(at==index) food.copy(foodId=id, name=if(food.name=="Outro alimento") choice else food.name) else food }; confirmed=false
             }
             var gramsText by remember { mutableStateOf(amount(item.grams)) }
-            Field("Porção estimada (g)",gramsText,true) { value ->
+            Field("Peso consumido (g)",gramsText,true) { value ->
                 gramsText=value
                 val grams=value.replace(',','.').toDoubleOrNull() ?: Double.NaN
                 items=items.mapIndexed { at,food -> if(at==index) food.copy(grams=grams) else food }; confirmed=false
@@ -63,12 +63,16 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
             references.firstOrNull { it.id==item.foodId }?.let { reference ->
                 TextButton(onClick={ links.openUri(reference.sourceUrl) }) { Text("Consultar fonte USDA") }
             }
-            Text("Identificação sugerida: "+when(item.confidence) { "high"->"mais provável"; "medium"->"incerta"; else->"confira com atenção" },style=MaterialTheme.typography.bodySmall)
+            runCatching { calculateMeal(listOf(item),references) }.getOrNull()?.let { portion ->
+                if(portion.complete) Text("Este alimento: ${amount(portion.totals.kcal)} kcal · ${amount(portion.totals.protein)} g de proteína")
+                else Text("Sem cálculo: informe peso e referência compatível.")
+            }
         } }
     }
-    TextButton(onClick={items=items+MealFood("Outro alimento");confirmed=false},enabled=items.size<12) { Text("Adicionar alimento que faltou") }
+    TextButton(onClick={items=items+MealFood("Outro alimento");confirmed=false},enabled=items.size<12) { Text("Adicionar alimento") }
+    Text("Sem referência compatível? Use o registro simples; não substitua por outro alimento.",style=MaterialTheme.typography.bodySmall)
     val estimate=runCatching { calculateMeal(items,references) }
-    estimate.getOrNull()?.let { MealNutritionSummary(it) }
+    estimate.getOrNull()?.let { Text("Total da refeição · soma dos alimentos"); MealNutritionSummary(it) }
     estimate.exceptionOrNull()?.let { Text(it.message.orEmpty(),color=MaterialTheme.colorScheme.error) }
     Choice("Refeição",kind,(catalog.mealTypes+kind).distinct()) {kind=it}
     Field("Horário (HH:MM:SS)",time) {time=it}
@@ -77,8 +81,10 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
     Button(onClick={
         try {
             val checked=LocalTime.parse(time).format(DateTimeFormatter.ofPattern("HH:mm:ss"))
-            val details=photoMealDetails(kind,items,references)
-            workspace.saveHealth(day.toString(),checked,"meal",details,previous?.id,onSaved=saved)
+            val details=photoMealDetails(kind,items,references,weighed || previous?.text("input_method")=="weighed")
+            workspace.saveHealth(day.toString(),checked,"meal",details,previous?.id,onSaved={
+                if(previous==null) {items=emptyList();confirmed=false}; saved()
+            })
         } catch(e: Exception) { error=e.message ?: "Confira o horário e as porções." }
     },enabled=!busy && confirmed && estimate.isSuccess) { Text(if(previous==null) "Confirmar e salvar refeição" else "Salvar edição nutricional") }
 }

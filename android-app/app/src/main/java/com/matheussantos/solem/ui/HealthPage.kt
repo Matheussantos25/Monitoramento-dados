@@ -98,8 +98,14 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                         calculated.sumOf { it.totals.carbs },calculated.sumOf { it.totals.fat },calculated.sumOf { it.totals.fiber })
                     MealNutritionSummary(MealEstimate(emptyList(),totals,calculated.sumOf { it.missing },
                         calculated.size==consumedMeals.size && calculated.all { it.complete }))
-                    Text("${calculated.size} de ${consumedMeals.size} refeição(ões) com cálculo. Registros manuais não estão incluídos.")
+                    Text("${calculated.size} de ${consumedMeals.size} refeição(ões) com cálculo. Refeições sem pesos ou referências deixam o total parcial.")
                 }
+                if(calculated.isEmpty()) Text("Calorias e proteínas do dia: sem cálculo ainda. Refeições sem pesos não são tratadas como zero.")
+                var weighedForm by rememberSaveable { mutableStateOf(false) }
+                FilterChip(selected=weighedForm,onClick={weighedForm=!weighedForm},label={Text("Registrar com balança · kcal e proteínas")})
+                if(weighedForm) key(day) { MealReview(day,catalog,vm,references,emptyList(),state.busy,
+                    saved={weighedForm=false},weighed=true) }
+                Text("Registro simples · sem cálculo nutricional",style=MaterialTheme.typography.titleMedium)
                 MealForm(day, catalog, state.busy, vm)
                 if (dayMeals.isEmpty()) Text("Nenhuma refeição registrada neste dia.")
                 dayMeals.sortedBy { it.loggedAt }.forEach { row ->
@@ -111,13 +117,21 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                         }
                         val nutrition=runCatching { row.details["nutrition"]?.let { mealJson.decodeFromJsonElement<MealEstimate>(it) } }.getOrNull()
                         nutrition?.let { runCatching { calculateMeal(it.items,references) }.getOrNull()?.let { checked -> MealNutritionSummary(checked) } }
+                        nutrition?.items?.forEach { item ->
+                            val portion=runCatching {calculateMeal(listOf(item),references)}.getOrNull()
+                            Text("${item.name} · ${item.grams} g · "+if(portion?.complete==true)
+                                "${portion.totals.kcal} kcal · ${portion.totals.protein} g de proteína" else "sem cálculo")
+                        }
                         TextButton(onClick = { editingId = if (editingId == row.id) null else row.id }) {
                             Text(if (editingId == row.id) "Fechar edição" else "Editar refeição")
                         }
                         if (editingId == row.id) {
                             if(nutrition!=null) key(row.id) { MealReview(day,catalog,vm,references,nutrition.items,state.busy,row,
                                 saved={editingId=null}) }
-                            if(nutrition!=null) Text("Edição manual abaixo substitui a análise; também permite marcar Sem refeição.")
+                            if(nutrition==null && !row.skippedMeal) key(row.id) { MealReview(day,catalog,vm,references,
+                                splitFoods(foods(row,"saudaveis")+","+foods(row,"ocasionais")).map {MealFood(it)},state.busy,row,
+                                saved={editingId=null},weighed=true) }
+                            if(nutrition!=null) Text("Salvar pelo registro simples abaixo remove os pesos e o cálculo nutricional. Para preservá-los, use a edição nutricional acima.")
                             MealForm(day, catalog, state.busy, vm, row)
                         }
                         TextButton(onClick = { deleting = row }) { Text("Remover refeição") }

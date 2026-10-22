@@ -6,6 +6,15 @@ import org.junit.Test
 class MealNutritionTest {
     private val catalog: List<MealReference> = mealJson.decodeFromString(javaClass.getResource("/nutrition_catalog.json")!!.readText())
     private val rice=MealFood("Arroz","169757",150.0,"high")
+    @Test fun weighedMealAndEdit() {
+        val items=listOf(rice,MealFood("Frango","171477",100.0))
+        val result=calculateMeal(items,catalog)
+        assertEquals(360.0,result.totals.kcal,0.01)
+        assertEquals(35.0,result.totals.protein,0.01)
+        assertTrue(photoMealDetails("Almoço",items,catalog,true).toString().contains("weighed"))
+        assertEquals(295.0,calculateMeal(listOf(rice.copy(grams=100.0),items[1]),catalog).totals.kcal,0.01)
+        assertEquals(150.0,rice.grams,0.01)
+    }
     @Test fun sourceAndCalculations() {
         assertEquals(24,catalog.size)
         assertTrue(catalog.all { it.name.isNotBlank() && it.sourceUrl.startsWith("https://fdc.nal.usda.gov/") })

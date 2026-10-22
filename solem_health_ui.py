@@ -22,6 +22,9 @@ def _save(client, day, time, kind, details, message, old=None, demo=False):
     if details.get("input_method") == "photo_reviewed":
         for key in list(st.session_state):
             if key.startswith(f"meal_photo_{day}"): del st.session_state[key]
+    if details.get("input_method") == "weighed" and old is None:
+        for key in list(st.session_state):
+            if key.startswith(f"weighed_meal_{day}_"): del st.session_state[key]
     st.rerun()
 
 def _delete(client, entry_id, demo):
@@ -57,6 +60,8 @@ def health_page(client, healthy_options, occasional_options, demo=False):
     with food_tab:
         from solem_meal_photo_ui import daily_metrics, nutrient_metrics, review_meal
         daily_metrics(consumed_meals)
+        with st.expander("Registrar alimentos com balança · calorias e proteínas", expanded=True):
+            review_meal(client, day, {"items": []}, _save, f"weighed_meal_{day}", demo=demo, weighed=True)
         st.caption("Adicione quantas refeições precisar no mesmo dia. A classificação é apenas para facilitar o registro.")
         meal_type = st.selectbox("Tipo de refeição", MEAL_TYPES, key="new_meal_type")
         skipped = st.checkbox("Sem refeição — não comi", key=f"meal_skipped_new_{day}_{meal_type}")
@@ -89,13 +94,28 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                     st.caption("Ocasionais: " + (", ".join(details.get("ocasionais", [])) or "—"))
                 if details.get("nutrition"):
                     from solem_meal_analysis import nutrition
-                    try: nutrient_metrics(nutrition(details["nutrition"]["items"]))
+                    try:
+                        nutrient_metrics(nutrition(details["nutrition"]["items"]))
+                        for item in details["nutrition"]["items"]:
+                            part = nutrition([item])
+                            value = f"{part['totals']['kcal']:.1f} kcal · {part['totals']['protein_g']:.1f} g de proteína" if part["complete"] else "sem cálculo"
+                            st.caption(f"{item['name']} · {item['grams']:g} g · {value}")
                     except (KeyError, ValueError, TypeError): st.warning("Confira os dados nutricionais desta refeição antes de editar.")
                     with st.expander("Editar alimentos e porções"):
                         review_meal(client, day, details["nutrition"], _save, f"meal_nutrition_{row['id']}", old=row, demo=demo)
+                else:
+                    if not details.get("sem_refeicao"):
+                        st.caption("Sem cálculo nutricional: este registro não tem pesos informados.")
+                    with st.expander("Adicionar pesos e calcular nutrição"):
+                        enable_weights = st.checkbox("Informar pesos deste registro", key=f"enable_weighed_{row['id']}",
+                                                     disabled=details.get("sem_refeicao") is True)
+                        if enable_weights and not details.get("sem_refeicao"):
+                            names = details.get("saudaveis", []) + details.get("ocasionais", [])
+                            review_meal(client, day, {"items": [{"name": name, "grams": 0} for name in names]},
+                                        _save, f"meal_weighed_{row['id']}", old=row, demo=demo, weighed=True)
                 with st.expander("Editar refeição"):
                     if details.get("nutrition"):
-                        st.caption("A edição manual abaixo substitui a análise nutricional. Para preservá-la, use Editar alimentos e porções acima.")
+                        st.caption("Salvar pelo registro simples abaixo remove os pesos e o cálculo nutricional desta refeição. Para preservá-los, use Editar alimentos e porções acima.")
                     previous_type = details.get("tipo_refeicao", "Outra")
                     types = MEAL_TYPES if previous_type in MEAL_TYPES else (*MEAL_TYPES, previous_type)
                     edit_type = st.selectbox("Tipo de refeição", types, index=types.index(previous_type),

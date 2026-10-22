@@ -39,10 +39,10 @@ def nutrition(items):
             "basis": "USDA FoodData Central / SR Legacy", "catalog_version": "sr-2018-solem-1"}
 
 
-def meal_details(meal_type, items):
+def meal_details(meal_type, items, weighed=False):
     result = nutrition(items)
     details = {"tipo_refeicao": meal_type, "saudaveis": [item["name"] for item in result["items"]],
-               "ocasionais": [], "nutrition": result, "input_method": "photo_reviewed"}
+               "ocasionais": [], "nutrition": result, "input_method": "weighed" if weighed else "photo_reviewed"}
     # Existing diary constraint is 4096 bytes; never enlarge it unnecessarily.
     if len(json.dumps(details, ensure_ascii=False).encode("utf-8")) > 3800:
         raise ValueError("Reduza a quantidade ou o tamanho dos nomes dos alimentos.")

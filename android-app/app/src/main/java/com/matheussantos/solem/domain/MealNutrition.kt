@@ -42,10 +42,10 @@ fun calculateMeal(items: List<MealFood>, catalog: List<MealReference>): MealEsti
     }
     return MealEstimate(checked,MealNutrients(decimal(kcal),decimal(protein),decimal(carbs),decimal(fat),decimal(fiber)),missing,missing==0)
 }
-fun photoMealDetails(kind: String, items: List<MealFood>, catalog: List<MealReference>): JsonObject {
+fun photoMealDetails(kind: String, items: List<MealFood>, catalog: List<MealReference>, weighed: Boolean = false): JsonObject {
     val estimate=calculateMeal(items,catalog)
     return buildJsonObject {
-        put("tipo_refeicao",kind); put("input_method","photo_reviewed")
+        put("tipo_refeicao",kind); put("input_method",if(weighed) "weighed" else "photo_reviewed")
         put("saudaveis",buildJsonArray { estimate.items.forEach { add(JsonPrimitive(it.name)) } })
         put("ocasionais",JsonArray(emptyList()))
         put("nutrition",mealJson.encodeToJsonElement(estimate))
