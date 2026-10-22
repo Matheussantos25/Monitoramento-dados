@@ -118,6 +118,7 @@ def settings_page():
         enabled = st.multiselect("Missões que aparecem no check-up", allowed,
                                  default=prefs["enabled"], format_func=lambda k: GOALS[k][0], key="journey_enabled")
         st.caption("Metas diárias. Você pode desativar uma missão sem perder os registros correspondentes.")
+        st.caption("O check-up mostra as missões ativadas aqui, com os valores que você salvar. O plano de treino tem metas próprias e não oculta nem substitui suas escolhas.")
         values = dict(prefs["targets"])
         columns = st.columns(2)
         for i, key in enumerate(allowed):

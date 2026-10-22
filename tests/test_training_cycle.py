@@ -86,7 +86,7 @@ def test_recovery_end_and_generic_accounts_do_not_receive_personal_cycle():
     assert not any(g["target"] == 24 for g in generic if g["id"] == "flexao")
 
 
-def test_checkup_and_calendar_share_new_targets_without_stacking_or_mutating_preferences():
+def test_checkup_uses_saved_targets_while_calendar_keeps_cycle_targets():
     from solem_journey import preferences
     settings = preferences(personal=True)
     original = deepcopy(settings)
@@ -94,9 +94,10 @@ def test_checkup_and_calendar_share_new_targets_without_stacking_or_mutating_pre
     rows = [record(1,day,"Flexão",24),record(2,day,"Agachamento",45)]
     goals = daily_checkup(rows,[],day,preferences=settings)
     physical = {g["id"]:g for g in goals if g["page"] == "Treino"}
-    assert set(physical) == {"flexao","agachamento"}
-    assert physical["flexao"]["target"] == 24 and physical["agachamento"]["target"] == 45
-    assert all(g["done"] for g in physical.values())
+    assert set(physical) == {"mewing","flexao","agachamento","cardio"}
+    assert physical["flexao"]["target"] == 100 and physical["agachamento"]["target"] == 100
+    assert physical["flexao"]["value"] == 24 and physical["agachamento"]["value"] == 45
+    assert not any(g["done"] for g in physical.values())
     result = workout_day(rows,day,settings,False,day)
     assert result["base_pct"] == 100 and result["plan_pct"] < 100
     assert len(result["events"]) == 2

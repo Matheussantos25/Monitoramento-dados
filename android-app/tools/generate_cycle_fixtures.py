@@ -6,8 +6,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT))
-from solem_training_cycle import START, END, cycle_day
-from solem_checkup import daily_checkup
+from solem_training_cycle import START, END, cycle_day, cycle_base_goals
 from tests.test_training_cycle import record, completed_week
 
 history=[record(i,START-timedelta(days=i),"Barra Fixa (Pronada)",15,3) for i in (1,2)]
@@ -27,7 +26,7 @@ for name,rows,day in [
     ("end",week2,END+timedelta(days=1)),
 ]:
     plan=cycle_day(rows,day)
-    base=[g for g in daily_checkup(rows,[],day) if g["page"]=="Treino"]
+    base=cycle_base_goals(rows,day)
     cases.append(dict(name=name,records=rows,day=str(day),expected=dict(
         active=plan["active"],stage=plan["stage"],week=plan["cycle_week"],held=plan["held"],
         percent=plan["percent"],recovery=plan["recovery"],completed=plan["completed"],

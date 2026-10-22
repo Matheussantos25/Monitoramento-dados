@@ -14,7 +14,7 @@ def training_plan_panel(records, today, preferences=None, generic=False, calenda
     plan = plan_day(records, today, enabled=not generic)
     a, b = st.columns(2)
     with a:
-        st.markdown("**Base do dia · incluída na sessão**" if plan.get("cycle") else "**Treino base · metas atuais**")
+        st.markdown("**Base do ciclo · incluída na sessão**" if plan.get("cycle") else "**Treino base · metas atuais**")
         value = stats["base_pct"]
         st.metric("Cumprimento base", "—" if value is None else f"{value}%")
         if value is not None: st.progress(value / 100)
@@ -23,15 +23,15 @@ def training_plan_panel(records, today, preferences=None, generic=False, calenda
         value = stats["plan_pct"]
         st.metric("Cumprimento do plano", "Recuperação" if plan["recovery"] else "—" if value is None else f"{value}%")
         if value is not None: st.progress(value / 100)
-    st.caption("Cada exercício tem o mesmo peso, limitado a 100%. Excesso de um não compensa outro. No ciclo, a base já faz parte da sessão completa: não some as antigas metas físicas.")
+    st.caption("Estes indicadores são do plano de treino; o check-up segue suas metas personalizadas. Os mesmos registros contam nos dois painéis: não some os volumes nem registre o mesmo treino duas vezes. No ciclo, a base já está incluída na sessão completa.")
     if not generic:
-        st.info("Ciclo de 22/10 a 18/11/2026: três sessões de força por semana, duas caminhadas e recuperação no fim de semana. Substitui as metas físicas nesse período; seu histórico e suas preferências ficam preservados.")
+        st.info("Ciclo de 22/10 a 18/11/2026: três sessões de força por semana, duas caminhadas e recuperação no fim de semana. O plano não altera as missões ativadas no check-up nem seu histórico.")
         if plan.get("cycle_week"):
             st.markdown(f"**Semana {plan['cycle_week']}/4 · {plan['phase']}**")
         if plan.get("held"):
             st.info("Etapa mantida: faltaram registros suficientes de conclusão na semana anterior. Não compense sessões perdidas acumulando volume.")
         if plan.get("completed"):
-            st.info("Ciclo encerrado. Revise seus resultados e recuperação antes de iniciar outro; as metas antigas não voltam automaticamente.")
+            st.info("Ciclo encerrado. Revise seus resultados e recuperação antes de iniciar outro. Suas metas personalizadas continuam no check-up.")
         st.markdown(f"#### Hoje · {plan['title']}")
         st.caption(f"{plan['duration']} · sessão total, incluindo a base." if plan.get("cycle") else f"{plan['duration']} · regra anterior ao ciclo.")
         if plan["recovery"]:
@@ -76,7 +76,7 @@ def training_plan_panel(records, today, preferences=None, generic=False, calenda
 
 def workout_calendar(records, today, preferences=None, generic=False):
     st.markdown("#### Calendário de treino")
-    st.caption("Somente exercícios. B = base do dia; P = sessão completa. No ciclo, B já faz parte de P. Datas anteriores mantêm a regra antiga. Alterar registros recalcula os percentuais.")
+    st.caption("Somente exercícios. Durante o ciclo, B = base do ciclo; P = sessão completa, que já inclui B. São metas do plano, não do check-up personalizado. Datas anteriores mantêm a regra antiga. Alterar registros recalcula os percentuais.")
     year_col, month_col = st.columns(2)
     with year_col: year = st.number_input("Ano do treino", 1900, 2200, today.year, key="workout_calendar_year")
     with month_col: month = st.selectbox("Mês do treino", range(1, 13), index=today.month - 1, key="workout_calendar_month")

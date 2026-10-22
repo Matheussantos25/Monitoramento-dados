@@ -68,6 +68,11 @@ def workout_day(records, day, preferences=None, generic=False, now=None):
     rows = workout_rows(records)
     base = [g for g in daily_checkup(rows, [], day, generic, preferences)
             if g["page"] == "Treino"]
+    from solem_training_cycle import START, cycle_base_goals
+    if not generic and day >= START:
+        # Calendar B remains the cycle's base, independent of personal checklist
+        # settings. Both views read the same sessions; neither creates extra reps.
+        base = cycle_base_goals(rows, day)
     future = day > now
     base_pct = floor(sum(min(1, max(0, g["value"]) / g["target"]) for g in base) / len(base) * 100 + 1e-7) if base and not future else None
     plan = plan_day(rows, day, enabled=not generic)
