@@ -37,7 +37,7 @@ data class DailyMission(val id: String, val title: String, val value: Double?, v
 
 /** Private health entries are never mixed with shared legacy nutrition records. */
 fun dailyMissions(records: List<TrainingRecord>, health: List<HealthEntry>, settings: DashboardPreferences,
-    generic: Boolean, healthAvailable: Boolean, day: LocalDate = today()): List<DailyMission> {
+    generic: Boolean, healthAvailable: Boolean, day: LocalDate = today(), definition: WeeklyPlanDefinition? = null): List<DailyMission> {
     val rows = records.distinctBy { it.id }.filter { it.data.take(10) == day.toString() }
     val workouts = rows.filter { it.isWorkout() }
     val study = rows.filter { it.group == "Estudos" }
@@ -49,7 +49,7 @@ fun dailyMissions(records: List<TrainingRecord>, health: List<HealthEntry>, sett
         if (volume.isFinite() && count.isFinite() && volume in 50.0..5000.0 && count in 1.0..50.0) volume * count else 0.0
     }
     val sleep = diary.firstOrNull { it.kind == "sleep" }?.number("duracao_min")?.takeIf { it.isFinite() && it in 1.0..960.0 }
-    return listOf(
+    val missions = listOf(
         DailyMission("water", "Hidratação", if (healthAvailable) water else null, settings.waterMl, "ml", 3),
         DailyMission("flexao", "Flexões", reps("Flexão"), settings.pushups, "rep", 1, "Flexão"),
         DailyMission("agachamento", "Agachamentos", reps("Agachamento"), settings.squats, "rep", 1, "Agachamento"),
@@ -61,6 +61,16 @@ fun dailyMissions(records: List<TrainingRecord>, health: List<HealthEntry>, sett
         DailyMission("mewing", "Mewing com borracha", reps("Mewing com borracha"), settings.mewing, "rep", 1, "Mewing com borracha"),
         DailyMission("sleep", "Sono registrado", if (healthAvailable) sleep ?: 0.0 else null, settings.sleepMinutes, "min", 3)
     ).filter { it.id !in settings.hidden && (!generic || fitnessMission(it.id)) }
+    val cycle = definition?.cycle
+    if(!generic && cycle != null && day >= LocalDate.parse(cycle.startsOn)) {
+        val base = trainingCycleDay(records,day,cycle).goals.filter {it.spec.baseId.isNotEmpty()}.map {
+            val id = if(it.spec.baseId == "cardio") "walk" else it.spec.baseId
+            DailyMission(id, when(id) {"flexao" -> "Flexões"; "agachamento" -> "Agachamentos"; else -> "Caminhada ou corrida"},
+                it.value,it.target,it.spec.unit,1,it.spec.exercise)
+        }
+        return missions.filter {it.destination != 1} + base
+    }
+    return missions
 }
 
 data class PromotionCheckpoint(val level: Int, val physicalTier: Int, val topicTiers:Map<String,Int> = emptyMap())

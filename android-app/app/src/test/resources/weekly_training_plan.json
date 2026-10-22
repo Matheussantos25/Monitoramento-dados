@@ -4,17 +4,341 @@
   "lookback_days": 28,
   "history_factor": 0.7,
   "exercises": {
-    "core": {"exercise": "Abdominal Levantada", "unit": "rep", "field": "repeticoes", "minimum": 12, "maximum": 30, "step": 2, "sets": 2, "rest_seconds": 90},
-    "plank": {"exercise": "Prancha", "unit": "seg", "field": "isometria_segundos", "minimum": 30, "maximum": 60, "step": 10, "sets": 2, "rest_seconds": 90},
-    "pull": {"exercise": "Barra Fixa (Pronada)", "unit": "rep", "field": "repeticoes", "minimum": 4, "maximum": 12, "step": 2, "sets": 2, "rest_seconds": 120}
+    "core": {
+      "exercise": "Abdominal Levantada",
+      "unit": "rep",
+      "field": "repeticoes",
+      "minimum": 12,
+      "maximum": 30,
+      "step": 2,
+      "sets": 2,
+      "rest_seconds": 90
+    },
+    "plank": {
+      "exercise": "Prancha",
+      "unit": "seg",
+      "field": "isometria_segundos",
+      "minimum": 30,
+      "maximum": 60,
+      "step": 10,
+      "sets": 2,
+      "rest_seconds": 90
+    },
+    "pull": {
+      "exercise": "Barra Fixa (Pronada)",
+      "unit": "rep",
+      "field": "repeticoes",
+      "minimum": 4,
+      "maximum": 12,
+      "step": 2,
+      "sets": 2,
+      "rest_seconds": 120
+    }
   },
   "days": [
-    {"title": "Core · controle", "exercises": ["core", "plank"], "minutes": "10–20 min"},
-    {"title": "Costas · técnica", "exercises": ["pull"], "minutes": "10–15 min"},
-    {"title": "Recuperação", "exercises": [], "minutes": "Sem volume extra"},
-    {"title": "Core · estabilidade", "exercises": ["core", "plank"], "minutes": "10–20 min"},
-    {"title": "Costas · controle", "exercises": ["pull"], "minutes": "10–15 min"},
-    {"title": "Core · consistência", "exercises": ["core", "plank"], "minutes": "10–20 min"},
-    {"title": "Recuperação", "exercises": [], "minutes": "Sem volume extra"}
-  ]
+    {
+      "title": "Core · controle",
+      "exercises": [
+        "core",
+        "plank"
+      ],
+      "minutes": "10–20 min"
+    },
+    {
+      "title": "Costas · técnica",
+      "exercises": [
+        "pull"
+      ],
+      "minutes": "10–15 min"
+    },
+    {
+      "title": "Recuperação",
+      "exercises": [],
+      "minutes": "Sem volume extra"
+    },
+    {
+      "title": "Core · estabilidade",
+      "exercises": [
+        "core",
+        "plank"
+      ],
+      "minutes": "10–20 min"
+    },
+    {
+      "title": "Costas · controle",
+      "exercises": [
+        "pull"
+      ],
+      "minutes": "10–15 min"
+    },
+    {
+      "title": "Core · consistência",
+      "exercises": [
+        "core",
+        "plank"
+      ],
+      "minutes": "10–20 min"
+    },
+    {
+      "title": "Recuperação",
+      "exercises": [],
+      "minutes": "Sem volume extra"
+    }
+  ],
+  "cycle": {
+    "starts_on": "2026-10-22",
+    "weeks": 4,
+    "labels": [
+      "Fundação · sessão controlada",
+      "Progressão · mais repetições",
+      "Construção · volume sustentado",
+      "Consolidação · reduzir fadiga"
+    ],
+    "days": [
+      {
+        "title": "Força A · corpo inteiro",
+        "exercises": [
+          "push",
+          "squat",
+          "bridge",
+          "row",
+          "core"
+        ],
+        "minutes": "55–75 min"
+      },
+      {
+        "title": "Caminhada · ritmo confortável",
+        "exercises": [
+          "walk"
+        ],
+        "minutes": "Conforme seu ritmo"
+      },
+      {
+        "title": "Força B · corpo inteiro",
+        "exercises": [
+          "push",
+          "squat",
+          "bridge",
+          "pull",
+          "plank"
+        ],
+        "minutes": "55–75 min"
+      },
+      {
+        "title": "Caminhada · ritmo confortável",
+        "exercises": [
+          "walk"
+        ],
+        "minutes": "Conforme seu ritmo"
+      },
+      {
+        "title": "Força C · corpo inteiro e core",
+        "exercises": [
+          "push",
+          "squat",
+          "bridge",
+          "row",
+          "core",
+          "plank"
+        ],
+        "minutes": "60–80 min"
+      },
+      {
+        "title": "Recuperação · movimento opcional",
+        "exercises": [],
+        "minutes": "Sem meta obrigatória"
+      },
+      {
+        "title": "Descanso",
+        "exercises": [],
+        "minutes": "Sem meta obrigatória"
+      }
+    ],
+    "exercises": {
+      "push": {
+        "exercise": "Flexão",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          4,
+          2
+        ],
+        "per_set": [
+          8,
+          9,
+          8,
+          8
+        ],
+        "rest_seconds": 120,
+        "minimum": 8,
+        "maximum": 8,
+        "history": false,
+        "base_id": "flexao",
+        "note": "Referência declarada: 3×10 controladas com 60 s de intervalo. Aqui há mais descanso; não some às antigas 100/dia."
+      },
+      "squat": {
+        "exercise": "Agachamento",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          15,
+          16,
+          18,
+          15
+        ],
+        "rest_seconds": 90,
+        "minimum": 15,
+        "maximum": 15,
+        "history": false,
+        "base_id": "agachamento",
+        "note": "Referência declarada: 20 seguidas. Se ficar muito fácil, peça orientação para ajustar resistência; não aumente carga e volume simultaneamente."
+      },
+      "bridge": {
+        "exercise": "Ponte de Glúteos",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          2,
+          2,
+          3,
+          2
+        ],
+        "per_set": [
+          10,
+          11,
+          10,
+          10
+        ],
+        "rest_seconds": 90,
+        "minimum": 10,
+        "maximum": 10,
+        "history": false,
+        "base_id": "",
+        "note": "Comece sem peso, com pés apoiados e elevando o quadril sem arquear a lombar. Ajuste a execução com o profissional da academia."
+      },
+      "row": {
+        "exercise": "Remada Baixa",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          8,
+          9,
+          10,
+          8
+        ],
+        "rest_seconds": 120,
+        "minimum": 6,
+        "maximum": 12,
+        "history": true,
+        "base_id": "",
+        "note": "Escolha resistência que permita terminar com cerca de 2–3 repetições possíveis. O app não estima carga segura em kg."
+      },
+      "pull": {
+        "exercise": "Barra Fixa (Pronada)",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          3,
+          4,
+          5,
+          3
+        ],
+        "rest_seconds": 150,
+        "minimum": 3,
+        "maximum": 5,
+        "history": true,
+        "base_id": "",
+        "note": "Sem pelo menos dois registros com séries válidas e margem para 3 repetições por série, o plano usa Remada Baixa. Não exige teste máximo."
+      },
+      "core": {
+        "exercise": "Abdominal Levantada",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          8,
+          9,
+          10,
+          8
+        ],
+        "rest_seconds": 90,
+        "minimum": 3,
+        "maximum": 12,
+        "history": true,
+        "base_id": "",
+        "note": "Elevação de pernas deitado. Reduza amplitude ou flexione os joelhos se necessário para manter controle da lombar."
+      },
+      "plank": {
+        "exercise": "Prancha",
+        "unit": "seg",
+        "field": "isometria_segundos",
+        "sets": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "per_set": [
+          20,
+          25,
+          30,
+          20
+        ],
+        "rest_seconds": 90,
+        "minimum": 10,
+        "maximum": 30,
+        "history": true,
+        "base_id": "",
+        "note": "Tempo por série, respirando normalmente. Pare quando não conseguir manter a posição."
+      },
+      "walk": {
+        "exercise": "Caminhada",
+        "unit": "km",
+        "field": "distancia_km",
+        "sets": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "per_set": [
+          5,
+          5,
+          5,
+          5
+        ],
+        "rest_seconds": 0,
+        "minimum": 5,
+        "maximum": 5,
+        "history": false,
+        "base_id": "cardio",
+        "note": "O deslocamento a pé para o trabalho já conta. Caminhada e corrida registradas contam, mas não é necessário correr ou fazer HIIT."
+      }
+    }
+  }
 }

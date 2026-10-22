@@ -49,6 +49,7 @@ WORKOUT_EXERCISE_PROFILES = {
     "Abdominal Levantada": "bodyweight", "Barra Fixa (Supinada)": "bodyweight",
     "Barra Fixa (Pronada)": "bodyweight", "Flexão": "bodyweight",
     "Agachamento": "bodyweight",
+    "Ponte de Glúteos": "bodyweight",
     "Puxada Alta": "resistance", "Remada Baixa": "resistance",
     "Remada em Pé na Polia": "resistance",
     "Remada em Pé na Polia com barra": "resistance",

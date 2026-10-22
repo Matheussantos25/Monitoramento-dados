@@ -1,0 +1,1767 @@
+[
+  {
+    "name": "first_strength",
+    "records": [],
+    "day": "2026-10-23",
+    "expected": {
+      "active": true,
+      "stage": 1,
+      "week": 1,
+      "held": false,
+      "percent": 0,
+      "recovery": false,
+      "completed": false,
+      "goals": [
+        {
+          "exercise": "Flexão",
+          "target": 24,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 45,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Ponte de Glúteos",
+          "target": 20,
+          "sets": 2,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Remada Baixa",
+          "target": 24,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Abdominal Levantada",
+          "target": 24,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Prancha",
+          "target": 40,
+          "sets": 2,
+          "value": 0,
+          "unit": "seg"
+        }
+      ],
+      "base": [
+        {
+          "exercise": "Flexão",
+          "target": 24,
+          "value": 0
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 45,
+          "value": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "walk",
+    "records": [
+      {
+        "id": 1,
+        "data": "2026-10-22",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 3,
+        "distancia_km": 2,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 2,
+        "data": "2026-10-22",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Corrida",
+        "repeticoes": 0,
+        "series": 3,
+        "distancia_km": 3,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      }
+    ],
+    "day": "2026-10-22",
+    "expected": {
+      "active": true,
+      "stage": 1,
+      "week": 1,
+      "held": false,
+      "percent": 100,
+      "recovery": false,
+      "completed": false,
+      "goals": [
+        {
+          "exercise": "Caminhada",
+          "target": 5,
+          "sets": 1,
+          "value": 5.0,
+          "unit": "km"
+        }
+      ],
+      "base": [
+        {
+          "exercise": "Caminhada",
+          "target": 5,
+          "value": 5.0
+        }
+      ]
+    }
+  },
+  {
+    "name": "rest",
+    "records": [],
+    "day": "2026-10-24",
+    "expected": {
+      "active": true,
+      "stage": 1,
+      "week": 1,
+      "held": false,
+      "percent": null,
+      "recovery": true,
+      "completed": false,
+      "goals": [],
+      "base": []
+    }
+  },
+  {
+    "name": "pull_fallback",
+    "records": [],
+    "day": "2026-10-28",
+    "expected": {
+      "active": true,
+      "stage": 1,
+      "week": 1,
+      "held": false,
+      "percent": 0,
+      "recovery": false,
+      "completed": false,
+      "goals": [
+        {
+          "exercise": "Flexão",
+          "target": 24,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 45,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Ponte de Glúteos",
+          "target": 20,
+          "sets": 2,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Remada Baixa",
+          "target": 24,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Prancha",
+          "target": 40,
+          "sets": 2,
+          "value": 0,
+          "unit": "seg"
+        }
+      ],
+      "base": [
+        {
+          "exercise": "Flexão",
+          "target": 24,
+          "value": 0
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 45,
+          "value": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "pull_history",
+    "records": [
+      {
+        "id": 1,
+        "data": "2026-10-21",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Barra Fixa (Pronada)",
+        "repeticoes": 15,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 2,
+        "data": "2026-10-20",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Barra Fixa (Pronada)",
+        "repeticoes": 15,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      }
+    ],
+    "day": "2026-10-28",
+    "expected": {
+      "active": true,
+      "stage": 1,
+      "week": 1,
+      "held": false,
+      "percent": 0,
+      "recovery": false,
+      "completed": false,
+      "goals": [
+        {
+          "exercise": "Flexão",
+          "target": 24,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 45,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Ponte de Glúteos",
+          "target": 20,
+          "sets": 2,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Barra Fixa (Pronada)",
+          "target": 12,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Prancha",
+          "target": 40,
+          "sets": 2,
+          "value": 0,
+          "unit": "seg"
+        }
+      ],
+      "base": [
+        {
+          "exercise": "Flexão",
+          "target": 24,
+          "value": 0
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 45,
+          "value": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "week2_held",
+    "records": [],
+    "day": "2026-10-30",
+    "expected": {
+      "active": true,
+      "stage": 1,
+      "week": 2,
+      "held": true,
+      "percent": 0,
+      "recovery": false,
+      "completed": false,
+      "goals": [
+        {
+          "exercise": "Flexão",
+          "target": 24,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 45,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Ponte de Glúteos",
+          "target": 20,
+          "sets": 2,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Remada Baixa",
+          "target": 24,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Abdominal Levantada",
+          "target": 24,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Prancha",
+          "target": 40,
+          "sets": 2,
+          "value": 0,
+          "unit": "seg"
+        }
+      ],
+      "base": [
+        {
+          "exercise": "Flexão",
+          "target": 24,
+          "value": 0
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 45,
+          "value": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "week2_advanced",
+    "records": [
+      {
+        "id": 1,
+        "data": "2026-10-22",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 1,
+        "distancia_km": 5,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 2,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 3,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 45,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 4,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 20,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 5,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 6,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Abdominal Levantada",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 7,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Prancha",
+        "repeticoes": 0,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 40
+        }
+      },
+      {
+        "id": 8,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 9,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 45,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 10,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 20,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 11,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 12,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Abdominal Levantada",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 13,
+        "data": "2026-10-27",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 1,
+        "distancia_km": 5,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 14,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 15,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 45,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 16,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 20,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 17,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 18,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Prancha",
+        "repeticoes": 0,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 40
+        }
+      }
+    ],
+    "day": "2026-10-30",
+    "expected": {
+      "active": true,
+      "stage": 2,
+      "week": 2,
+      "held": false,
+      "percent": 0,
+      "recovery": false,
+      "completed": false,
+      "goals": [
+        {
+          "exercise": "Flexão",
+          "target": 27,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 48,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Ponte de Glúteos",
+          "target": 22,
+          "sets": 2,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Remada Baixa",
+          "target": 27,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Abdominal Levantada",
+          "target": 27,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Prancha",
+          "target": 50,
+          "sets": 2,
+          "value": 0,
+          "unit": "seg"
+        }
+      ],
+      "base": [
+        {
+          "exercise": "Flexão",
+          "target": 27,
+          "value": 0
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 48,
+          "value": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "week3_advanced",
+    "records": [
+      {
+        "id": 1,
+        "data": "2026-10-22",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 1,
+        "distancia_km": 5,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 2,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 3,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 45,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 4,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 20,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 5,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 6,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Abdominal Levantada",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 7,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Prancha",
+        "repeticoes": 0,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 40
+        }
+      },
+      {
+        "id": 8,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 9,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 45,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 10,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 20,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 11,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 12,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Abdominal Levantada",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 13,
+        "data": "2026-10-27",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 1,
+        "distancia_km": 5,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 14,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 15,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 45,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 16,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 20,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 17,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 18,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Prancha",
+        "repeticoes": 0,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 40
+        }
+      },
+      {
+        "id": 19,
+        "data": "2026-10-29",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 1,
+        "distancia_km": 5,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 20,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 21,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 48,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 22,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 22,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 23,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 24,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Abdominal Levantada",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 25,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Prancha",
+        "repeticoes": 0,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 50
+        }
+      },
+      {
+        "id": 26,
+        "data": "2026-11-02",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 27,
+        "data": "2026-11-02",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 48,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 28,
+        "data": "2026-11-02",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 22,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 29,
+        "data": "2026-11-02",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 30,
+        "data": "2026-11-02",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Abdominal Levantada",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 31,
+        "data": "2026-11-03",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 1,
+        "distancia_km": 5,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 32,
+        "data": "2026-11-04",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 33,
+        "data": "2026-11-04",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 48,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 34,
+        "data": "2026-11-04",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 22,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 35,
+        "data": "2026-11-04",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 36,
+        "data": "2026-11-04",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Prancha",
+        "repeticoes": 0,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 50
+        }
+      }
+    ],
+    "day": "2026-11-06",
+    "expected": {
+      "active": true,
+      "stage": 3,
+      "week": 3,
+      "held": false,
+      "percent": 0,
+      "recovery": false,
+      "completed": false,
+      "goals": [
+        {
+          "exercise": "Flexão",
+          "target": 32,
+          "sets": 4,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 54,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Ponte de Glúteos",
+          "target": 30,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Remada Baixa",
+          "target": 30,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Abdominal Levantada",
+          "target": 30,
+          "sets": 3,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Prancha",
+          "target": 60,
+          "sets": 2,
+          "value": 0,
+          "unit": "seg"
+        }
+      ],
+      "base": [
+        {
+          "exercise": "Flexão",
+          "target": 32,
+          "value": 0
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 54,
+          "value": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "deload",
+    "records": [],
+    "day": "2026-11-13",
+    "expected": {
+      "active": true,
+      "stage": 4,
+      "week": 4,
+      "held": false,
+      "percent": 0,
+      "recovery": false,
+      "completed": false,
+      "goals": [
+        {
+          "exercise": "Flexão",
+          "target": 16,
+          "sets": 2,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 30,
+          "sets": 2,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Ponte de Glúteos",
+          "target": 20,
+          "sets": 2,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Remada Baixa",
+          "target": 16,
+          "sets": 2,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Abdominal Levantada",
+          "target": 16,
+          "sets": 2,
+          "value": 0,
+          "unit": "rep"
+        },
+        {
+          "exercise": "Prancha",
+          "target": 40,
+          "sets": 2,
+          "value": 0,
+          "unit": "seg"
+        }
+      ],
+      "base": [
+        {
+          "exercise": "Flexão",
+          "target": 16,
+          "value": 0
+        },
+        {
+          "exercise": "Agachamento",
+          "target": 30,
+          "value": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "end",
+    "records": [
+      {
+        "id": 1,
+        "data": "2026-10-22",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 1,
+        "distancia_km": 5,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 2,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 3,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 45,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 4,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 20,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 5,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 6,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Abdominal Levantada",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 7,
+        "data": "2026-10-23",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Prancha",
+        "repeticoes": 0,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 40
+        }
+      },
+      {
+        "id": 8,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 9,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 45,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 10,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 20,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 11,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 12,
+        "data": "2026-10-26",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Abdominal Levantada",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 13,
+        "data": "2026-10-27",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 1,
+        "distancia_km": 5,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 14,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 15,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 45,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 16,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 20,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 17,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 24,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 18,
+        "data": "2026-10-28",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Prancha",
+        "repeticoes": 0,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 40
+        }
+      },
+      {
+        "id": 19,
+        "data": "2026-10-29",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 1,
+        "distancia_km": 5,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 20,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 21,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 48,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 22,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 22,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 23,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 24,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Abdominal Levantada",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 25,
+        "data": "2026-10-30",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Prancha",
+        "repeticoes": 0,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 50
+        }
+      },
+      {
+        "id": 26,
+        "data": "2026-11-02",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 27,
+        "data": "2026-11-02",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 48,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 28,
+        "data": "2026-11-02",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 22,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 29,
+        "data": "2026-11-02",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 30,
+        "data": "2026-11-02",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Abdominal Levantada",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 31,
+        "data": "2026-11-03",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Caminhada",
+        "repeticoes": 0,
+        "series": 1,
+        "distancia_km": 5,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 32,
+        "data": "2026-11-04",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Flexão",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 33,
+        "data": "2026-11-04",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Agachamento",
+        "repeticoes": 48,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 34,
+        "data": "2026-11-04",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Ponte de Glúteos",
+        "repeticoes": 22,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 35,
+        "data": "2026-11-04",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Remada Baixa",
+        "repeticoes": 27,
+        "series": 3,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 0
+        }
+      },
+      {
+        "id": 36,
+        "data": "2026-11-04",
+        "horario": "08:00:00",
+        "grupo_muscular": "Treino",
+        "exercicio": "Prancha",
+        "repeticoes": 0,
+        "series": 2,
+        "distancia_km": 0,
+        "dados_extras": {
+          "isometria_segundos": 50
+        }
+      }
+    ],
+    "day": "2026-11-19",
+    "expected": {
+      "active": false,
+      "stage": 0,
+      "week": 0,
+      "held": false,
+      "percent": null,
+      "recovery": false,
+      "completed": true,
+      "goals": [],
+      "base": []
+    }
+  }
+]

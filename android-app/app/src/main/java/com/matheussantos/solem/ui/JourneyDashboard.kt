@@ -61,7 +61,8 @@ private fun missionIcon(id: String): ImageVector = when(id) {
     val settings = LocalDashboardPreferences.current
     val day = today()
     val p = calculateProgress(rows)
-    val missions = dailyMissions(rows, health, settings, generic, healthAvailable).map {
+    val definition = rememberWeeklyDefinition()
+    val missions = dailyMissions(rows, health, settings, generic, healthAvailable, definition=definition).map {
         if(!activityAvailable && it.destination != 3) it.copy(value=null) else it
     }
     val done = missions.count { it.complete }

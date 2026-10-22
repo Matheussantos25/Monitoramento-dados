@@ -71,5 +71,9 @@ def daily_checkup(records, private_entries, day, generic=False, preferences=None
         ]
         goals = [{**g, "target": preferences["targets"][g["id"]]}
                  for g in goals if g["id"] in preferences["enabled"]]
+    from solem_training_cycle import START, cycle_base_goals
+    if not generic and day >= START:
+        # Replace, never stack the old daily physical quotas on the new cycle.
+        goals = [g for g in goals if g["page"] != "Treino"] + cycle_base_goals(records, day)
     return [{**goal, "done": goal["value"] is not None and goal["value"] >= goal["target"]}
             for goal in goals if not generic or goal["id"] in ("water", "flexao", "agachamento", "cardio")]

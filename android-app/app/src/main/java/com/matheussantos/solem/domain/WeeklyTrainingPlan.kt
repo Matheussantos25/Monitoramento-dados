@@ -10,23 +10,26 @@ import kotlin.math.floor
     val version: Int, @SerialName("starts_on") val startsOn: String,
     @SerialName("lookback_days") val lookbackDays: Int,
     @SerialName("history_factor") val historyFactor: Double,
-    val exercises: Map<String, PlanExercise>, val days: List<PlanWeekday>
+    val exercises: Map<String, PlanExercise>, val days: List<PlanWeekday>, val cycle: TrainingCycleDefinition? = null
 )
 @Serializable data class PlanExercise(val exercise: String, val unit: String, val field: String,
     val minimum: Int, val maximum: Int, val step: Int, val sets: Int,
-    @SerialName("rest_seconds") val restSeconds: Int)
+    @SerialName("rest_seconds") val restSeconds: Int, val note: String = "", val baseId: String = "")
 @Serializable data class PlanWeekday(val title: String, val exercises: List<String>, val minutes: String)
 data class PlanGoal(val spec: PlanExercise, val target: Int, val value: Double, val historyDays: Int) {
     val fraction get() = (value / target).coerceIn(0.0, 1.0)
 }
 data class WorkoutPlanDay(val date: LocalDate, val title: String, val duration: String,
-    val goals: List<PlanGoal>, val active: Boolean) {
+    val goals: List<PlanGoal>, val active: Boolean, val cycle: Boolean = false,
+    val cycleWeek: Int = 0, val stage: Int = 0, val phase: String = "", val held: Boolean = false,
+    val completed: Boolean = false) {
     val recovery get() = active && goals.isEmpty()
     val percent: Int? get() = if(goals.isEmpty()) null else floor(goals.map {it.fraction}.average()*100 + 1e-7).toInt()
 }
 
 fun weeklyPlanDay(records: List<TrainingRecord>, day: LocalDate, definition: WeeklyPlanDefinition,
     enabled: Boolean = true): WorkoutPlanDay {
+    definition.cycle?.let { if(enabled && day >= LocalDate.parse(it.startsOn)) return trainingCycleDay(records, day, it) }
     val weekday = definition.days[day.dayOfWeek.value - 1]
     val monday = day.minusDays((day.dayOfWeek.value - 1).toLong())
     val active = enabled && day >= LocalDate.parse(definition.startsOn)
@@ -52,7 +55,7 @@ fun weeklyPlanDay(records: List<TrainingRecord>, day: LocalDate, definition: Wee
 }
 
 fun baseWorkoutPercent(rows: List<TrainingRecord>, day: LocalDate, settings: DashboardPreferences,
-    generic: Boolean): Int? {
-    val missions = dailyMissions(rows, emptyList(), settings, generic, false, day).filter {it.destination == 1}
+    generic: Boolean, definition: WeeklyPlanDefinition? = null): Int? {
+    val missions = dailyMissions(rows, emptyList(), settings, generic, false, day, definition).filter {it.destination == 1}
     return if(missions.isEmpty()) null else floor(missions.map {it.fraction.toDouble()}.average()*100 + 1e-5).toInt()
 }

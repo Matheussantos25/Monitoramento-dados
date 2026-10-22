@@ -4,36 +4,49 @@ from datetime import date, timedelta
 import streamlit as st
 from solem_training_plan import plan_day, workout_day
 import solem_journal_component
+from solem_training_cycle import START, CYCLE, clean_rows, goals_at
 
 
 def training_plan_panel(records, today, preferences=None, generic=False, calendar=True):
     from solem_ui import navigate_checkup
-    st.subheader("Seu treino, em duas frentes")
+    st.subheader("Seu ciclo de treino" if not generic else "Seu treino")
     stats = workout_day(records, today, preferences, generic, today)
     plan = plan_day(records, today, enabled=not generic)
     a, b = st.columns(2)
     with a:
-        st.markdown("**Treino base · metas atuais**")
+        st.markdown("**Base do dia · incluída na sessão**" if plan.get("cycle") else "**Treino base · metas atuais**")
         value = stats["base_pct"]
         st.metric("Cumprimento base", "—" if value is None else f"{value}%")
         if value is not None: st.progress(value / 100)
     with b:
-        st.markdown("**Plano complementar · core e costas**")
+        st.markdown("**Sessão completa · corpo inteiro**" if plan.get("cycle") else "**Plano complementar · core e costas**")
         value = stats["plan_pct"]
         st.metric("Cumprimento do plano", "Recuperação" if plan["recovery"] else "—" if value is None else f"{value}%")
         if value is not None: st.progress(value / 100)
-    st.caption("Cada exercício tem o mesmo peso no percentual, limitado a 100%. Fazer mais de um não compensa deixar outro sem fazer. As metas base não foram alteradas.")
+    st.caption("Cada exercício tem o mesmo peso, limitado a 100%. Excesso de um não compensa outro. No ciclo, a base já faz parte da sessão completa: não some as antigas metas físicas.")
     if not generic:
+        st.info("Ciclo de 22/10 a 18/11/2026: três sessões de força por semana, duas caminhadas e recuperação no fim de semana. Substitui as metas físicas nesse período; seu histórico e suas preferências ficam preservados.")
+        if plan.get("cycle_week"):
+            st.markdown(f"**Semana {plan['cycle_week']}/4 · {plan['phase']}**")
+        if plan.get("held"):
+            st.info("Etapa mantida: faltaram registros suficientes de conclusão na semana anterior. Não compense sessões perdidas acumulando volume.")
+        if plan.get("completed"):
+            st.info("Ciclo encerrado. Revise seus resultados e recuperação antes de iniciar outro; as metas antigas não voltam automaticamente.")
         st.markdown(f"#### Hoje · {plan['title']}")
-        st.caption(f"{plan['duration']} extras, não duas horas obrigatórias. Sem carga adicional sugerida.")
+        st.caption(f"{plan['duration']} · sessão total, incluindo a base." if plan.get("cycle") else f"{plan['duration']} · regra anterior ao ciclo.")
         if plan["recovery"]:
-            st.info("Hoje o plano não pede esforço extra. Recuperação não é falha, nem vira 100% automaticamente. Ajuste também suas metas base se estiver cansado.")
+            st.info("Recuperação: sem treino obrigatório do ciclo hoje. Não é falha nem vira 100% automaticamente." if plan.get("cycle") else "Recuperação do plano anterior. O novo ciclo começa em 22/10.")
         for goal in plan["goals"]:
             with st.container(border=True):
                 st.markdown(f"**{goal['exercise']}** · {goal['value']:g} / {goal['target']:g} {goal['unit']}")
                 st.progress(goal["fraction"])
-                st.caption(f"Sugestão: {goal['sets']} séries de {goal['target'] / goal['sets']:g} {goal['unit']} · descanso {goal['rest_seconds']} s. Registre o total realizado, não a meta planejada.")
-                st.caption(f"Referência: {goal['history_days']} dias com essa medida nas 4 semanas anteriores." if goal["history_days"] >= 2 else "Pouco histórico recente dessa medida: ponto de partida conservador, não teste de capacidade máxima.")
+                st.caption("Distância total do dia; o deslocamento para o trabalho já conta." if goal["unit"] == "km" else f"Sugestão: {goal['sets']} séries de {goal['target'] / goal['sets']:g} {goal['unit']} · descanso {goal['rest_seconds']} s. Registre o total realizado e a quantidade real de séries.")
+                if plan.get("cycle"):
+                    st.caption(goal["note"])
+                    if goal.get("fallback"): st.caption("Sem referência suficiente por série na barra: remada como alternativa.")
+                    if goal["history"]: st.caption(f"{goal['history_days']} registros com séries válidas anteriores ao ciclo. Sem pelo menos dois, usamos o ponto de partida conservador.")
+                else:
+                    st.caption(f"Referência: {goal['history_days']} dias com essa medida nas 4 semanas anteriores.")
                 st.button("Registrar " + goal["exercise"], key=f"plan_register_{goal['id']}",
                           on_click=navigate_checkup, args=("Treino", goal["exercise"]), use_container_width=True)
         with st.expander("Ver semana e como o plano funciona"):
@@ -41,9 +54,21 @@ def training_plan_panel(records, today, preferences=None, generic=False, calenda
                 item = plan_day(records, plan["week"] + timedelta(days=index))
                 description = " · ".join(f"{g['exercise']}: {g['target']:g} {g['unit']}" for g in item["goals"]) or "Sem volume extra"
                 st.markdown(f"**{label} · {item['title']}** — {description}")
-            st.caption("Metas calculadas com 70% da mediana diária registrada nas 4 semanas anteriores à segunda-feira, dentro de limites conservadores. Essa é uma regra de organização do app, não uma fórmula clínica validada nem uma prescrição da ACSM. Não sobem durante a semana. Você pode fazer menos ou descansar conforme a recuperação.")
+            st.caption("No novo ciclo, flexão e agachamento partem da capacidade que você relatou. Nos demais, usamos registros com 2–8 séries anteriores ao ciclo: 80% da mediana por série, com limites conservadores. Sem referência suficiente na barra, usamos remada. Essa é uma heurística do app, não uma avaliação clínica. As metas não sobem com os registros da própria semana.")
             st.warning("Seu histórico não mede técnica, recuperação, gordura corporal ou carga máxima segura. Pare antes da falha técnica (deixe cerca de 2–3 repetições possíveis); interrompa com dor, tontura ou falta de ar incomum. Sem barra disponível, não improvise suporte: pule o exercício e ajuste com um profissional. Descanso é permitido, inclusive nas metas base.")
             st.caption("Fortalecer o abdômen não remove gordura localizada nem garante definição em um prazo. Alimentação, sono e recuperação também importam. Referência: ACSM 2026 · https://acsm.org/resistance-training-guidelines-update-2026/")
+        with st.expander("Ver as 4 semanas · progressão planejada", expanded=today < START):
+            st.caption("Prévia se houver progressão. Para avançar, são necessárias pelo menos 2 sessões de força com 80% de cada exercício na semana anterior. Isso mede registros, não técnica ou recuperação: reduza ou descanse se necessário. A semana 4 sempre reduz o volume. Faça 5–10 minutos de aquecimento leve e séries fáceis antes da força.")
+            preview = st.selectbox("Semana do ciclo", range(4), format_func=lambda i: f"{i+1} · {CYCLE['labels'][i]}", key="cycle_preview_week")
+            first = START + timedelta(days=preview * 7)
+            st.caption(f"{first:%d/%m} a {first + timedelta(days=6):%d/%m} · descanso de 90–150 s entre séries; deixe 2–3 repetições possíveis.")
+            rows = clean_rows(records)
+            for offset in range(7):
+                when = first + timedelta(days=offset)
+                goals = goals_at(rows, when, preview)
+                title = CYCLE["days"][when.weekday()]["title"]
+                details = " · ".join(f"{g['exercise']}: {g['sets']}×{g['per_set']:g} {g['unit']}" for g in goals) or "Sem meta obrigatória"
+                st.markdown(f"**{when:%d/%m} · {title}** — {details}")
     if calendar:
         with st.expander("Abrir calendário · somente treinos", expanded=False):
             workout_calendar(records, today, preferences, generic)
@@ -51,7 +76,7 @@ def training_plan_panel(records, today, preferences=None, generic=False, calenda
 
 def workout_calendar(records, today, preferences=None, generic=False):
     st.markdown("#### Calendário de treino")
-    st.caption("Somente exercícios. B = metas base atuais; P = plano daquela semana. Alterar registros antigos recalcula os percentuais. Dias anteriores ao início do plano não recebem uma meta retroativa.")
+    st.caption("Somente exercícios. B = base do dia; P = sessão completa. No ciclo, B já faz parte de P. Datas anteriores mantêm a regra antiga. Alterar registros recalcula os percentuais.")
     year_col, month_col = st.columns(2)
     with year_col: year = st.number_input("Ano do treino", 1900, 2200, today.year, key="workout_calendar_year")
     with month_col: month = st.selectbox("Mês do treino", range(1, 13), index=today.month - 1, key="workout_calendar_month")

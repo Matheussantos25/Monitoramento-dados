@@ -1,7 +1,8 @@
-"""Read-only complementary plan. No writes, invented workouts or inferred 1RM.
+"""Read-only, versioned plans. No writes, invented workouts or inferred 1RM.
 
 Targets use only the 28 days BEFORE the selected week's Monday. Current-week
-workouts never move the goalposts. The JSON is also bundled unchanged in Android.
+workouts never move the legacy goalposts. From 22/10 the four-week cycle uses a
+fixed pre-cycle baseline instead. The JSON is bundled unchanged in Android.
 """
 import json
 from datetime import date, timedelta
@@ -33,6 +34,9 @@ def _value(row, field):
 
 
 def plan_day(records, day, enabled=True):
+    from solem_training_cycle import START, cycle_day
+    if enabled and day >= START:
+        return cycle_day(records, day)
     weekday = PLAN["days"][day.weekday()]
     week = day - timedelta(days=day.weekday())
     rows = workout_rows(records)

@@ -20,7 +20,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-@Composable private fun rememberWeeklyDefinition(): WeeklyPlanDefinition {
+@Composable internal fun rememberWeeklyDefinition(): WeeklyPlanDefinition {
     val context = LocalContext.current
     return remember { Json.decodeFromString<WeeklyPlanDefinition>(context.assets.open("weekly_training_plan.json").bufferedReader().use {it.readText()}) }
 }
@@ -29,14 +29,14 @@ import java.util.Locale
     day: LocalDate = today()) {
     val definition = rememberWeeklyDefinition()
     val plan = weeklyPlanDay(rows, day, definition, !generic)
-    val base = if(available) baseWorkoutPercent(rows, day, LocalDashboardPreferences.current, generic) else null
+    val base = if(available) baseWorkoutPercent(rows, day, LocalDashboardPreferences.current, generic, definition) else null
     val extra = if(available) plan.percent else null
-    Panel("Treino · duas frentes") {
+    Panel(if(plan.cycle) "Ciclo de 4 semanas" else "Treino · duas frentes") {
         Text("Treino base · ${base?.let {"$it%"} ?: "—"}",style=MaterialTheme.typography.titleMedium)
         LinearProgressIndicator(progress={(base ?: 0)/100f},modifier=Modifier.fillMaxWidth(),drawStopIndicator={})
-        Text("Plano complementar · ${if(!available) "Aguardando dados" else if(plan.recovery) "Recuperação" else extra?.let {"$it%"} ?: "Sem plano"}",style=MaterialTheme.typography.titleMedium)
+        Text("${if(plan.cycle) "Sessão completa" else "Plano complementar"} · ${if(!available) "Aguardando dados" else if(plan.recovery) "Recuperação" else extra?.let {"$it%"} ?: "Sem plano"}",style=MaterialTheme.typography.titleMedium)
         if(extra != null) LinearProgressIndicator(progress={extra/100f},modifier=Modifier.fillMaxWidth(),drawStopIndicator={})
-        Text("Metas base preservadas. Os percentuais são separados; excesso de um exercício não compensa outro.",style=MaterialTheme.typography.bodySmall)
+        Text(if(plan.cycle) "A base está incluída na sessão completa. Não some as metas antigas. Histórico e preferências preservados." else "Metas base preservadas. Os percentuais são separados; excesso de um exercício não compensa outro.",style=MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -47,27 +47,51 @@ import java.util.Locale
     var monthText by rememberSaveable {mutableStateOf(YearMonth.from(today()).toString())}
     var selectedText by rememberSaveable {mutableStateOf(today().toString())}
     var showWeek by rememberSaveable {mutableStateOf(false)}
+    var previewWeek by rememberSaveable {mutableStateOf(0)}
+    var showCycle by rememberSaveable {mutableStateOf(false)}
     val day = LocalDate.parse(selectedText)
     val month = YearMonth.parse(monthText)
     val plan = weeklyPlanDay(rows, day, definition, !generic)
     val future = day > today()
     Page("Plano e calendário de treino") {
-        Text("Core e costas, sem aumentar as metas fixas. Sugestão conservadora; o histórico não mede sua capacidade máxima.")
+        Text("Força de corpo inteiro às segundas, quartas e sextas; caminhada às terças e quintas; recuperação no fim de semana. O histórico não mede capacidade máxima.")
+        if(!generic) definition.cycle?.let {cycle ->
+            val start = LocalDate.parse(cycle.startsOn)
+            Text("Ciclo: 22/10 a 18/11/2026 · substitui as metas físicas nesse período; não apaga registros.")
+            if(day < start) Button({selectedText=start.toString();monthText=YearMonth.from(start).toString()}) {Text("Ver início do novo ciclo")}
+            if(plan.cycleWeek > 0) Text("Semana ${plan.cycleWeek}/4 · ${plan.phase}",style=MaterialTheme.typography.titleMedium)
+            if(plan.held) Text("Etapa mantida: faltaram registros suficientes de conclusão na semana anterior. Não tente compensar sessões perdidas.")
+            Text("Semanas 1–3: progressão gradual. Semana 4: menos volume para recuperar. O app só avança com pelo menos 2 sessões de força a 80% de cada exercício na semana anterior. Isso mede registro, não recuperação: reduza ou descanse se houver fadiga ou perda de técnica.",style=MaterialTheme.typography.bodySmall)
+            TextButton({showCycle=!showCycle}) {Text(if(showCycle) "Ocultar ciclo" else "Ver as 4 semanas · progressão planejada")}
+            if(showCycle) {
+                Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                    repeat(4) {n -> FilterChip(selected=previewWeek==n,onClick={previewWeek=n},label={Text("${n+1}")})}
+                }
+                Text(cycle.labels[previewWeek],style=MaterialTheme.typography.titleMedium)
+                Text("Prévia se houver progressão. Faça 5–10 minutos de aquecimento leve e séries fáceis antes da força.",style=MaterialTheme.typography.bodySmall)
+                repeat(7) {offset ->
+                    val date=start.plusDays(previewWeek*7L+offset)
+                    val item=trainingCycleDay(rows,date,cycle,previewStage=previewWeek)
+                    Text(date.format(DateTimeFormatter.ofPattern("dd/MM"))+" · "+item.title,style=MaterialTheme.typography.titleSmall)
+                    Text(item.goals.joinToString(" · ") {"${it.spec.exercise}: ${it.spec.sets}×${it.target/it.spec.sets} ${it.spec.unit}"}.ifBlank {"Sem meta obrigatória"},style=MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
         if(!available) Text("Aguardando o histórico. Não mostramos zero como se fosse seu resultado.")
         TextButton({selectedText=today().toString();monthText=YearMonth.from(today()).toString()}) {Text("Voltar para hoje")}
         Text(day.format(DateTimeFormatter.ofPattern("EEEE, dd/MM/yyyy",Locale.forLanguageTag("pt-BR"))),style=MaterialTheme.typography.titleLarge)
         if(!future) WorkoutProgressBars(rows,generic,available,day)
         if(!generic) {
             Text(plan.title,style=MaterialTheme.typography.titleLarge)
-            Text(plan.duration + " extras · não duas horas obrigatórias")
-            if(plan.recovery) Text("Sem volume extra hoje. Recuperação não é falha nem vira 100% automaticamente. Ajuste também as metas base se estiver cansado.")
-            if(!plan.active) Text("O plano começa em ${definition.startsOn}. Não aplicamos metas extras retroativas.")
+            Text(plan.duration + if(plan.cycle) " · sessão total, incluindo a base" else " extras")
+            if(plan.recovery) Text("Recuperação: sem treino obrigatório do ciclo hoje. Não é falha nem vira 100% automaticamente.")
+            if(!plan.active) Text(if(plan.completed) "Ciclo encerrado. Revise a recuperação e os resultados antes de iniciar outro; as metas antigas não voltam automaticamente." else "O plano começa em ${definition.startsOn}. Não aplicamos metas extras retroativas.")
             plan.goals.forEach { goal ->
                 Panel(goal.spec.exercise) {
                     Text("${if(available && !future) formatOneDecimal(goal.value) else "—"} / ${goal.target} ${goal.spec.unit}", style=MaterialTheme.typography.headlineSmall)
                     if(available && !future) LinearProgressIndicator(progress={goal.fraction.toFloat()},modifier=Modifier.fillMaxWidth(),drawStopIndicator={})
-                    Text("${goal.spec.sets} séries de ${goal.target/goal.spec.sets} ${goal.spec.unit} · descanso ${goal.spec.restSeconds} s")
-                    Text(if(goal.historyDays >= 2) "Base: ${goal.historyDays} dias nas 4 semanas anteriores." else "Pouco histórico recente dessa medida: ponto de partida conservador.",style=MaterialTheme.typography.bodySmall)
+                    Text(if(goal.spec.unit == "km") "Distância total do dia; o deslocamento para o trabalho já conta." else "${goal.spec.sets} séries de ${goal.target/goal.spec.sets} ${goal.spec.unit} · descanso ${goal.spec.restSeconds} s")
+                    Text(if(plan.cycle) "${goal.historyDays} registros com séries válidas antes do ciclo. " + goal.spec.note else if(goal.historyDays >= 2) "Base: ${goal.historyDays} dias nas 4 semanas anteriores." else "Pouco histórico recente dessa medida: ponto de partida conservador.",style=MaterialTheme.typography.bodySmall)
                     if(day == today()) Button({register(goal.spec.exercise)},enabled=available) {Text("Registrar exercício")}
                 }
             }
@@ -80,14 +104,14 @@ import java.util.Locale
                     Text(date.format(DateTimeFormatter.ofPattern("EEEE",Locale.forLanguageTag("pt-BR"))) + " · " + item.title,style=MaterialTheme.typography.titleMedium)
                     Text(item.goals.joinToString(" · ") {"${it.spec.exercise}: ${it.target} ${it.spec.unit}"}.ifBlank {"Sem volume extra"})
                 }
-                Text("Metas: 70% da mediana diária das 4 semanas anteriores à segunda-feira, com limites conservadores. Regra de organização do app, não fórmula clínica validada nem prescrição da ACSM. Não mudam com os registros da própria semana.",style=MaterialTheme.typography.bodySmall)
+                Text(if(plan.cycle) "Flexão e agachamento partem da capacidade que você relatou. Nos demais, usamos registros com 2–8 séries anteriores ao ciclo: 80% da mediana por série, com limites conservadores. Sem referência suficiente na barra, usamos remada. É uma heurística do app, não uma avaliação clínica. Registre repetições totais e a quantidade real de séries." else "Metas anteriores ao ciclo: 70% da mediana diária, com limites conservadores.",style=MaterialTheme.typography.bodySmall)
                 Text("Deixe cerca de 2–3 repetições possíveis; não busque falha técnica. Interrompa com dor, tontura ou falta de ar incomum. Sem barra disponível, não improvise suporte. A recuperação vale também para as metas base.",style=MaterialTheme.typography.bodySmall)
                 Text("Treinar abdômen não remove gordura localizada nem garante definição em prazo. Sono, alimentação e recuperação importam. Referência: ACSM 2026.",style=MaterialTheme.typography.bodySmall)
             }
         }
         HorizontalDivider()
         Text("Calendário · somente treinos",style=MaterialTheme.typography.titleLarge)
-        Text("B = base · P = plano. Base usa suas metas atuais. Editar o histórico recalcula o resultado. Toque em um dia.",style=MaterialTheme.typography.bodySmall)
+        Text("B = base do dia · P = sessão completa. No ciclo, B já faz parte de P. Datas anteriores mantêm a regra antiga. Editar registros recalcula o resultado. Toque em um dia.",style=MaterialTheme.typography.bodySmall)
         Row(verticalAlignment=Alignment.CenterVertically) {
             TextButton({monthText=month.minusMonths(1).toString()},enabled=month.year>1900) {Text("Anterior")}
             Text(month.format(DateTimeFormatter.ofPattern("MMM yyyy",Locale.forLanguageTag("pt-BR"))),Modifier.weight(1f))
@@ -105,7 +129,7 @@ import java.util.Locale
                         val date = month.atDay(n)
                         val extra = weeklyPlanDay(rows,date,definition,!generic)
                         val known = available && date <= today()
-                        val b = if(known) baseWorkoutPercent(rows,date,settings,generic) else null
+                        val b = if(known) baseWorkoutPercent(rows,date,settings,generic,definition) else null
                         val p = if(known) extra.percent else null
                         val recovery = known && extra.recovery
                         Surface(onClick={selectedText=date.toString()},modifier=Modifier.weight(1f).heightIn(min=88.dp).semantics {

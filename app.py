@@ -74,7 +74,7 @@ EXERCICIOS_PRESETADOS = {
         "Remada em Pé na Polia com barra"
     ],
     "Peitoral": ["Flexão"],
-    "Pernas": ["Agachamento"],
+    "Pernas": ["Agachamento", "Ponte de Glúteos"],
     "Rosto": ["Massagem Facial", "Mewing com borracha"],
     "Skills / Calistenia": ["Handstand (Parada de Mãos)", "L-Sit"]
 }
