@@ -257,6 +257,8 @@ def render_finance(repo, items):
             st.write(f"{entry['title']} · {brl(entry['value_cents'])} / {'ano' if entry.get('billing_cycle') == 'annual' else 'mês'} · desde {entry['event_date']}")
 
 def render_workspace(repo, items, module=None):
+    from solem_scripts import script_data
+    items = [item for item in items if not script_data(item)]
     message = st.session_state.pop('ws_feedback', None)
     if message:
         st.success(message)

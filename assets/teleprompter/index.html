@@ -1,0 +1,27 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b1423;color:#eaf2ff;font:16px system-ui}#app{padding:16px;border:1px solid #34516e;border-radius:16px}header{display:flex;gap:12px;flex-wrap:wrap;align-items:center}button{padding:12px 18px;border:1px solid #78d7ff;border-radius:9px;background:#183b54;color:white;font:inherit;cursor:pointer}button:focus-visible,input:focus-visible{outline:3px solid #b8aaff}label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}input{max-width:150px;accent-color:#83dcff}#reader{height:400px;overflow:auto;margin-top:18px;border-top:2px solid #83dcff;padding:30px 20px 160px;scroll-behavior:auto}#text{white-space:pre-wrap;overflow-wrap:anywhere;max-width:850px;margin:auto;line-height:1.65;font-size:32px}#status{color:#83dcff;min-height:24px;margin:8px 0}h2{font-size:18px}:fullscreen #reader{height:75vh}:fullscreen{overflow:auto;background:#0b1423} @media(max-width:500px){#reader{padding:20px 8px 130px}#text{font-size:28px}header{gap:8px}}
+</style>
+<section id="app"><h2 id="title"></h2><header><button id="play">▶ Iniciar</button><button id="reset">↺ Reiniciar</button><button id="full">Ampliar</button>
+<label>Velocidade <input id="speed" type="range" min="10" max="120" value="35"><output id="speedValue">35 px/s</output></label>
+<label>Fonte <input id="font" type="range" min="20" max="64" value="32"><output id="fontValue">32 px</output></label></header>
+<p id="status" role="status">Pronto para ler</p><div id="reader" tabindex="0" aria-label="Texto do teleprompter"><div id="text"></div></div></section>
+<script>
+const $=id=>document.getElementById(id),reader=$('reader');let playing=false,last=0,position=0,frame=0,current='',wake=null;
+const send=(type,rest={})=>parent.postMessage({isStreamlitMessage:true,type,...rest},'*');
+function pause(message='Pausado'){playing=false;last=0;cancelAnimationFrame(frame);$('play').textContent='▶ Continuar';$('status').textContent=message;if(wake){wake.release();wake=null}}
+function tick(now){if(!playing)return;if(last){position+=Math.min((now-last)/1000,.1)*Number($('speed').value);reader.scrollTop=position}last=now;
+ if(reader.scrollTop>=reader.scrollHeight-reader.clientHeight-1){pause('Fim do roteiro');return}frame=requestAnimationFrame(tick)}
+$('play').onclick=async()=>{if(playing){pause();return}if(!current.trim())return;if(reader.scrollTop>=reader.scrollHeight-reader.clientHeight-1)reader.scrollTop=0;position=reader.scrollTop;playing=true;last=0;$('play').textContent='⏸ Pausar';$('status').textContent='Lendo';frame=requestAnimationFrame(tick);
+ try{if(navigator.wakeLock){const lock=await navigator.wakeLock.request('screen');if(playing)wake=lock;else lock.release()}}catch{}};
+$('reset').onclick=()=>{pause('Reiniciado');$('play').textContent='▶ Iniciar';reader.scrollTop=0;position=0};
+$('speed').oninput=()=>{$('speedValue').textContent=$('speed').value+' px/s'};
+$('font').oninput=()=>{pause();$('text').style.fontSize=$('font').value+'px';$('fontValue').textContent=$('font').value+' px'};
+$('full').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await $('app').requestFullscreen()}catch{$('status').textContent='Tela cheia indisponível neste navegador. Use o zoom do navegador.'}};
+reader.addEventListener('wheel',()=>{if(playing)pause()},{passive:true});reader.addEventListener('touchstart',()=>{if(playing)pause()},{passive:true});
+reader.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('play').click()}else if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End'].includes(e.key))pause()});
+document.addEventListener('fullscreenchange',()=>{$('full').textContent=document.fullscreenElement?'Reduzir':'Ampliar'});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Pausado ao sair da aba')});window.addEventListener('pagehide',()=>pause());
+window.addEventListener('message',e=>{if(e.source!==parent || e.data?.type!=='streamlit:render')return;let data=e.data.args;if(typeof data.text!=='string')return;if(data.text!==current){pause('Pronto para ler');$('play').textContent='▶ Iniciar';current=data.text;$('text').textContent=current;reader.scrollTop=0} $('title').textContent=data.title||'Teleprompter';send('streamlit:setFrameHeight',{height:650})});
+send('streamlit:componentReady',{apiVersion:1});send('streamlit:setFrameHeight',{height:650});
+</script></html>

@@ -168,7 +168,7 @@ import java.time.LocalDate
                 Field("Mês (AAAA-MM)",month) {month=it}
                 Text("Planejar ou concluir aqui não gera XP. Registre a prática em Treino ou Estudar.")
             }
-            val filtered = state.items.filter { it.kind==kind && it.archived==archived && (it.title+" "+it.body).contains(search,true) && (kind!="plan" || it.eventDate.orEmpty().startsWith(month)) }.sortedWith(compareBy({it.eventDate.orEmpty()},{it.eventTime},{it.title}))
+            val filtered = state.items.filter { scriptDocument(it)==null && it.kind==kind && it.archived==archived && (it.title+" "+it.body).contains(search,true) && (kind!="plan" || it.eventDate.orEmpty().startsWith(month)) }.sortedWith(compareBy({it.eventDate.orEmpty()},{it.eventTime},{it.title}))
             if(kind=="investment") {
                 Text("Valores manuais em BRL, sem cotação ao vivo, corretora ou operações. Diferença nominal, não rentabilidade anualizada.")
                 val cost=filtered.sumOf {it.investedCents};val value=filtered.sumOf{it.valueCents}

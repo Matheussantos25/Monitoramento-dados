@@ -31,7 +31,7 @@ import com.matheussantos.solem.data.PersonalizationStore
 import com.matheussantos.solem.ui.theme.LocalDashboardPreferences
 import com.matheussantos.solem.ui.theme.SolemTheme
 
-val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Todos os registros", "Calendário", "Elos", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Personalizar")
+val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Todos os registros", "Calendário", "Elos", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Personalizar", "Ideias e roteiros")
 
 val LocalGpsAccount = staticCompositionLocalOf { "" }
 
@@ -107,7 +107,7 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
         ModalDrawerSheet {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
                 Text("✳ solem",Modifier.padding(16.dp),style=MaterialTheme.typography.headlineMedium)
-                listOf("JORNADA" to listOf(0,1,2,3,5,6,9,10), "BIBLIOTECA" to listOf(11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(17,8))
+                listOf("JORNADA" to listOf(0,1,2,3,5,6,9,10), "BIBLIOTECA" to listOf(18,11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(17,8))
                     .map { (group, indices) -> group to indices.filter { !generic || fitnessPage(it) } }
                     .filter { it.second.isNotEmpty() }.forEach { (group, indices) ->
                     Text(group,Modifier.padding(16.dp,12.dp),style=MaterialTheme.typography.labelSmall)
@@ -199,6 +199,7 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
                 composable("9") { MonthlyJournal(rows, generic) }
                 composable("10") { if (state is TrainingUiState.Ready || state is TrainingUiState.Empty) RanksPage(rows, catalog) }
                 if (!generic) (11..16).forEach { index -> composable(index.toString()) { WorkspacePage(workspaceVm,pages[index]) } }
+                if (!generic) composable("18") {ScriptsPage(workspaceVm)}
                 composable("17") { PersonalizationPage(store,generic) }
                 composable("edit/{id}") { entry ->
                     val record = rows.firstOrNull { it.id == entry.arguments?.getString("id")?.toLongOrNull() }

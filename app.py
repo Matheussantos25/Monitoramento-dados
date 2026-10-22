@@ -745,6 +745,10 @@ if pagina == "Publicações":
     from solem_journey_ui import creator_page
     creator_page()
 
+if pagina == "Ideias e roteiros":
+    from solem_scripts_ui import scripts_page
+    scripts_page(demo=IS_DEMO)
+
 if pagina == "Metas e aparência":
     from solem_journey_ui import settings_page
     settings_page()
