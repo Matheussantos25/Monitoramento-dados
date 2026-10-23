@@ -28,6 +28,14 @@ def daily_metrics(meals):
 
 
 def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=False):
+    cumulative_saved=bool(old and old.get("details",{}).get("weighing",{}).get("mode")=="cumulative")
+    mode=st.radio("Como vai informar os pesos?",["Peso individual de cada alimento","Peso acumulado da balança"],
+                  index=int(cumulative_saved),key=f"{key}_weighing_mode")
+    st.caption("Os modos têm rascunhos separados. Salve antes de trocar de modo se quiser manter as alterações.")
+    if mode=="Peso acumulado da balança":
+        from solem_cumulative_meal_ui import cumulative_review
+        cumulative_review(client,day,proposal,save,f"{key}_cum",old,demo)
+        return
     table = catalog()
     labels = {food["id"]: food["name"] for food in table}
     source_items = proposal["items"]

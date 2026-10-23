@@ -20,6 +20,22 @@ import kotlin.math.floor
     @SerialName("catalog_version") val catalogVersion: String = "sr-2018-solem-1")
 val mealJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 private fun decimal(value: Double) = floor(value * 10 + 0.5) / 10
+@Serializable data class MealWeighing(val mode:String="cumulative",
+    @SerialName("baseline_g") val baseline:Double=0.0,
+    @SerialName("readings_g") val readings:List<Double>)
+fun cumulativeMealItems(items:List<MealFood>, weighing:MealWeighing):List<MealFood> {
+    require(weighing.mode=="cumulative" && weighing.baseline.isFinite() && weighing.baseline in 0.0..10000.0 && items.size in 1..12 && items.size==weighing.readings.size) {
+        "Confira o peso inicial e informe uma leitura por alimento (até 12)."
+    }
+    var previous=weighing.baseline
+    return items.mapIndexed {index,item ->
+        val reading=weighing.readings[index]
+        require(reading.isFinite() && reading in 0.0..34000.0 && reading-previous in 0.0..2000.0) {
+            "Leitura ${index+1}: o total não pode diminuir; cada alimento deve acrescentar de 0 a 2000 g. Não zere a balança entre alimentos."
+        }
+        item.copy(grams=decimal(reading-previous)).also {previous=reading}
+    }
+}
 fun calculateMeal(items: List<MealFood>, catalog: List<MealReference>): MealEstimate {
     require(items.size in 1..12) { "Mantenha entre 1 e 12 alimentos." }
     val checked = items.map {
@@ -42,12 +58,13 @@ fun calculateMeal(items: List<MealFood>, catalog: List<MealReference>): MealEsti
     }
     return MealEstimate(checked,MealNutrients(decimal(kcal),decimal(protein),decimal(carbs),decimal(fat),decimal(fiber)),missing,missing==0)
 }
-fun photoMealDetails(kind: String, items: List<MealFood>, catalog: List<MealReference>, weighed: Boolean = false): JsonObject {
-    val estimate=calculateMeal(items,catalog)
+fun photoMealDetails(kind: String, items: List<MealFood>, catalog: List<MealReference>, weighed: Boolean = false, weighing:MealWeighing?=null): JsonObject {
+    val estimate=calculateMeal(if(weighing!=null) cumulativeMealItems(items,weighing) else items,catalog)
     return buildJsonObject {
         put("tipo_refeicao",kind); put("input_method",if(weighed) "weighed" else "photo_reviewed")
         put("saudaveis",buildJsonArray { estimate.items.forEach { add(JsonPrimitive(it.name)) } })
         put("ocasionais",JsonArray(emptyList()))
         put("nutrition",mealJson.encodeToJsonElement(estimate))
+        if(weighing!=null) put("weighing",mealJson.encodeToJsonElement(weighing))
     }.also { require(it.toString().toByteArray(Charsets.UTF_8).size<=3800) { "Reduza o número ou o tamanho dos nomes dos alimentos." } }
 }

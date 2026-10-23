@@ -39,10 +39,30 @@ def nutrition(items):
             "basis": "USDA FoodData Central / SR Legacy", "catalog_version": "sr-2018-solem-1"}
 
 
-def meal_details(meal_type, items, weighed=False):
+def cumulative_items(items, baseline, readings):
+    """Readings stay in plate-addition order. Never clamp invalid differences."""
+    def weight(value, maximum):
+        return (not isinstance(value, bool) and isinstance(value, (int, float))
+                and math.isfinite(value) and 0 <= value <= maximum)
+    if not weight(baseline, 10000) or not 1 <= len(items) <= 12 or len(items) != len(readings):
+        raise ValueError("Confira o peso inicial e informe uma leitura para cada alimento (até 12).")
+    result, previous = [], baseline
+    for index, (item, reading) in enumerate(zip(items, readings)):
+        if not weight(reading, 34000) or not 0 <= reading - previous <= 2000:
+            raise ValueError(f"Leitura {index + 1}: o total não pode diminuir; cada alimento deve acrescentar de 0 a 2000 g. Não zere a balança entre alimentos.")
+        result.append({**item, "grams": math.floor((reading - previous) * 10 + 0.5) / 10})
+        previous = reading
+    return result
+
+
+def meal_details(meal_type, items, weighed=False, weighing=None):
+    if weighing is not None:
+        items = cumulative_items(items, weighing["baseline_g"], weighing["readings_g"])
     result = nutrition(items)
     details = {"tipo_refeicao": meal_type, "saudaveis": [item["name"] for item in result["items"]],
                "ocasionais": [], "nutrition": result, "input_method": "weighed" if weighed else "photo_reviewed"}
+    if weighing is not None:
+        details["weighing"] = dict(mode="cumulative", baseline_g=weighing["baseline_g"], readings_g=list(weighing["readings_g"]))
     # Existing diary constraint is 4096 bytes; never enlarge it unnecessarily.
     if len(json.dumps(details, ensure_ascii=False).encode("utf-8")) > 3800:
         raise ValueError("Reduza a quantidade ou o tamanho dos nomes dos alimentos.")

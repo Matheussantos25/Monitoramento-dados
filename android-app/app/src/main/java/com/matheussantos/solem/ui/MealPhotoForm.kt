@@ -29,6 +29,13 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
 @Composable fun MealReview(day: LocalDate, catalog: Catalog, workspace: WorkspaceViewModel,
     references: List<MealReference>, initial: List<MealFood>, busy: Boolean,
     previous: HealthEntry?=null, saved: () -> Unit={}, weighed: Boolean=false) {
+    var mode by rememberSaveable {mutableStateOf(if(previous?.details?.get("weighing")!=null) "Peso acumulado da balança" else "Peso individual de cada alimento")}
+    Choice("Como vai informar os pesos?",mode,listOf("Peso individual de cada alimento","Peso acumulado da balança")) {mode=it}
+    Text("Os modos têm rascunhos separados. Salve antes de trocar de modo para manter alterações.",style=MaterialTheme.typography.bodySmall)
+    if(mode=="Peso acumulado da balança") {
+        CumulativeMealReview(day,catalog,workspace,references,initial,busy,previous,saved)
+        return
+    }
     var items by remember { mutableStateOf(initial) }
     var kind by rememberSaveable { mutableStateOf(previous?.text("tipo_refeicao") ?: "Almoço") }
     var time by rememberSaveable { mutableStateOf(previous?.loggedAt ?: LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))) }
