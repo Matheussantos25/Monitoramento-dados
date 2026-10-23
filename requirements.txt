@@ -1,4 +1,8 @@
 streamlit==1.59.1
+# Streamlit 1.59.1 overrides the old GZip responder contract. Starlette 1.9
+# sends excluded/encoded response headers elsewhere, breaking that override.
+# Keep the HTTP-tested version until Streamlit supports the new contract.
+starlette==1.7.0
 pandas>=3.0,<3.0.3
 numpy>=2.1,<2.5
 pyarrow>=22,<25
