@@ -93,7 +93,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                     st.caption("Sem refeição — não comi.")
                 else:
                     st.caption(("Confirmados: " if details.get("nutrition") else "Habituais: ") + (", ".join(food_display_name(name) for name in details.get("saudaveis", [])) or "—"))
-                    st.caption("Ocasionais: " + (", ".join(details.get("ocasionais", [])) or "—"))
+                    st.caption("Ocasionais: " + (", ".join(food_display_name(name) for name in details.get("ocasionais", [])) or "—"))
                 if details.get("nutrition"):
                     from solem_meal_analysis import nutrition
                     try:

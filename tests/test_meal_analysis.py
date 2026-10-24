@@ -13,8 +13,9 @@ RICE = {"name": "Arroz", "food_id": "169757", "grams": 150, "confidence": "high"
 
 def test_verified_catalog_and_platform_parity():
     foods = catalog()
-    assert len(foods) == 24
-    assert all(food["name"] and food["source_url"].startswith("https://fdc.nal.usda.gov/") for food in foods)
+    assert len(foods) == 37
+    assert len([f for f in foods if not f["id"].startswith("taco-")]) == 24
+    assert all(food["name"] and food["source_url"].startswith(("https://fdc.nal.usda.gov/", "https://nepa.unicamp.br/")) for food in foods)
     from pathlib import Path
     root=Path(__file__).resolve().parents[1]
     for file in ("android-app/app/src/main/assets/nutrition_catalog.json", "android-app/app/src/test/resources/nutrition_catalog.json"):
@@ -90,3 +91,16 @@ review_meal(None,date(2026,10,4),nutrition([{"name":"Arroz","food_id":"169757","
     app.button(key="review_save").click().run()
     assert not app.exception
     assert app.session_state.saved["nutrition"]["totals"]["kcal"] == 65
+
+
+def test_occasional_food_cumulative_nutrients_and_classification():
+    from solem_voice import parse_meal
+    parsed=parse_meal('Biscoito recheado 114, chocolate ao leite 134, acumulado', catalog())
+    result=meal_details('Lanche da tarde', parsed['items'], weighed=True,
+        weighing={'baseline_g':0,'readings_g':parsed['readings']})
+    assert [i['grams'] for i in result['nutrition']['items']] == [114,20]
+    assert result['nutrition']['totals']['kcal'] == 646.1
+    assert result['nutrition']['totals']['protein_g'] == 8.7
+    assert not result['saudaveis'] and len(result['ocasionais'])==2
+    assert 'TACO' in result['nutrition']['basis']
+    assert nutrition([RICE])['catalog_version'] == 'sr-2018-solem-1'

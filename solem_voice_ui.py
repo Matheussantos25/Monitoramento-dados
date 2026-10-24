@@ -1,10 +1,9 @@
 """Voice is an optional draft input; saving stays in the existing authenticated forms."""
-from pathlib import Path
+from hashlib import sha256
 import streamlit as st
-import streamlit.components.v1 as components
+from solem_audio import transcribe_audio
 from solem_voice import parse_meal, parse_weight, parse_sleep, parse_workout
 
-_voice = components.declare_component('solem_voice_input', path=str(Path(__file__).parent / 'assets/voice_input'))
 EXAMPLES = {
     'meal': 'Almoço, arroz 170, feijão 323, ovo cozido 371, peso acumulado.',
     'weight': 'Peso 67 vírgula 5 quilos.',
@@ -15,12 +14,33 @@ EXAMPLES = {
 
 def voice_input(kind, key, *, foods=None, exercises=None, current=None, fields=None):
     with st.expander('🎙 Preencher por voz · conferir antes de salvar'):
-        st.caption('Sem API paga do Solem. O navegador pode enviar áudio ao seu serviço de voz e precisar de internet. Só escuta ao tocar em Falar. O Solem não guarda o áudio.')
+        st.caption('Grave até 60 segundos e toque em parar. O áudio é enviado ao servidor do Solem para transcrição pelo Whisper, sem API paga. Não é salvo no histórico. Confira o texto antes de preencher.')
         st.caption('Preenche apenas este formulário, na data selecionada. Exemplo: ' + EXAMPLES[kind])
-        event = _voice(key=key+'_mic', default=None)
-        if isinstance(event, dict) and event.get('id') != st.session_state.get(key+'_event'):
-            st.session_state[key+'_event'] = event.get('id')
-            st.session_state[key+'_text'] = str(event.get('text',''))[:2000]
+        audio = st.audio_input('Gravar fala · toque no microfone para começar e no quadrado para parar',
+                               sample_rate=16000, key=key+'_audio',
+                               help='Permita o microfone no navegador. A primeira transcrição pode demorar enquanto o modelo é carregado.')
+        if audio is not None:
+            data = audio.getvalue()
+            digest = sha256(data).hexdigest()
+            retry = False
+            if st.session_state.get(key+'_audio_error') and st.session_state.get(key+'_audio_seen') == digest:
+                st.warning(st.session_state[key+'_audio_error'])
+                retry = st.button('Tentar transcrever novamente', key=key+'_retry')
+            if digest != st.session_state.get(key+'_audio_seen') or retry:
+                st.session_state[key+'_audio_seen'] = digest
+                st.session_state.pop(key+'_audio_error', None)
+                try:
+                    with st.spinner('Transcrevendo no Solem… Na primeira vez, aguarde o carregamento do modelo.'):
+                        st.session_state[key+'_text'] = transcribe_audio(data)
+                except ValueError as error:
+                    st.session_state[key+'_audio_error'] = str(error)
+                except Exception:
+                    # Never surface audio, credentials or provider diagnostics in the UI/log.
+                    st.session_state[key+'_audio_error'] = 'O transcritor não carregou. Tente novamente em instantes ou digite o texto abaixo.'
+                if st.session_state.get(key+'_audio_error'):
+                    st.rerun()
+                st.success('Fala transcrita. Confira o texto e os valores abaixo; nada foi salvo.')
+        st.caption('Se o microfone não abrir, permita o acesso nas configurações do site no Opera e recarregue. Você também pode corrigir ou digitar a fala abaixo.')
         text = st.text_area('O que você falou · pode corrigir', key=key+'_text', max_chars=2000)
         if not text.strip(): return None
         try:

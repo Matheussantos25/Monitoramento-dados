@@ -93,7 +93,7 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
                 TextButton(onClick={items=items.filterIndexed { at,_ -> at!=index };confirmed=false}) { Text("Remover") }
             }
             references.firstOrNull { it.id==item.foodId }?.let { reference ->
-                TextButton(onClick={ links.openUri(reference.sourceUrl) }) { Text("Consultar fonte USDA") }
+                TextButton(onClick={ links.openUri(reference.sourceUrl) }) { Text("Consultar fonte nutricional") }
             }
             runCatching { calculateMeal(listOf(item),references) }.getOrNull()?.let { portion ->
                 if(portion.complete) Text("Este alimento: ${amount(portion.totals.kcal)} kcal · ${amount(portion.totals.protein)} g de proteína")

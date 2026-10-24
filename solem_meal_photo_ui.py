@@ -69,7 +69,7 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
             include = st.checkbox("Incluir este alimento", value=True, key=f"{key}_include_{index}")
             if chosen:
                 food = next(food for food in table if food["id"] == chosen)
-                st.link_button("Consultar fonte USDA", food["source_url"])
+                st.link_button("Consultar fonte nutricional", food["source_url"])
             if include:
                 entry = {"name": name, "food_id": chosen, "grams": grams, "confidence": item.get("confidence", "low")}
                 items.append(entry)

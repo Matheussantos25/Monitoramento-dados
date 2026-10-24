@@ -42,7 +42,8 @@ def nutrition(items):
         for key in NUTRIENTS: totals[key] += table[food_id]["per100"][key] * amount / 100
     return {"items": clean, "totals": {key: math.floor(value * 10 + 0.5) / 10 for key, value in totals.items()},
             "missing": missing, "complete": missing == 0, "estimated": True,
-            "basis": "USDA FoodData Central / SR Legacy", "catalog_version": "sr-2018-solem-1"}
+            "basis": "USDA FoodData Central / SR Legacy + TACO NEPA/Unicamp" if any(i["food_id"].startswith("taco-") for i in clean) else "USDA FoodData Central / SR Legacy",
+            "catalog_version": "solem-taco-2011-sr-2018-v2" if any(i["food_id"].startswith("taco-") for i in clean) else "sr-2018-solem-1"}
 
 
 def cumulative_items(items, baseline, readings):
@@ -65,8 +66,9 @@ def meal_details(meal_type, items, weighed=False, weighing=None):
     if weighing is not None:
         items = cumulative_items(items, weighing["baseline_g"], weighing["readings_g"])
     result = nutrition(items)
-    details = {"tipo_refeicao": meal_type, "saudaveis": [item["name"] for item in result["items"]],
-               "ocasionais": [], "nutrition": result, "input_method": "weighed" if weighed else "photo_reviewed"}
+    occasional = {food["id"] for food in catalog() if food.get("category") == "occasional"}
+    details = {"tipo_refeicao": meal_type, "saudaveis": [item["name"] for item in result["items"] if item["food_id"] not in occasional],
+               "ocasionais": [item["name"] for item in result["items"] if item["food_id"] in occasional], "nutrition": result, "input_method": "weighed" if weighed else "photo_reviewed"}
     if weighing is not None:
         details["weighing"] = dict(mode="cumulative", baseline_g=weighing["baseline_g"], readings_g=list(weighing["readings_g"]))
     # Existing diary constraint is 4096 bytes; never enlarge it unnecessarily.

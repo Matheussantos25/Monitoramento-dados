@@ -16,8 +16,9 @@ class MealNutritionTest {
         assertEquals(150.0,rice.grams,0.01)
     }
     @Test fun sourceAndCalculations() {
-        assertEquals(24,catalog.size)
-        assertTrue(catalog.all { it.name.isNotBlank() && it.sourceUrl.startsWith("https://fdc.nal.usda.gov/") })
+        assertEquals(37,catalog.size)
+        assertEquals(24,catalog.count { !it.id.startsWith("taco-") })
+        assertTrue(catalog.all { it.name.isNotBlank() && (it.sourceUrl.startsWith("https://fdc.nal.usda.gov/") || it.sourceUrl.startsWith("https://nepa.unicamp.br/")) })
         val estimate=calculateMeal(listOf(rice),catalog)
         assertEquals(195.0,estimate.totals.kcal,0.01)
         assertEquals(4.0,estimate.totals.protein,0.01)
@@ -39,5 +40,17 @@ class MealNutritionTest {
         val payload=photoMealDetails("Almoço",listOf(rice),catalog).toString()
         assertFalse(payload.contains("image"));assertFalse(payload.contains("token"))
         assertTrue(payload.toByteArray().size<3800)
+    }
+    @Test fun occasionalCumulativeMeal() {
+        val items=listOf(MealFood("Biscoito recheado","taco-9"),MealFood("Chocolate ao leite","taco-495"))
+        val portions=cumulativeMealItems(items,MealWeighing(readings=listOf(114.0,134.0)))
+        val estimate=calculateMeal(portions,catalog)
+        assertEquals(listOf(114.0,20.0),portions.map {it.grams})
+        assertEquals(646.1,estimate.totals.kcal,0.01)
+        assertEquals(8.7,estimate.totals.protein,0.01)
+        assertTrue(estimate.basis.contains("TACO"))
+        val details=photoMealDetails("Lanche da tarde",items,catalog,true,MealWeighing(readings=listOf(114.0,134.0)))
+        assertEquals("[]",details["saudaveis"].toString())
+        assertTrue(details["ocasionais"].toString().contains("Biscoito recheado"))
     }
 }

@@ -51,7 +51,7 @@ def parse_meal(text, foods, default_cumulative=True):
             kind = label
             text = re.sub(rf'\b{spoken}\b', ' ', text)
     aliases = {plain(f.get('display_name', f['name'])): f for f in foods}
-    for alias, target in [('ovo','Ovo cozido'),('pure','Purê de batata'),('salada de alface','Alface')]:
+    for alias, target in [('ovo','Ovo cozido'),('pure','Purê de batata'),('salada de alface','Alface'),('bolacha recheada','Biscoito recheado')]:
         match = next((f for f in foods if f.get('display_name') == target), None)
         if match: aliases[alias] = match
     pattern = r'\b(' + '|'.join(re.escape(a) for a in sorted(aliases, key=len, reverse=True)) + r')\s*(?:[:=]|com)?\s*(\d+(?:\.\d+)?)\s*(?:gramas?\b|g\b)?'

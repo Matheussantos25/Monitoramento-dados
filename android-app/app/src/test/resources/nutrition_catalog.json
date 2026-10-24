@@ -334,5 +334,200 @@
       "fat_g": 0.15,
       "fiber_g": 1.3
     }
+  },
+  {
+    "id": "taco-8",
+    "name": "Biscoito, doce, maisena",
+    "display_name": "Biscoito maisena",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 8. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 443,
+      "protein_g": 8.1,
+      "carbs_g": 75.2,
+      "fat_g": 12,
+      "fiber_g": 2.1
+    }
+  },
+  {
+    "id": "taco-9",
+    "name": "Biscoito, doce, recheado com chocolate",
+    "display_name": "Biscoito recheado",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 9. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 472,
+      "protein_g": 6.4,
+      "carbs_g": 70.5,
+      "fat_g": 19.6,
+      "fiber_g": 3
+    }
+  },
+  {
+    "id": "taco-10",
+    "name": "Biscoito, doce, recheado com morango",
+    "display_name": "Biscoito recheado de morango",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 10. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 471,
+      "protein_g": 5.7,
+      "carbs_g": 71,
+      "fat_g": 19.6,
+      "fiber_g": 1.5
+    }
+  },
+  {
+    "id": "taco-11",
+    "name": "Biscoito, doce, wafer, recheado de chocolate",
+    "display_name": "Wafer de chocolate",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 11. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 502,
+      "protein_g": 5.6,
+      "carbs_g": 67.5,
+      "fat_g": 24.7,
+      "fiber_g": 1.8
+    }
+  },
+  {
+    "id": "taco-13",
+    "name": "Biscoito, salgado, cream cracker",
+    "display_name": "Biscoito cream cracker",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 13. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 432,
+      "protein_g": 10.1,
+      "carbs_g": 68.7,
+      "fat_g": 14.4,
+      "fiber_g": 2.5
+    }
+  },
+  {
+    "id": "taco-16",
+    "name": "Bolo, pronto, chocolate",
+    "display_name": "Bolo de chocolate",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 16. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 410,
+      "protein_g": 6.2,
+      "carbs_g": 54.7,
+      "fat_g": 18.5,
+      "fiber_g": 1.4
+    }
+  },
+  {
+    "id": "taco-56",
+    "name": "Pastel, de carne, frito",
+    "display_name": "Pastel de carne",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 56. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 388,
+      "protein_g": 10.1,
+      "carbs_g": 43.8,
+      "fat_g": 20.1,
+      "fiber_g": 1
+    }
+  },
+  {
+    "id": "taco-58",
+    "name": "Pastel, de queijo, frito",
+    "display_name": "Pastel de queijo",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 58. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 422,
+      "protein_g": 8.7,
+      "carbs_g": 48.1,
+      "fat_g": 22.7,
+      "fiber_g": 0.9
+    }
+  },
+  {
+    "id": "taco-90",
+    "name": "Batata, frita, tipo chips, industrializada",
+    "display_name": "Batata chips",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 90. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 543,
+      "protein_g": 5.6,
+      "carbs_g": 51.2,
+      "fat_g": 36.6,
+      "fiber_g": 2.5
+    }
+  },
+  {
+    "id": "taco-99",
+    "name": "Biscoito, polvilho doce",
+    "display_name": "Biscoito de polvilho",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 99. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 438,
+      "protein_g": 1.3,
+      "carbs_g": 80.5,
+      "fat_g": 12.2,
+      "fiber_g": 1.2
+    }
+  },
+  {
+    "id": "taco-386",
+    "name": "Coxinha de frango, frita",
+    "display_name": "Coxinha",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 386. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 283,
+      "protein_g": 9.6,
+      "carbs_g": 34.5,
+      "fat_g": 11.8,
+      "fiber_g": 5
+    }
+  },
+  {
+    "id": "taco-495",
+    "name": "Chocolate, ao leite",
+    "display_name": "Chocolate ao leite",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 495. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 540,
+      "protein_g": 7.2,
+      "carbs_g": 59.6,
+      "fat_g": 30.3,
+      "fiber_g": 2.2
+    }
+  },
+  {
+    "id": "taco-498",
+    "name": "Chocolate, meio amargo",
+    "display_name": "Chocolate meio amargo",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 498. Valores por 100 g; marcas e receitas variam.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 475,
+      "protein_g": 4.9,
+      "carbs_g": 62.4,
+      "fat_g": 29.9,
+      "fiber_g": 4.9
+    }
   }
 ]

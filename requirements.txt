@@ -9,3 +9,5 @@ pyarrow>=22,<25
 plotly==6.9.0
 supabase==2.31.0
 Pillow>=12,<13
+# Local CPU speech transcription; no paid API or browser SpeechRecognition.
+faster-whisper==1.2.1

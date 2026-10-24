@@ -43,7 +43,7 @@ fun parseMealVoice(raw: String, foods: List<MealReference>, defaultCumulative: B
         }
     }
     val aliases = foods.associateBy { plainVoice(it.displayName) }.toMutableMap()
-    mapOf("ovo" to "Ovo cozido", "pure" to "Purê de batata", "salada de alface" to "Alface").forEach { (alias,target) -> foods.firstOrNull { it.displayName == target }?.let { aliases[alias] = it } }
+    mapOf("ovo" to "Ovo cozido", "pure" to "Purê de batata", "salada de alface" to "Alface", "bolacha recheada" to "Biscoito recheado").forEach { (alias,target) -> foods.firstOrNull { it.displayName == target }?.let { aliases[alias] = it } }
     val names = aliases.keys.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
     val pattern = Regex("\\b($names)\\s*(?:[:=]|com)?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:gramas?\\b|g\\b)?")
     val matches = pattern.findAll(text).toList()

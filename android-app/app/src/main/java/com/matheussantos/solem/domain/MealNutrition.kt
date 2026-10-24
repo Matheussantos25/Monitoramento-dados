@@ -12,7 +12,7 @@ import kotlin.math.floor
     @SerialName("fiber_g") val fiber: Double = 0.0)
 @Serializable data class MealReference(val id: String, val name: String, val description: String,
     @SerialName("source_url") val sourceUrl: String, val per100: MealNutrients,
-    @SerialName("display_name") val displayName: String = name)
+    @SerialName("display_name") val displayName: String = name, val category: String = "habitual")
 @Serializable data class MealFood(val name: String, @SerialName("food_id") val foodId: String = "",
     val grams: Double = 0.0, val confidence: String = "low")
 @Serializable data class MealEstimate(val items: List<MealFood>, val totals: MealNutrients,
@@ -62,14 +62,18 @@ fun calculateMeal(items: List<MealFood>, catalog: List<MealReference>): MealEsti
             carbs+=food.per100.carbs*scale; fat+=food.per100.fat*scale; fiber+=food.per100.fiber*scale
         }
     }
-    return MealEstimate(checked,MealNutrients(decimal(kcal),decimal(protein),decimal(carbs),decimal(fat),decimal(fiber)),missing,missing==0)
+    return MealEstimate(checked,MealNutrients(decimal(kcal),decimal(protein),decimal(carbs),decimal(fat),decimal(fiber)),missing,missing==0).let { estimate ->
+        if(checked.any { it.foodId.startsWith("taco-") }) estimate.copy(
+            basis="USDA FoodData Central / SR Legacy + TACO NEPA/Unicamp",catalogVersion="solem-taco-2011-sr-2018-v2") else estimate
+    }
 }
 fun photoMealDetails(kind: String, items: List<MealFood>, catalog: List<MealReference>, weighed: Boolean = false, weighing:MealWeighing?=null): JsonObject {
     val estimate=calculateMeal(if(weighing!=null) cumulativeMealItems(items,weighing) else items,catalog)
+    val occasional=catalog.filter { it.category=="occasional" }.map { it.id }.toSet()
     return buildJsonObject {
         put("tipo_refeicao",kind); put("input_method",if(weighed) "weighed" else "photo_reviewed")
-        put("saudaveis",buildJsonArray { estimate.items.forEach { add(JsonPrimitive(it.name)) } })
-        put("ocasionais",JsonArray(emptyList()))
+        put("saudaveis",buildJsonArray { estimate.items.filter { it.foodId !in occasional }.forEach { add(JsonPrimitive(it.name)) } })
+        put("ocasionais",buildJsonArray { estimate.items.filter { it.foodId in occasional }.forEach { add(JsonPrimitive(it.name)) } })
         put("nutrition",mealJson.encodeToJsonElement(estimate))
         if(weighing!=null) put("weighing",mealJson.encodeToJsonElement(weighing))
     }.also { require(it.toString().toByteArray(Charsets.UTF_8).size<=3800) { "Reduza o número ou o tamanho dos nomes dos alimentos." } }
