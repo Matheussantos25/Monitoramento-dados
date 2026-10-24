@@ -51,7 +51,7 @@ def cumulative_review(client, day, proposal, save, key, old=None, demo=False):
         nutrient_metrics(result)
         valid=True
     except ValueError as error: st.info(str(error))
-    old_type=previous.get("tipo_refeicao","Almoço")
+    old_type=proposal.get('voice_type') or previous.get("tipo_refeicao","Almoço")
     types=list(dict.fromkeys([*MEAL_TYPES,old_type]))
     kind=st.selectbox("Refeição",types,index=types.index(old_type),key=f"{key}_type")
     when=time.fromisoformat(str(old["logged_at"])) if old else now_local().time().replace(second=0,microsecond=0)

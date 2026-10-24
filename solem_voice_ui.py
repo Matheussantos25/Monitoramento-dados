@@ -60,11 +60,7 @@ def meal_voice_draft(proposal, key):
     result = st.session_state.get(key+'_voice_proposal')
     if result:
         draft_key = key+'_dictated_'+str(st.session_state[key+'_voice_revision'])
-        mode_key = draft_key+'_weighing_mode'
-        if mode_key not in st.session_state:
-            st.session_state[mode_key] = 'Peso acumulado da balança' if result['cumulative'] else 'Peso individual de cada alimento'
-            for suffix in ('', '_cum'):
-                if result['meal_type']: st.session_state[draft_key+suffix+'_type'] = result['meal_type']
-        proposal = {'items': result['items'], 'voice_weighing': {'baseline_g':0, 'readings_g':result['readings']} if result['cumulative'] else {}}
+        proposal = {'items': result['items'], 'voice_cumulative':result['cumulative'], 'voice_type':result['meal_type'],
+                    'voice_weighing': {'baseline_g':0, 'readings_g':result['readings']} if result['cumulative'] else {}}
         return proposal, draft_key
     return proposal, key

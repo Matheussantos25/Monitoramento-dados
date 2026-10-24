@@ -39,7 +39,7 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
         from solem_voice_ui import meal_voice_draft
         proposal, key = meal_voice_draft(proposal, key)
     # New meals use scale readings; editing keeps the saved interpretation.
-    cumulative_saved=old is None or old.get("details",{}).get("weighing",{}).get("mode")=="cumulative"
+    cumulative_saved=proposal.get('voice_cumulative', old is None or old.get("details",{}).get("weighing",{}).get("mode")=="cumulative")
     mode=st.radio("Como vai informar os pesos?",["Peso individual de cada alimento","Peso acumulado da balança"],
                   index=int(cumulative_saved),key=f"{key}_weighing_mode")
     st.caption("Os modos têm rascunhos separados. Salve antes de trocar de modo se quiser manter as alterações.")
@@ -94,7 +94,7 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
         valid = True
     except ValueError as error: st.info(str(error))
     previous = old.get("details", {}) if old else {}
-    previous_type = previous.get("tipo_refeicao", "Almoço")
+    previous_type = proposal.get('voice_type') or previous.get("tipo_refeicao", "Almoço")
     types = list(dict.fromkeys([*MEAL_TYPES, previous_type]))
     meal_type = st.selectbox("Refeição", types, index=types.index(previous_type), key=f"{key}_type")
     from datetime import time
