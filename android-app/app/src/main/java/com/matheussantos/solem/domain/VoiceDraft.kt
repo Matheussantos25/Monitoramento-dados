@@ -45,7 +45,7 @@ fun parseMealVoice(raw: String, foods: List<MealReference>, defaultCumulative: B
     val aliases = foods.associateBy { plainVoice(it.displayName) }.toMutableMap()
     mapOf("ovo" to "Ovo cozido", "pure" to "Purê de batata", "salada de alface" to "Alface", "bolacha recheada" to "Biscoito recheado").forEach { (alias,target) -> foods.firstOrNull { it.displayName == target }?.let { aliases[alias] = it } }
     val names = aliases.keys.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
-    val pattern = Regex("\\b($names)\\s*(?:[:=]|com)?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:gramas?\\b|g\\b)?")
+    val pattern = Regex("\\b($names)\\s*(?:[,;:.=]|com)?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:gramas?\\b|g\\b)?")
     val matches = pattern.findAll(text).toList()
     val rest = text.replace(pattern, " ").replace(Regex("\\b(?:e|de|no|na|o|a|coloquei|colocar|refeicao|registrar|registra|balanca|pesos|peso)\\b"), " ")
     require(leftover(rest).isEmpty() && matches.size in 1..12) { "Não entendi a lista completa. Diga alimento e leitura em gramas: arroz 170, feijão 323, acumulado. Confira alimentos e números." }

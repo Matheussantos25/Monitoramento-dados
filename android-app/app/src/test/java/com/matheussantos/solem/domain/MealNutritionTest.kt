@@ -41,6 +41,10 @@ class MealNutritionTest {
         assertFalse(payload.contains("image"));assertFalse(payload.contains("token"))
         assertTrue(payload.toByteArray().size<3800)
     }
+    @Test fun spokenBiscuitWithPunctuation() {
+        val parsed=parseMealVoice("Biscoito recheado, 114 gramas, peso acumulado.",catalog)
+        assertEquals(114.0,parsed.items!![0].grams,0.01)
+    }
     @Test fun occasionalCumulativeMeal() {
         val items=listOf(MealFood("Biscoito recheado","taco-9"),MealFood("Chocolate ao leite","taco-495"))
         val portions=cumulativeMealItems(items,MealWeighing(readings=listOf(114.0,134.0)))

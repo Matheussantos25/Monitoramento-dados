@@ -54,7 +54,7 @@ def parse_meal(text, foods, default_cumulative=True):
     for alias, target in [('ovo','Ovo cozido'),('pure','Purê de batata'),('salada de alface','Alface'),('bolacha recheada','Biscoito recheado')]:
         match = next((f for f in foods if f.get('display_name') == target), None)
         if match: aliases[alias] = match
-    pattern = r'\b(' + '|'.join(re.escape(a) for a in sorted(aliases, key=len, reverse=True)) + r')\s*(?:[:=]|com)?\s*(\d+(?:\.\d+)?)\s*(?:gramas?\b|g\b)?'
+    pattern = r'\b(' + '|'.join(re.escape(a) for a in sorted(aliases, key=len, reverse=True)) + r')\s*(?:[,;:.=]|com)?\s*(\d+(?:\.\d+)?)\s*(?:gramas?\b|g\b)?'
     matches = list(re.finditer(pattern, text))
     remainder = re.sub(pattern, ' ', text)
     remainder = re.sub(r'\b(?:e|de|no|na|o|a|coloquei|colocar|refeicao|registrar|registra|balanca|pesos|peso)\b', ' ', remainder)

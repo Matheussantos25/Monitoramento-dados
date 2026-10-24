@@ -152,3 +152,10 @@ review_meal(None,date(2026,10,24),{'items':[]},_save,'weighed_meal_2026-10-24',d
     assert app.number_input(key=key+'_dictated_1_cum_reading_1').value == 200
     assert app.button(key=key+'_dictated_1_cum_save').disabled
     assert len(app.session_state['demo_health_entries']) == 1
+
+
+def test_transcription_punctuation_before_weight():
+    parsed=parse_meal('biscoito recheado, 114 gramas, peso acumulado.',catalog())
+    assert parsed['items'][0]['food_id']=='taco-9'
+    assert parsed['items'][0]['grams']==114
+    assert parse_meal('Arroz: 70,5 gramas. Feijão, 130,5 gramas.',catalog())['items'][1]['grams']==60
