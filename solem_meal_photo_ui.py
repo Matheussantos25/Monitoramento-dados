@@ -35,6 +35,9 @@ def daily_metrics(meals):
 
 
 def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=False):
+    if old is None:
+        from solem_voice_ui import meal_voice_draft
+        proposal, key = meal_voice_draft(proposal, key)
     # New meals use scale readings; editing keeps the saved interpretation.
     cumulative_saved=old is None or old.get("details",{}).get("weighing",{}).get("mode")=="cumulative"
     mode=st.radio("Como vai informar os pesos?",["Peso individual de cada alimento","Peso acumulado da balança"],

@@ -17,13 +17,13 @@ private fun scaleNumber(value:Double)=String.format(Locale.getDefault(),"%.1f",v
 private fun parseScale(value:String)=value.replace(',','.').toDoubleOrNull() ?: Double.NaN
 
 @Composable fun CumulativeMealReview(day:LocalDate,catalog:Catalog,workspace:WorkspaceViewModel,
-    references:List<MealReference>,initial:List<MealFood>,busy:Boolean,previous:HealthEntry?,saved:()->Unit) {
+    references:List<MealReference>,initial:List<MealFood>,busy:Boolean,previous:HealthEntry?,saved:()->Unit,spoken:VoiceDraft?=null) {
     val stored=remember {runCatching {previous?.details?.get("weighing")?.let {mealJson.decodeFromJsonElement<MealWeighing>(it)}}.getOrNull()}
     var items by remember {mutableStateOf(initial)}
     var baseline by rememberSaveable {mutableStateOf(scaleNumber(stored?.baseline ?: 0.0))}
-    var readings by remember {mutableStateOf(stored?.readings?.takeIf {it.size==initial.size}?.map(::scaleNumber)
+    var readings by remember {mutableStateOf(spoken?.takeIf {it.cumulative}?.readings?.map(::scaleNumber) ?: stored?.readings?.takeIf {it.size==initial.size}?.map(::scaleNumber)
         ?: initial.runningFold(0.0) {sum,item ->sum+item.grams}.drop(1).map(::scaleNumber))}
-    var kind by rememberSaveable {mutableStateOf(previous?.text("tipo_refeicao") ?: "Almoço")}
+    var kind by rememberSaveable {mutableStateOf(spoken?.mealType ?: previous?.text("tipo_refeicao") ?: "Almoço")}
     var time by rememberSaveable {mutableStateOf(previous?.loggedAt ?: LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")))}
     var confirmed by remember {mutableStateOf(false)}
     var error by remember {mutableStateOf<String?>(null)}

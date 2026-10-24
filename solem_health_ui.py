@@ -188,10 +188,14 @@ def health_page(client, healthy_options, occasional_options, demo=False):
 
     with weight_tab:
         st.caption("Uma medida por dia. O valor salvo aparece abaixo para você editar e atualizar.")
+        from solem_voice_ui import voice_input
+        weight_key = f"weight_value_{day}"
+        spoken = voice_input('weight', f'weight_voice_{day}')
+        if spoken: st.session_state[weight_key] = float(spoken['kg'])
         with st.form("health_weight"):
             kg = st.number_input("Peso corporal (kg)", min_value=1.0, max_value=500.0,
                                  value=float(weight["details"]["kg"]) if weight else None, step=0.1,
-                                 placeholder="Informe seu peso")
+                                 placeholder="Informe seu peso", key=weight_key)
             submitted = st.form_submit_button("Salvar edição do peso" if weight else "Salvar peso", use_container_width=True)
         if submitted:
             if kg is None: st.error("Informe seu peso antes de salvar.")
@@ -218,6 +222,11 @@ def health_page(client, healthy_options, occasional_options, demo=False):
         # Date + persisted value scopes widgets: switching days must not retain
         # the previous day's draft, nor hide the saved bedtime after a rerun.
         scope = f"sleep_{day}_{previous.get('dormir', '')}_{previous.get('acordar', '')}"
+        spoken = voice_input('sleep', scope+'_voice')
+        if spoken:
+            st.session_state[scope+'_bed_text'] = spoken['bed']
+            st.session_state[scope+'_wake_text'] = spoken['wake']
+            st.session_state[scope+'_mode'] = spoken['mode']
         st.caption("Digite em formato 24 horas e pressione Enter ou toque fora do campo. Meia-noite = 00:00; duas da madrugada = 02:00. Aceita qualquer minuto, não apenas intervalos de 15 minutos.")
         bed_text = st.text_input("Horário em que dormiu", value=_time(previous.get("dormir"), "23:00").strftime("%H:%M"),
                                  placeholder="Ex.: 02:00", max_chars=5, key=scope + "_bed_text")

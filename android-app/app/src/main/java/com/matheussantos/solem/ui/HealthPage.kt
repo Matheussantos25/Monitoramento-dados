@@ -247,6 +247,7 @@ private fun contextAssets(context: android.content.Context) = context.assets.ope
     var value by rememberSaveable(day, previous?.id) { mutableStateOf(previous?.text("kg").orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
     Text("Uma medida por dia. Salvar novamente atualiza a anterior.")
+    key(day,previous?.id) {VoiceInput("Peso 67 vírgula 5 quilos.",busy,::parseWeightVoice) {value=it.kg.toString();error=null}}
     Field("Peso corporal (kg)", value, true) { value = it }
     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     Button(onClick = {
@@ -263,6 +264,9 @@ private fun contextAssets(context: android.content.Context) = context.assets.ope
     var mode by rememberSaveable(day, previous?.id) { mutableStateOf("Automático pelos horários") }
     var error by remember(day) { mutableStateOf<String?>(null) }
     Text("O dia em foco é o dia em que acordou. Dormir às 02h e acordar às 08h conta na mesma data.")
+    key(day,previous?.id) {VoiceInput("Dormi às 3 e acordei às 13:30, na mesma data.",busy,::parseSleepVoice) {
+        bed=it.bed;wake=it.wake;mode=when(it.mode){"same"->"Na mesma data";"previous"->"Na noite anterior";else->"Automático pelos horários"};error=null
+    }}
     Field("Dormiu (HH:MM)", bed) { bed = it }
     Field("Acordou (HH:MM)", wake) { wake = it }
     Choice("Quando começou o sono?", mode, listOf("Automático pelos horários", "Na mesma data", "Na noite anterior")) { mode = it }

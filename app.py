@@ -791,6 +791,20 @@ if pagina == "Treino":
     modo_insercao = st.radio("Selecione o formato do treino:", ["🏋️ Exercício Isolado (Convencional)", "🔥 Circuito AMRAP 20' (5 Barras / 10 Flexões / 15 Agachamentos)"], horizontal=True, key="treino_formato")
     if modo_insercao == "🏋️ Exercício Isolado (Convencional)":
         exercicios_disponiveis = sorted(set(TODOS_EXERCICIOS) | set(df_treinos.get("exercicio", pd.Series(dtype=str)).dropna()))
+        from solem_voice_ui import voice_input
+        spoken = voice_input('workout', 'workout_voice', exercises=exercicios_disponiveis,
+                             current=st.session_state.get('treino_exercicio', exercicios_disponiveis[0]), fields=workout_fields)
+        if spoken:
+            selected = spoken['exercise']
+            st.session_state['treino_exercicio'] = selected
+            if st.session_state.get('treino_exercicio_anterior') != selected:
+                st.session_state['treino_distancia'] = 0.0
+            st.session_state['treino_exercicio_anterior'] = selected
+            for field, value in spoken['values'].items():
+                target = 'treino_distancia' if field == 'distancia_km' else f'treino_{field}_{selected}'
+                st.session_state[target] = value
+            if 'duracao_min' in spoken['values']:
+                st.session_state.pop(f'treino_tempo_medido_{selected}', None)
         exercicio_input = st.selectbox("Exercício", exercicios_disponiveis, key="treino_exercicio")
         exercise_guide(exercicio_input)
         if st.session_state.get("treino_exercicio_anterior") != exercicio_input:

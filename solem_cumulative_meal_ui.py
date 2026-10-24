@@ -10,7 +10,7 @@ def cumulative_review(client, day, proposal, save, key, old=None, demo=False):
     names={food["id"]:food["name"] for food in table}
     reference_details()
     previous=old.get("details",{}) if old else {}
-    weighing=previous.get("weighing",{})
+    weighing=proposal.get("voice_weighing") or previous.get("weighing",{})
     source=proposal["items"]
     st.caption("Adicione os alimentos na mesma ordem em que foram colocados no prato. Não zere a balança entre eles. Se retirar comida ou zerar novamente, use o modo individual.")
     baseline=st.number_input("Leitura inicial: prato vazio (g) — 0 se usou tara",0.0,10000.0,

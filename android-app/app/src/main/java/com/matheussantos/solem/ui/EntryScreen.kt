@@ -80,6 +80,20 @@ import java.time.ZoneOffset
                     TimerPanel(fixedSeconds = 1200)
                     Field("Rounds completos", rounds, true) { rounds = it }
                 } else {
+                    key(date,existing?.id) {VoiceInput("Agachamento, 3 séries de 20, descanso de 60 segundos.",busy || WalkLocationService.state.value.active,
+                        parse={text->parseWorkoutVoice(text,catalog.exercises,exercise).also {draft->
+                            require(draft.values.keys.all {it in catalog.workoutFields(draft.exercise)}) {"Há medidas que não pertencem a este exercício. Confira exercício, duração e repetições."}
+                        }}, apply={draft->
+                            if(exercise!=draft.exercise){series="1";reps="0";load="0";duration="0";distance="0";rest="60";iso="0";measuredSeconds=null}
+                            exercise=draft.exercise
+                            draft.values.forEach {(field,value)-> when(field){
+                                "series"->series=value.toInt().toString(); "repeticoes"->reps=value.toInt().toString()
+                                "carga_kg"->load=value.toString(); "descanso_seg"->rest=value.toInt().toString()
+                                "duracao_min"->{duration=value.toInt().toString();measuredSeconds=null}
+                                "distancia_km"->distance=value.toString(); "isometria_segundos"->iso=value.toInt().toString()
+                            }}
+                            success=false
+                        })}
                     Choice("Exercício", exercise, catalog.exercises + listOfNotNull(existing?.exercicio)) {
                         if (WalkLocationService.state.value.active) error = "Pare o GPS antes de trocar o exercício."
                         else if (exercise != it) {
