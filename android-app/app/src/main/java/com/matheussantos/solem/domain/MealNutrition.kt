@@ -11,7 +11,8 @@ import kotlin.math.floor
     @SerialName("fat_g") val fat: Double = 0.0,
     @SerialName("fiber_g") val fiber: Double = 0.0)
 @Serializable data class MealReference(val id: String, val name: String, val description: String,
-    @SerialName("source_url") val sourceUrl: String, val per100: MealNutrients)
+    @SerialName("source_url") val sourceUrl: String, val per100: MealNutrients,
+    @SerialName("display_name") val displayName: String = name)
 @Serializable data class MealFood(val name: String, @SerialName("food_id") val foodId: String = "",
     val grams: Double = 0.0, val confidence: String = "low")
 @Serializable data class MealEstimate(val items: List<MealFood>, val totals: MealNutrients,
@@ -19,6 +20,8 @@ import kotlin.math.floor
     val basis: String = "USDA FoodData Central / SR Legacy",
     @SerialName("catalog_version") val catalogVersion: String = "sr-2018-solem-1")
 val mealJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+fun foodDisplayName(name: String, references: List<MealReference>): String =
+    references.firstOrNull { it.name == name }?.displayName ?: name
 // A missing record means creation; legacy records must retain individual grams.
 fun defaultCumulativeMeal(details: JsonObject?): Boolean = details == null ||
     ((details["weighing"] as? JsonObject)?.get("mode") as? JsonPrimitive)?.content == "cumulative"

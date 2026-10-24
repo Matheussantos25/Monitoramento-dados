@@ -16,6 +16,14 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", value)
+@Composable fun MealReferenceDetails(references: List<MealReference>) {
+    var expanded by remember { mutableStateOf(false) }
+    TextButton(onClick={expanded=!expanded}) { Text(if(expanded) "Ocultar referências e preparo" else "Referências nutricionais e preparo") }
+    if(expanded) {
+        Text("Nomes simplificados; cálculos pelas referências abaixo. Preparo e ingredientes podem mudar os valores.",style=MaterialTheme.typography.bodySmall)
+        references.forEach { Text("${it.displayName} — ${it.name}",style=MaterialTheme.typography.bodySmall) }
+    }
+}
 @Composable fun MealNutritionSummary(estimate: MealEstimate) {
     Text(if(estimate.complete) "Estimativa nutricional" else "Estimativa parcial",style=MaterialTheme.typography.titleMedium)
     val values=estimate.totals
@@ -42,16 +50,18 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
     var confirmed by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val links=LocalUriHandler.current
+    MealReferenceDetails(references)
     Text(if(weighed) "Refeição com balança" else "Confira seu prato",style=MaterialTheme.typography.titleLarge)
     Text("Zere a balança com o prato vazio (tara). Pese só a parte consumida de cada alimento. Escolha o mesmo preparo: cru ou cozido. Inclua óleo e molhos. Use 0 g para deixar sem cálculo.")
     items.forEachIndexed { index,item ->
-        key(items.size,index) { Panel(item.name.ifBlank { "Alimento" }) {
-            Field("Alimento",item.name) { name -> items=items.mapIndexed { at,food -> if(at==index) food.copy(name=name.take(80)) else food }; confirmed=false }
-            val options=listOf("Sem correspondência — não calcular")+references.map { it.name }
-            val selected=references.firstOrNull { it.id==item.foodId }?.name ?: options.first()
+        key(items.size,index) { Panel(foodDisplayName(item.name,references).ifBlank { "Alimento" }) {
+            Field("Alimento",foodDisplayName(item.name,references)) { name -> items=items.mapIndexed { at,food -> if(at==index) food.copy(name=name.take(80)) else food }; confirmed=false }
+            val options=listOf("Sem correspondência — não calcular")+references.map { it.displayName }
+            val selected=references.firstOrNull { it.id==item.foodId }?.displayName ?: options.first()
             Choice("Referência nutricional / preparo",selected,options) { choice ->
-                val id=references.firstOrNull { it.name==choice }?.id.orEmpty()
-                items=items.mapIndexed { at,food -> if(at==index) food.copy(foodId=id, name=if(food.name=="Outro alimento") choice else food.name) else food }; confirmed=false
+                val reference=references.firstOrNull { it.displayName==choice }
+                val id=reference?.id.orEmpty()
+                items=items.mapIndexed { at,food -> if(at==index) food.copy(foodId=id, name=if(food.name=="Outro alimento") reference?.name ?: choice else food.name) else food }; confirmed=false
             }
             var gramsText by remember { mutableStateOf(amount(item.grams)) }
             Field("Peso consumido (g)",gramsText,true) { value ->

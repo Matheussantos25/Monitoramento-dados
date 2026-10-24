@@ -34,6 +34,8 @@ Validação: `python -m pytest -q` inclui regressão das abas legadas, metas pes
 
 Novas refeições com balança abrem em **Peso acumulado da balança** no site e no Android. Informe a leitura após cada alimento, sem zerar entre eles; o aplicativo calcula a diferença. O modo individual continua disponível. Editar uma refeição existente mantém seu modo salvo (individual para registros antigos sem metadados de pesagem). Não há migração nem recálculo do histórico.
 
+Na versão **0.16.3**, o catálogo e os registros são exibidos com nomes curtos (Arroz, Feijão, Carne, Purê de batata). A camada de apresentação usa `display_name`, sem trocar IDs, nomes armazenados, pesos, fontes ou valores por 100 g. Nomes personalizados permanecem intactos. Variantes nutricionalmente diferentes continuam separadas, e o preparo completo pode ser consultado em **Referências nutricionais e preparo**. Nenhuma refeição é regravada por essa atualização.
+
 Use Python 3.12 ou compatível com as dependências do projeto:
 
 ```sh

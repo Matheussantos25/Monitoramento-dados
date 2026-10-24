@@ -27,6 +27,7 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
@@ -112,14 +113,15 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                     Panel("${row.text("tipo_refeicao")} · ${row.loggedAt.take(5)}") {
                         if(row.skippedMeal) Text("Sem refeição — não comi.")
                         else {
-                            Text("${if(row.details["nutrition"]!=null) "Confirmados" else "Habituais"}: ${foods(row, "saudaveis").ifBlank { "—" }}")
+                            val shownFoods=(row.details["saudaveis"] as? JsonArray)?.joinToString(", ") { foodDisplayName(it.jsonPrimitive.content,references) }.orEmpty()
+                            Text("${if(row.details["nutrition"]!=null) "Confirmados" else "Habituais"}: ${shownFoods.ifBlank { "—" }}")
                             Text("Ocasionais: ${foods(row, "ocasionais").ifBlank { "—" }}")
                         }
                         val nutrition=runCatching { row.details["nutrition"]?.let { mealJson.decodeFromJsonElement<MealEstimate>(it) } }.getOrNull()
                         nutrition?.let { runCatching { calculateMeal(it.items,references) }.getOrNull()?.let { checked -> MealNutritionSummary(checked) } }
                         nutrition?.items?.forEach { item ->
                             val portion=runCatching {calculateMeal(listOf(item),references)}.getOrNull()
-                            Text("${item.name} · ${item.grams} g · "+if(portion?.complete==true)
+                            Text("${foodDisplayName(item.name,references)} · ${item.grams} g · "+if(portion?.complete==true)
                                 "${portion.totals.kcal} kcal · ${portion.totals.protein} g de proteína" else "sem cálculo")
                         }
                         TextButton(onClick = { editingId = if (editingId == row.id) null else row.id }) {

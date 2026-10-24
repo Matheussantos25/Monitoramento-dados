@@ -28,16 +28,18 @@ private fun parseScale(value:String)=value.replace(',','.').toDoubleOrNull() ?: 
     var confirmed by remember {mutableStateOf(false)}
     var error by remember {mutableStateOf<String?>(null)}
     Text("Balança · peso acumulado",style=MaterialTheme.typography.titleLarge)
+    MealReferenceDetails(references)
     Text("Coloque os alimentos na ordem do registro, sem zerar a balança entre eles. Informe 0 como peso inicial se usou tara. Se retirou comida ou zerou novamente, use o modo individual.")
     Field("Leitura inicial: prato vazio (g)",baseline,true) {baseline=it;confirmed=false}
     items.forEachIndexed {index,item ->
-        Panel("${index+1}. ${item.name}") {
-            Field("Alimento",item.name) {name ->items=items.mapIndexed {at,food->if(at==index)food.copy(name=name.take(80))else food};confirmed=false}
-            val options=listOf("Sem correspondência — não calcular")+references.map {it.name}
-            val current=references.firstOrNull {it.id==item.foodId}?.name ?: options.first()
+        Panel("${index+1}. ${foodDisplayName(item.name,references)}") {
+            Field("Alimento",foodDisplayName(item.name,references)) {name ->items=items.mapIndexed {at,food->if(at==index)food.copy(name=name.take(80))else food};confirmed=false}
+            val options=listOf("Sem correspondência — não calcular")+references.map {it.displayName}
+            val current=references.firstOrNull {it.id==item.foodId}?.displayName ?: options.first()
             Choice("Referência nutricional / preparo",current,options) {choice ->
-                val id=references.firstOrNull {it.name==choice}?.id.orEmpty()
-                items=items.mapIndexed {at,food->if(at==index)food.copy(foodId=id,name=if(food.name=="Outro alimento")choice else food.name)else food};confirmed=false
+                val reference=references.firstOrNull {it.displayName==choice}
+                val id=reference?.id.orEmpty()
+                items=items.mapIndexed {at,food->if(at==index)food.copy(foodId=id,name=if(food.name=="Outro alimento")reference?.name ?: choice else food.name)else food};confirmed=false
             }
             Field("Leitura da balança após este alimento (g)",readings[index],true) {value ->readings=readings.mapIndexed {at,text->if(at==index)value else text};confirmed=false}
             runCatching {cumulativeMealItems(items.take(index+1),MealWeighing(baseline=parseScale(baseline),readings=readings.take(index+1).map(::parseScale)))}.getOrNull()?.lastOrNull()?.let {food ->

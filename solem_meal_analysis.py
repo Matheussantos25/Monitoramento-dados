@@ -13,6 +13,12 @@ def catalog():
     return json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
 
 
+def food_display_name(name):
+    """Presentation only: preserve custom names and never mutate saved meals."""
+    return next((food.get("display_name", food["name"]) for food in catalog()
+                 if food["name"] == name), name)
+
+
 def nutrition(items):
     if not isinstance(items, list) or not 1 <= len(items) <= 12:
         raise ValueError(ERRORS["invalid_items"])

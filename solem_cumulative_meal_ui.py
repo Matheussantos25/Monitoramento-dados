@@ -1,12 +1,14 @@
 """Cumulative scale entry; individual-food weights remain the stored nutrition basis."""
 from datetime import time
 import streamlit as st
-from solem_meal_analysis import catalog, cumulative_items, nutrition, meal_details
+from solem_meal_analysis import catalog, cumulative_items, nutrition, meal_details, food_display_name
 from solem_health import MEAL_TYPES, now_local
 
 def cumulative_review(client, day, proposal, save, key, old=None, demo=False):
-    from solem_meal_photo_ui import nutrient_metrics
-    table=catalog(); labels={food["id"]:food["name"] for food in table}
+    from solem_meal_photo_ui import nutrient_metrics, reference_details
+    table=catalog(); labels={food["id"]:food_display_name(food["name"]) for food in table}
+    names={food["id"]:food["name"] for food in table}
+    reference_details()
     previous=old.get("details",{}) if old else {}
     weighing=previous.get("weighing",{})
     source=proposal["items"]
@@ -19,7 +21,7 @@ def cumulative_review(client, day, proposal, save, key, old=None, demo=False):
     for index,item in enumerate(source):
         reconstructed+=float(item["grams"])
         with st.container(border=True):
-            st.markdown(f"**{index+1}. {item['name']}**")
+            st.markdown(f"**{index+1}. {food_display_name(item['name'])}**")
             chosen=st.selectbox("Referência nutricional / preparo",[""]+list(labels),
                 index=([""]+list(labels)).index(item.get("food_id","") if item.get("food_id","") in labels else ""),
                 format_func=lambda value:labels.get(value,"Sem correspondência — não calcular"),key=f"{key}_food_{index}")
@@ -32,7 +34,7 @@ def cumulative_review(client, day, proposal, save, key, old=None, demo=False):
         order="_".join(added[:index+1])
         reading=st.number_input(f"{len(source)+index+1}. Balança após {labels[food_id]} (g)",0.0,34000.0,0.0,1.0,
                                 key=f"{key}_reading_extra_{order}")
-        items.append(dict(name=labels[food_id],food_id=food_id,grams=0));readings.append(reading)
+        items.append(dict(name=names[food_id],food_id=food_id,grams=0));readings.append(reading)
     st.caption("Ao remover ou trocar a ordem de uma adição, confira e preencha novamente as leituras seguintes. Para remover alimentos de uma refeição já salva, use o modo individual.")
     valid=False
     try:
@@ -41,7 +43,7 @@ def cumulative_review(client, day, proposal, save, key, old=None, demo=False):
         previous_reading=baseline
         for index,(item,reading) in enumerate(zip(calculated,readings)):
             values=nutrition([item])
-            st.write(f"{index+1}. {item['name']}: {reading:g} − {previous_reading:g} = **{item['grams']:g} g**")
+            st.write(f"{index+1}. {food_display_name(item['name'])}: {reading:g} − {previous_reading:g} = **{item['grams']:g} g**")
             if values["complete"]:
                 st.caption(f"{values['totals']['kcal']:.1f} kcal · {values['totals']['protein_g']:.1f} g de proteína")
             previous_reading=reading

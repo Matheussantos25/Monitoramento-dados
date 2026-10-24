@@ -2,6 +2,7 @@
   {
     "id": "169757",
     "name": "Arroz branco cozido, sem óleo",
+    "display_name": "Arroz",
     "description": "Rice, white, long-grain, regular, unenriched, cooked without salt",
     "source_url": "https://fdc.nal.usda.gov/food-details/169757/nutrients",
     "per100": {
@@ -15,6 +16,7 @@
   {
     "id": "169704",
     "name": "Arroz integral cozido",
+    "display_name": "Arroz integral",
     "description": "Rice, brown, long-grain, cooked (Includes foods for USDA's Food Distribution Program)",
     "source_url": "https://fdc.nal.usda.gov/food-details/169704/nutrients",
     "per100": {
@@ -28,6 +30,7 @@
   {
     "id": "175200",
     "name": "Feijão tipo pinto, grãos cozidos sem caldo",
+    "display_name": "Feijão",
     "description": "Beans, pinto, mature seeds, cooked, boiled, without salt",
     "source_url": "https://fdc.nal.usda.gov/food-details/175200/nutrients",
     "per100": {
@@ -41,6 +44,7 @@
   {
     "id": "173735",
     "name": "Feijão preto, grãos cozidos sem caldo",
+    "display_name": "Feijão preto",
     "description": "Beans, black, mature seeds, cooked, boiled, without salt",
     "source_url": "https://fdc.nal.usda.gov/food-details/173735/nutrients",
     "per100": {
@@ -54,6 +58,7 @@
   {
     "id": "171477",
     "name": "Peito de frango assado, sem pele",
+    "display_name": "Frango",
     "description": "Chicken, broilers or fryers, breast, meat only, cooked, roasted",
     "source_url": "https://fdc.nal.usda.gov/food-details/171477/nutrients",
     "per100": {
@@ -67,6 +72,7 @@
   {
     "id": "168555",
     "name": "Purê de batata com leite e manteiga",
+    "display_name": "Purê de batata com manteiga",
     "description": "Potatoes, mashed, home-prepared, whole milk and butter added",
     "source_url": "https://fdc.nal.usda.gov/food-details/168555/nutrients",
     "per100": {
@@ -80,6 +86,7 @@
   {
     "id": "170493",
     "name": "Purê de batata com leite",
+    "display_name": "Purê de batata",
     "description": "Potatoes, mashed, home-prepared, whole milk added",
     "source_url": "https://fdc.nal.usda.gov/food-details/170493/nutrients",
     "per100": {
@@ -93,6 +100,7 @@
   {
     "id": "173424",
     "name": "Ovo cozido",
+    "display_name": "Ovo cozido",
     "description": "Egg, whole, cooked, hard-boiled",
     "source_url": "https://fdc.nal.usda.gov/food-details/173424/nutrients",
     "per100": {
@@ -106,6 +114,7 @@
   {
     "id": "173423",
     "name": "Ovo frito",
+    "display_name": "Ovo frito",
     "description": "Egg, whole, cooked, fried",
     "source_url": "https://fdc.nal.usda.gov/food-details/173423/nutrients",
     "per100": {
@@ -119,6 +128,7 @@
   {
     "id": "172187",
     "name": "Ovos mexidos",
+    "display_name": "Ovos mexidos",
     "description": "Egg, whole, cooked, scrambled",
     "source_url": "https://fdc.nal.usda.gov/food-details/172187/nutrients",
     "per100": {
@@ -132,6 +142,7 @@
   {
     "id": "172675",
     "name": "Pão tipo francês",
+    "display_name": "Pão francês",
     "description": "Bread, french or vienna (includes sourdough)",
     "source_url": "https://fdc.nal.usda.gov/food-details/172675/nutrients",
     "per100": {
@@ -145,6 +156,7 @@
   {
     "id": "173944",
     "name": "Banana",
+    "display_name": "Banana",
     "description": "Bananas, raw",
     "source_url": "https://fdc.nal.usda.gov/food-details/173944/nutrients",
     "per100": {
@@ -158,6 +170,7 @@
   {
     "id": "171793",
     "name": "Carne bovina moída, 10% gordura, cozida",
+    "display_name": "Carne",
     "description": "Beef, ground, 90% lean meat / 10% fat, patty, cooked, pan-broiled",
     "source_url": "https://fdc.nal.usda.gov/food-details/171793/nutrients",
     "per100": {
@@ -171,6 +184,7 @@
   {
     "id": "168928",
     "name": "Macarrão cozido, sem molho",
+    "display_name": "Macarrão",
     "description": "Pasta, cooked, unenriched, without added salt",
     "source_url": "https://fdc.nal.usda.gov/food-details/168928/nutrients",
     "per100": {
@@ -184,6 +198,7 @@
   {
     "id": "170072",
     "name": "Inhame cozido",
+    "display_name": "Inhame",
     "description": "Yam, cooked, boiled, drained, or baked, without salt",
     "source_url": "https://fdc.nal.usda.gov/food-details/170072/nutrients",
     "per100": {
@@ -197,6 +212,7 @@
   {
     "id": "172217",
     "name": "Leite integral",
+    "display_name": "Leite integral",
     "description": "Milk, whole, 3.25% milkfat, without added vitamin A and vitamin D",
     "source_url": "https://fdc.nal.usda.gov/food-details/172217/nutrients",
     "per100": {
@@ -210,6 +226,7 @@
   {
     "id": "171413",
     "name": "Azeite de oliva",
+    "display_name": "Azeite",
     "description": "Oil, olive, salad or cooking",
     "source_url": "https://fdc.nal.usda.gov/food-details/171413/nutrients",
     "per100": {
@@ -223,6 +240,7 @@
   {
     "id": "172421",
     "name": "Lentilha cozida",
+    "display_name": "Lentilha",
     "description": "Lentils, mature seeds, cooked, boiled, without salt",
     "source_url": "https://fdc.nal.usda.gov/food-details/172421/nutrients",
     "per100": {
@@ -236,6 +254,7 @@
   {
     "id": "171688",
     "name": "Maçã com casca",
+    "display_name": "Maçã",
     "description": "Apples, raw, with skin (Includes foods for USDA's Food Distribution Program)",
     "source_url": "https://fdc.nal.usda.gov/food-details/171688/nutrients",
     "per100": {
@@ -249,6 +268,7 @@
   {
     "id": "173905",
     "name": "Aveia cozida em água",
+    "display_name": "Aveia cozida",
     "description": "Cereals, oats, regular and quick, unenriched, cooked with water (includes boiling and microwaving), without salt",
     "source_url": "https://fdc.nal.usda.gov/food-details/173905/nutrients",
     "per100": {
@@ -262,6 +282,7 @@
   {
     "id": "175177",
     "name": "Tilápia assada",
+    "display_name": "Tilápia",
     "description": "Fish, tilapia, cooked, dry heat",
     "source_url": "https://fdc.nal.usda.gov/food-details/175177/nutrients",
     "per100": {
@@ -275,6 +296,7 @@
   {
     "id": "170440",
     "name": "Batata cozida",
+    "display_name": "Batata cozida",
     "description": "Potatoes, boiled, cooked without skin, flesh, without salt",
     "source_url": "https://fdc.nal.usda.gov/food-details/170440/nutrients",
     "per100": {
@@ -288,6 +310,7 @@
   {
     "id": "170457",
     "name": "Tomate cru",
+    "display_name": "Tomate",
     "description": "Tomatoes, red, ripe, raw, year round average",
     "source_url": "https://fdc.nal.usda.gov/food-details/170457/nutrients",
     "per100": {
@@ -301,6 +324,7 @@
   {
     "id": "169249",
     "name": "Alface crua",
+    "display_name": "Alface",
     "description": "Lettuce, green leaf, raw",
     "source_url": "https://fdc.nal.usda.gov/food-details/169249/nutrients",
     "per100": {

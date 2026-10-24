@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from solem_health import MEAL_TYPES, meal_food_options, now_local, private_weight_history, sleep_period
 from solem_health_private import delete_entry, list_entries, save_entry
 from solem_ui import section_intro
+from solem_meal_analysis import food_display_name
 
 def _time(value, fallback):
     for pattern in ("%H:%M", "%H:%M:%S"):
@@ -91,7 +92,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                 if details.get("sem_refeicao") is True:
                     st.caption("Sem refeição — não comi.")
                 else:
-                    st.caption(("Confirmados: " if details.get("nutrition") else "Habituais: ") + (", ".join(details.get("saudaveis", [])) or "—"))
+                    st.caption(("Confirmados: " if details.get("nutrition") else "Habituais: ") + (", ".join(food_display_name(name) for name in details.get("saudaveis", [])) or "—"))
                     st.caption("Ocasionais: " + (", ".join(details.get("ocasionais", [])) or "—"))
                 if details.get("nutrition"):
                     from solem_meal_analysis import nutrition
@@ -100,7 +101,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                         for item in details["nutrition"]["items"]:
                             part = nutrition([item])
                             value = f"{part['totals']['kcal']:.1f} kcal · {part['totals']['protein_g']:.1f} g de proteína" if part["complete"] else "sem cálculo"
-                            st.caption(f"{item['name']} · {item['grams']:g} g · {value}")
+                            st.caption(f"{food_display_name(item['name'])} · {item['grams']:g} g · {value}")
                     except (KeyError, ValueError, TypeError): st.warning("Confira os dados nutricionais desta refeição antes de editar.")
                     with st.expander("Editar alimentos e porções"):
                         review_meal(client, day, details["nutrition"], _save, f"meal_nutrition_{row['id']}", old=row, demo=demo)
@@ -131,7 +132,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                             old_good = details.get("saudaveis", [])
                             edit_good = st.multiselect("Alimentos habituais",
                                 meal_food_options(edit_type, healthy_options, old_good), default=old_good,
-                                key=f"meal_good_{row['id']}", disabled=edit_skipped)
+                                key=f"meal_good_{row['id']}", disabled=edit_skipped, format_func=food_display_name)
                             new_good = st.text_input("Outro alimento habitual", max_chars=120, disabled=edit_skipped)
                         with b:
                             old_other = details.get("ocasionais", [])

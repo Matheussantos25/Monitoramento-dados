@@ -1,7 +1,14 @@
 """Local nutrition display and editing for existing meal records."""
 import streamlit as st
 from solem_health import MEAL_TYPES, now_local
-from solem_meal_analysis import catalog, nutrition, meal_details, day_nutrition
+from solem_meal_analysis import catalog, nutrition, meal_details, day_nutrition, food_display_name
+
+
+def reference_details():
+    with st.expander("Referências nutricionais e preparo"):
+        st.caption("Os nomes são simplificados. O cálculo continua usando estas referências específicas; preparo e ingredientes podem mudar os valores.")
+        for food in catalog():
+            st.write(f"{food_display_name(food['name'])} — {food['name']}")
 
 
 def nutrient_metrics(result):
@@ -38,7 +45,9 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
         cumulative_review(client,day,proposal,save,f"{key}_cum",old,demo)
         return
     table = catalog()
-    labels = {food["id"]: food["name"] for food in table}
+    labels = {food["id"]: food_display_name(food["name"]) for food in table}
+    names = {food["id"]: food["name"] for food in table}
+    reference_details()
     source_items = proposal["items"]
     items = []
     weighed = weighed or bool(old and old.get("details", {}).get("input_method") == "weighed")
@@ -46,7 +55,9 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
     st.caption("Zere a balança com o prato vazio (tara). Informe só o peso consumido de cada alimento, sem ossos ou cascas não consumidas. Escolha a referência do mesmo preparo: cru ou cozido. Inclua óleo e molhos separadamente; 0 g deixa o alimento sem cálculo.")
     for index, item in enumerate(source_items):
         with st.container(border=True):
-            name = st.text_input("Alimento", value=item["name"], max_chars=80, key=f"{key}_name_{index}")
+            display_name = food_display_name(item["name"])
+            name = st.text_input("Alimento", value=display_name, max_chars=80, key=f"{key}_name_{index}")
+            if name == display_name: name = item["name"]
             chosen = st.selectbox("Referência nutricional / preparo", [""] + list(labels),
                 index=([""] + list(labels)).index(item.get("food_id", "") if item.get("food_id", "") in labels else ""),
                 format_func=lambda food_id: labels.get(food_id, "Sem correspondência — não calcular"), key=f"{key}_food_{index}")
@@ -66,7 +77,7 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
     added = st.multiselect("Adicionar alimentos à refeição", list(labels), format_func=labels.get, key=f"{key}_added")
     for food_id in added:
         grams = st.number_input(f"Peso de {labels[food_id]} (g)", 0.0, 2000.0, 0.0, 1.0, key=f"{key}_extra_{food_id}")
-        entry = {"name": labels[food_id], "food_id": food_id, "grams": grams, "confidence": "low"}
+        entry = {"name": names[food_id], "food_id": food_id, "grams": grams, "confidence": "low"}
         items.append(entry)
         if grams:
             values = nutrition([entry])["totals"]
