@@ -19,6 +19,9 @@ import kotlin.math.floor
     val basis: String = "USDA FoodData Central / SR Legacy",
     @SerialName("catalog_version") val catalogVersion: String = "sr-2018-solem-1")
 val mealJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+// A missing record means creation; legacy records must retain individual grams.
+fun defaultCumulativeMeal(details: JsonObject?): Boolean = details == null ||
+    ((details["weighing"] as? JsonObject)?.get("mode") as? JsonPrimitive)?.content == "cumulative"
 private fun decimal(value: Double) = floor(value * 10 + 0.5) / 10
 @Serializable data class MealWeighing(val mode:String="cumulative",
     @SerialName("baseline_g") val baseline:Double=0.0,

@@ -28,7 +28,8 @@ def daily_metrics(meals):
 
 
 def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=False):
-    cumulative_saved=bool(old and old.get("details",{}).get("weighing",{}).get("mode")=="cumulative")
+    # New meals use scale readings; editing keeps the saved interpretation.
+    cumulative_saved=old is None or old.get("details",{}).get("weighing",{}).get("mode")=="cumulative"
     mode=st.radio("Como vai informar os pesos?",["Peso individual de cada alimento","Peso acumulado da balança"],
                   index=int(cumulative_saved),key=f"{key}_weighing_mode")
     st.caption("Os modos têm rascunhos separados. Salve antes de trocar de modo se quiser manter as alterações.")

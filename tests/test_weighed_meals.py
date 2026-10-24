@@ -30,6 +30,7 @@ review_meal(None,date(2026,10,22),{"items":[]},save,"scale",demo=True,weighed=Tr
 '''
     app=AppTest.from_string(code).run()
     assert not app.exception
+    app.radio(key="scale_weighing_mode").set_value("Peso individual de cada alimento").run()
     assert app.button(key="scale_save").disabled
     app.multiselect(key="scale_added").set_value(["169757","171477"]).run()
     app.number_input(key="scale_extra_169757").set_value(150)
@@ -49,6 +50,7 @@ def test_health_diary_save_persists_and_edit_recalculates(monkeypatch):
     app.radio(key="solem_page").set_value("Saúde").run()
     day=app.date_input(key="health_day").value
     key=f"weighed_meal_{day}"
+    app.radio(key=f"{key}_weighing_mode").set_value("Peso individual de cada alimento").run()
     app.multiselect(key=f"{key}_added").set_value(["169757","171477"]).run()
     app.number_input(key=f"{key}_extra_169757").set_value(150)
     app.number_input(key=f"{key}_extra_171477").set_value(100).run()

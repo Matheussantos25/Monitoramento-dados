@@ -4,6 +4,17 @@ import org.junit.Test
 import kotlinx.serialization.json.decodeFromJsonElement
 
 class CumulativeMealTest {
+    @Test fun newMealsDefaultToCumulativeButSavedMealsKeepTheirInterpretation() {
+        assertTrue(defaultCumulativeMeal(null))
+        val legacy=photoMealDetails("Almoço",listOf(MealFood("Arroz","169757",128.0)),catalog,true)
+        val before=legacy.toString()
+        assertFalse(defaultCumulativeMeal(legacy))
+        assertEquals(before,legacy.toString())
+        assertEquals(128.0,mealJson.decodeFromJsonElement<MealEstimate>(legacy.getValue("nutrition")).items.single().grams,0.0)
+        val cumulative=photoMealDetails("Almoço",foods,catalog,true,MealWeighing(readings=listOf(69.0,128.0,201.0)))
+        assertTrue(defaultCumulativeMeal(cumulative))
+        assertEquals(listOf(69.0,59.0,73.0),mealJson.decodeFromJsonElement<MealEstimate>(cumulative.getValue("nutrition")).items.map {it.grams})
+    }
     private val foods=listOf(MealFood("Feijão","175200"),MealFood("Arroz","169757"),MealFood("Outro"))
     private val catalog:List<MealReference> = mealJson.decodeFromString(javaClass.getResource("/nutrition_catalog.json")!!.readText())
     @Test fun differencesTareAndEditing() {

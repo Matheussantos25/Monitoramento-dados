@@ -30,6 +30,10 @@ Validação: `python -m pytest -q` inclui regressão das abas legadas, metas pes
 
 ## Executar com seu banco
 
+### Balança acumulada como padrão (0.16.2)
+
+Novas refeições com balança abrem em **Peso acumulado da balança** no site e no Android. Informe a leitura após cada alimento, sem zerar entre eles; o aplicativo calcula a diferença. O modo individual continua disponível. Editar uma refeição existente mantém seu modo salvo (individual para registros antigos sem metadados de pesagem). Não há migração nem recálculo do histórico.
+
 Use Python 3.12 ou compatível com as dependências do projeto:
 
 ```sh

@@ -83,6 +83,7 @@ review_meal(None,date(2026,10,4),nutrition([{"name":"Arroz","food_id":"169757","
 '''
     app=AppTest.from_string(code).run()
     assert not app.exception
+    app.radio(key="review_weighing_mode").set_value("Peso individual de cada alimento").run()
     assert app.button(key="review_save").disabled
     app.number_input(key="review_grams_0").set_value(50).run()
     app.checkbox(key="review_confirmed").check().run()

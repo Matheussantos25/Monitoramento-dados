@@ -5,6 +5,28 @@ from solem_meal_analysis import cumulative_items,meal_details,day_nutrition
 
 ITEMS=[dict(name="Feijão",food_id="175200",grams=0),dict(name="Arroz",food_id="169757",grams=0),dict(name="Outro",food_id="",grams=0)]
 
+def test_opening_legacy_editor_keeps_individual_weights_without_saving():
+    old=dict(id="legacy",logged_at="13:30:00",details=meal_details("Almoço",[
+        dict(name="Feijão",food_id="175200",grams=69),
+        dict(name="Arroz",food_id="169757",grams=128)],True))
+    original=deepcopy(old)
+    app=AppTest.from_string('''
+import streamlit as st
+from datetime import date
+from solem_meal_photo_ui import review_meal
+def save(*args, **kwargs):
+    raise AssertionError("Opening a form must not save")
+old=st.session_state.old
+review_meal(None,date(2026,10,23),old["details"]["nutrition"],save,"legacy",old=old)
+''',default_timeout=40)
+    app.session_state.old=old
+    app.run()
+    assert not app.exception
+    assert app.radio(key="legacy_weighing_mode").value=="Peso individual de cada alimento"
+    assert app.number_input(key="legacy_grams_1").value==128
+    assert app.session_state.old==original
+
+
 @pytest.mark.parametrize("baseline,readings,expected",[
     (0,[60,128,201],[60,68,73]),(0,[69,128,201],[69,59,73]),
     (250,[310,378,451],[60,68,73]),(0,[60.5,128.5,201.7],[60.5,68,73.2]),
@@ -40,7 +62,7 @@ old=st.session_state.get("old")
 review_meal(None,date(2026,10,23),old["details"]["nutrition"] if old else {"items":[]},save,"scale",old=old,demo=True,weighed=True)
 '''
     app=AppTest.from_string(code,default_timeout=40).run()
-    app.radio(key="scale_weighing_mode").set_value("Peso acumulado da balança").run()
+    assert app.radio(key="scale_weighing_mode").value=="Peso acumulado da balança"
     app.multiselect(key="scale_cum_added").set_value(["175200","169757"]).run()
     app.number_input(key="scale_cum_baseline").set_value(250)
     app.number_input(key="scale_cum_reading_extra_175200").set_value(310)
@@ -71,7 +93,7 @@ def test_diary_stores_and_edits_one_cumulative_record(monkeypatch):
     app.radio(key="solem_page").set_value("Saúde").run()
     day=app.date_input(key="health_day").value
     key=f"weighed_meal_{day}"
-    app.radio(key=f"{key}_weighing_mode").set_value("Peso acumulado da balança").run()
+    assert app.radio(key=f"{key}_weighing_mode").value=="Peso acumulado da balança"
     app.multiselect(key=f"{key}_cum_added").set_value(["175200","169757","168928"]).run()
     app.number_input(key=f"{key}_cum_reading_extra_175200").set_value(60)
     app.number_input(key=f"{key}_cum_reading_extra_175200_169757").set_value(128)
