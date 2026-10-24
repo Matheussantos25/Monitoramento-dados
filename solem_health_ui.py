@@ -25,7 +25,7 @@ def _save(client, day, time, kind, details, message, old=None, demo=False):
             if key.startswith(f"meal_photo_{day}"): del st.session_state[key]
     if details.get("input_method") == "weighed" and old is None:
         for key in list(st.session_state):
-            if key.startswith(f"weighed_meal_{day}_") and not key.endswith("_weighing_mode"):
+            if key.startswith(f"weighed_meal_{day}_") and key != f"weighed_meal_{day}_weighing_mode":
                 del st.session_state[key]
     st.rerun()
 

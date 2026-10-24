@@ -119,3 +119,36 @@ def test_voice_training_and_health_prefill_never_save(monkeypatch):
     assert not app.exception
     assert next(t for t in app.text_input if t.label=='Horário em que dormiu').value == '03:00'
     assert app.session_state['demo_health_entries'] == original_health
+
+
+def test_saving_resets_dictated_mode_and_does_not_reuse_old_readings():
+    code='''
+import streamlit as st
+from datetime import date
+from solem_meal_photo_ui import review_meal
+from solem_health_ui import _save
+review_meal(None,date(2026,10,24),{'items':[]},_save,'weighed_meal_2026-10-24',demo=True,weighed=True)
+'''
+    app=AppTest.from_string(code).run()
+    key='weighed_meal_2026-10-24'
+    app.text_area(key=key+'_voice_text').set_value('arroz 170, feijão 153, individual').run()
+    app.button(key=key+'_voice_apply').click().run()
+    app.checkbox(key=key+'_dictated_1_confirmed').check().run()
+    app.button(key=key+'_dictated_1_save').click().run()
+    assert not app.exception
+    assert len(app.session_state['demo_health_entries']) == 1
+    assert key+'_dictated_1_weighing_mode' not in app.session_state
+    assert key+'_voice_proposal' not in app.session_state
+    # A fresh frontend avoids AppTest retaining removed widget IDs across the
+    # save-triggered rerun. Preserve the saved records and remaining form state.
+    saved=deepcopy(app.session_state['demo_health_entries'])
+    app=AppTest.from_string(code)
+    app.session_state['demo_health_entries']=saved
+    app.run()
+    app.text_area(key=key+'_voice_text').set_value('Jantar arroz 100, feijão 200, acumulado').run()
+    app.button(key=key+'_voice_apply').click().run()
+    assert not app.exception
+    assert app.radio(key=key+'_dictated_1_weighing_mode').value == 'Peso acumulado da balança'
+    assert app.number_input(key=key+'_dictated_1_cum_reading_1').value == 200
+    assert app.button(key=key+'_dictated_1_cum_save').disabled
+    assert len(app.session_state['demo_health_entries']) == 1
