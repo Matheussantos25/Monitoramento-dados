@@ -9,11 +9,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -77,15 +85,66 @@ import java.util.UUID
 }
 
 @Composable private fun ScriptPrompter(title:String,text:String,close:()->Unit) {
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        // Hoisted outside Dialog: changing its window sizing never recreates the reading state.
         val scroll=rememberScrollState()
         var playing by remember {mutableStateOf(false)}
         var speed by rememberSaveable {mutableFloatStateOf(35f)}
         var size by rememberSaveable {mutableFloatStateOf(30f)}
         var status by remember {mutableStateOf("Pronto para ler")}
+        var fullscreen by rememberSaveable {mutableStateOf(false)}
+        var showSettings by rememberSaveable {mutableStateOf(true)}
+        var layout by remember {mutableStateOf<TextLayoutResult?>(null)}
+        var pendingAnchor by remember {mutableStateOf<PrompterAnchor?>(null)}
+        var retainedAnchor by remember {mutableStateOf<PrompterAnchor?>(null)}
+        var restoredScroll by remember {mutableIntStateOf(-1)}
+        var reset by remember {mutableIntStateOf(0)}
+        LaunchedEffect(reset) {scroll.scrollTo(0)}
+        val padding = with(LocalDensity.current) {24.dp.toPx()}
+        fun lines():List<PrompterLine> = layout?.let {result -> (0 until result.lineCount).map {
+            PrompterLine(result.getLineStart(it),result.getLineTop(it),result.getLineBottom(it))
+        }} ?: emptyList()
+        fun holdPosition() {
+            // Repeated toggles without scrolling keep the original character,
+            // rather than drifting to an earlier line after each reflow.
+            pendingAnchor=retainedAnchor?.takeIf {scroll.value==restoredScroll}
+                ?: capturePrompterPosition(scroll.value,padding,lines())
+            playing=false;status="Pausado · continue de onde parou"
+        }
+        fun toggleScreen() {if(pendingAnchor==null){holdPosition();fullscreen=!fullscreen;showSettings=!fullscreen}}
+        LaunchedEffect(fullscreen,showSettings) {
+            val anchor=pendingAnchor
+            if(anchor!=null) {
+                // Wait for the new dialog bounds and text wrapping to be measured.
+                repeat(2) {withFrameNanos {}}
+                scroll.scrollTo(restorePrompterPosition(anchor,padding,lines()))
+                retainedAnchor=anchor;restoredScroll=scroll.value
+                pendingAnchor=null
+            }
+        }
+    Dialog(onDismissRequest={if(fullscreen)toggleScreen() else close()},properties=DialogProperties(
+        usePlatformDefaultWidth=false,decorFitsSystemWindows=!fullscreen,dismissOnClickOutside=false)) {
         val dragging by scroll.interactionSource.collectIsDraggedAsState()
         LaunchedEffect(dragging) {if(dragging) {playing=false;status="Pausado para rolagem manual"}}
         val view=LocalView.current
+        val window=(view.parent as? DialogWindowProvider)?.window
+        DisposableEffect(window,view,fullscreen) {
+            val controller=window?.let {WindowCompat.getInsetsController(it,view)}
+            val insets=ViewCompat.getRootWindowInsets(view)
+            val statusWasVisible=insets?.isVisible(WindowInsetsCompat.Type.statusBars()) ?: true
+            val navigationWasVisible=insets?.isVisible(WindowInsetsCompat.Type.navigationBars()) ?: true
+            val behavior=controller?.systemBarsBehavior
+            if(fullscreen) {
+                controller?.systemBarsBehavior=WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller?.hide(WindowInsetsCompat.Type.systemBars())
+            }
+            onDispose {
+                if(fullscreen) {
+                    if(statusWasVisible)controller?.show(WindowInsetsCompat.Type.statusBars())
+                    if(navigationWasVisible)controller?.show(WindowInsetsCompat.Type.navigationBars())
+                    if(behavior!=null)controller?.systemBarsBehavior=behavior
+                }
+            }
+        }
         val owner=LocalLifecycleOwner.current
         DisposableEffect(owner) {
             val observer=LifecycleEventObserver {_,event -> if(event==Lifecycle.Event.ON_PAUSE) {playing=false;status="Pausado ao sair da tela"}}
@@ -104,23 +163,32 @@ import java.util.UUID
                 }
             }
         }
-        var reset by remember {mutableIntStateOf(0)}
-        LaunchedEffect(reset) {scroll.scrollTo(0)}
-        Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize().padding(20.dp)) {
-                Text(title,maxLines=2,style=MaterialTheme.typography.titleMedium)
-                Row {Button({playing=!playing;status=if(playing) "Lendo" else "Pausado"}) {Text(if(playing) "Pausar" else "▶ Iniciar")}
-                    TextButton({playing=false;reset++;status="Reiniciado"}) {Text("Reiniciar")}
-                    TextButton(close) {Text("Fechar")}}
+        Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
+        Surface(Modifier.fillMaxWidth(if(fullscreen)1f else .96f).fillMaxHeight(if(fullscreen)1f else .92f),
+            shape=if(fullscreen)androidx.compose.ui.graphics.RectangleShape else MaterialTheme.shapes.extraLarge,
+            color=MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize().displayCutoutPadding().padding(horizontal=16.dp,vertical=12.dp)) {
+                if(!fullscreen)Text(title,maxLines=2,style=MaterialTheme.typography.titleMedium)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+                    FilledTonalButton({toggleScreen()},enabled=pendingAnchor==null) {Text(if(fullscreen) "Sair da tela cheia" else "⛶ Tela cheia")}
+                    TextButton(close) {Text("Fechar")}
+                }
+                Row {Button({playing=!playing;status=if(playing) "Lendo" else "Pausado"},enabled=pendingAnchor==null) {Text(if(playing) "Pausar" else "▶ Iniciar")}
+                    TextButton({playing=false;retainedAnchor=null;restoredScroll=-1;reset++;status="Reiniciado"},enabled=pendingAnchor==null) {Text("Reiniciar")}
+                    if(fullscreen)TextButton({holdPosition();showSettings=!showSettings},enabled=pendingAnchor==null) {Text(if(showSettings) "Ocultar ajustes" else "Ajustes")}}
+                if(showSettings) {
                 Text("Velocidade: ${speed.toInt()} px/s")
                 Slider(speed,{speed=it},valueRange=10f..120f)
-                Text("Fonte: ${size.toInt()} · $status")
-                Slider(size,{size=it;playing=false},valueRange=20f..60f)
+                Text("Fonte: ${size.toInt()}")
+                Slider(size,{size=it;playing=false;retainedAnchor=null;restoredScroll=-1},valueRange=20f..60f)
+                }
+                Text(status,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)
                 HorizontalDivider(color=MaterialTheme.colorScheme.primary)
                 Box(Modifier.weight(1f).verticalScroll(scroll)) {
-                    Text(text,Modifier.padding(top=24.dp,bottom=240.dp),fontSize=size.sp,lineHeight=(size*1.6f).sp)
+                    Text(text,Modifier.padding(top=24.dp,bottom=240.dp),fontSize=size.sp,lineHeight=(size*1.6f).sp,onTextLayout={layout=it})
                 }
             }
+        }
         }
     }
 }
