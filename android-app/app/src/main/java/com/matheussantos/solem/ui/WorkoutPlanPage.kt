@@ -55,9 +55,9 @@ import java.util.Locale
     val future = day > today()
     Page("Plano e calendário de treino") {
         Text("Força de corpo inteiro às segundas, quartas e sextas; caminhada às terças e quintas; recuperação no fim de semana. O histórico não mede capacidade máxima.")
-        if(!generic) definition.cycle?.let {cycle ->
+        if(!generic) (definition.cycleRevised ?: definition.cycle)?.let {cycle ->
             val start = LocalDate.parse(cycle.startsOn)
-            Text("Ciclo: 22/10 a 18/11/2026 · substitui as metas físicas nesse período; não apaga registros.")
+            Text("Ciclo revisado: 26/10 a 22/11/2026 · a base já está incluída na sessão. Datas anteriores preservam o plano original.")
             if(day < start) Button({selectedText=start.toString();monthText=YearMonth.from(start).toString()}) {Text("Ver início do novo ciclo")}
             if(plan.cycleWeek > 0) Text("Semana ${plan.cycleWeek}/4 · ${plan.phase}",style=MaterialTheme.typography.titleMedium)
             if(plan.held) Text("Etapa mantida: faltaram registros suficientes de conclusão na semana anterior. Não tente compensar sessões perdidas.")
@@ -87,13 +87,7 @@ import java.util.Locale
             if(plan.recovery) Text("Recuperação: sem treino obrigatório do ciclo hoje. Não é falha nem vira 100% automaticamente.")
             if(!plan.active) Text(if(plan.completed) "Ciclo encerrado. Revise a recuperação e os resultados antes de iniciar outro; as metas antigas não voltam automaticamente." else "O plano começa em ${definition.startsOn}. Não aplicamos metas extras retroativas.")
             plan.goals.forEach { goal ->
-                Panel(goal.spec.exercise) {
-                    Text("${if(available && !future) formatOneDecimal(goal.value) else "—"} / ${goal.target} ${goal.spec.unit}", style=MaterialTheme.typography.headlineSmall)
-                    if(available && !future) LinearProgressIndicator(progress={goal.fraction.toFloat()},modifier=Modifier.fillMaxWidth(),drawStopIndicator={})
-                    Text(if(goal.spec.unit == "km") "Distância total do dia; o deslocamento para o trabalho já conta." else "${goal.spec.sets} séries de ${goal.target/goal.spec.sets} ${goal.spec.unit} · descanso ${goal.spec.restSeconds} s")
-                    Text(if(plan.cycle) "${goal.historyDays} registros com séries válidas antes do ciclo. " + goal.spec.note else if(goal.historyDays >= 2) "Base: ${goal.historyDays} dias nas 4 semanas anteriores." else "Pouco histórico recente dessa medida: ponto de partida conservador.",style=MaterialTheme.typography.bodySmall)
-                    if(day == today()) Button({register(goal.spec.exercise)},enabled=available) {Text("Registrar exercício")}
-                }
+                CycleGoalCard(goal, available, future, day == today(), register)
             }
             TextButton({showWeek=!showWeek}) {Text(if(showWeek) "Ocultar semana" else "Ver plano de segunda a domingo")}
             if(showWeek) {
@@ -158,4 +152,42 @@ import java.util.Locale
             ListItem(headlineContent={Text(row.exercicio)},supportingContent={Text("${row.horario.take(5)} · ${facts.joinToString(" · ")}")})
         }
     }
+}
+
+@Composable fun CycleGoalCard(goal: PlanGoal, available: Boolean, future: Boolean,
+    canRegister: Boolean, register: (String) -> Unit) {
+    var details by rememberSaveable(goal.spec.exercise) {mutableStateOf(false)}
+    Surface(shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surfaceContainer,
+        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
+        Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                Text(goal.spec.exercise,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+                Text(if(future) "Programado" else if(!available) "Sincronizando" else if(goal.fraction>=1) "Concluído" else "Em andamento",
+                    style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
+            }
+            Text("${if(available && !future) formatOneDecimal(goal.value) else "—"} / ${goal.target} ${goal.spec.unit}",style=MaterialTheme.typography.headlineMedium)
+            LinearProgressIndicator(progress={if(available && !future) goal.fraction.toFloat() else 0f},modifier=Modifier.fillMaxWidth().height(6.dp),drawStopIndicator={})
+            Text(if(goal.spec.unit=="km") "Distância total do dia · deslocamentos já contam" else "${goal.spec.sets} séries × ${goal.target/goal.spec.sets} ${goal.spec.unit} · descanso ${goal.spec.restSeconds} s",
+                style=MaterialTheme.typography.bodyMedium)
+            Button({register(goal.spec.exercise)},enabled=available && canRegister,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                Text(if(goal.fraction>=1 && !future) "Ver registro" else "Registrar exercício")
+            }
+            TextButton({details=!details}) { Text(if(details) "Ocultar orientação" else "Orientação da sessão") }
+            if(details) Text(goal.spec.note,style=MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable fun CycleTodayCards(rows: List<TrainingRecord>, generic: Boolean, available: Boolean,
+    register: (String) -> Unit, openPlan: () -> Unit) {
+    if(generic) return
+    val plan=weeklyPlanDay(rows,today(),rememberWeeklyDefinition())
+    Text("Seu ciclo de treino",style=MaterialTheme.typography.headlineSmall)
+    Text(plan.title,style=MaterialTheme.typography.titleMedium)
+    if(plan.recovery) {
+        Text("Hoje é recuperação. O descanso faz parte do ciclo.")
+        OutlinedButton(openPlan,modifier=Modifier.fillMaxWidth()) {Text("Ver próximas sessões")}
+    }
+    if(plan.goals.isNotEmpty()) Text("${plan.goals.count {it.fraction>=1}} de ${plan.goals.size} exercícios concluídos · base incluída",style=MaterialTheme.typography.bodySmall)
+    plan.goals.forEach { CycleGoalCard(it,available,false,true,register) }
 }

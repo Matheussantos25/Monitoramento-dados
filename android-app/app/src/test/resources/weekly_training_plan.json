@@ -340,5 +340,263 @@
         "note": "O deslocamento a pé para o trabalho já conta. Caminhada e corrida registradas contam, mas não é necessário correr ou fazer HIIT."
       }
     }
+  },
+  "cycle_revised": {
+    "starts_on": "2026-10-26",
+    "weeks": 4,
+    "labels": [
+      "Volume ampliado · técnica firme",
+      "Progressão · mais repetições",
+      "Consolidar volume · sem buscar falha",
+      "Recuperar · manter qualidade"
+    ],
+    "days": [
+      {
+        "title": "Força A · corpo inteiro",
+        "exercises": [
+          "push",
+          "squat",
+          "bridge",
+          "row",
+          "core",
+          "plank"
+        ],
+        "minutes": "65–90 min"
+      },
+      {
+        "title": "Caminhada · ritmo confortável",
+        "exercises": [
+          "walk"
+        ],
+        "minutes": "Conforme seu ritmo"
+      },
+      {
+        "title": "Força B · corpo inteiro",
+        "exercises": [
+          "push",
+          "squat",
+          "bridge",
+          "pull",
+          "core",
+          "plank"
+        ],
+        "minutes": "65–90 min"
+      },
+      {
+        "title": "Caminhada · ritmo confortável",
+        "exercises": [
+          "walk"
+        ],
+        "minutes": "Conforme seu ritmo"
+      },
+      {
+        "title": "Força C · corpo inteiro e core",
+        "exercises": [
+          "push",
+          "squat",
+          "bridge",
+          "row",
+          "core",
+          "plank"
+        ],
+        "minutes": "65–90 min"
+      },
+      {
+        "title": "Recuperação · movimento opcional",
+        "exercises": [],
+        "minutes": "Sem meta obrigatória"
+      },
+      {
+        "title": "Descanso",
+        "exercises": [],
+        "minutes": "Sem meta obrigatória"
+      }
+    ],
+    "exercises": {
+      "push": {
+        "exercise": "Flexão",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          4,
+          4,
+          4,
+          3
+        ],
+        "per_set": [
+          8,
+          9,
+          10,
+          8
+        ],
+        "rest_seconds": 120,
+        "minimum": 8,
+        "maximum": 8,
+        "history": false,
+        "base_id": "flexao",
+        "note": "Partida: capacidade relatada de 3×10. Faça 4×8 com 120 s de descanso; reduza para 3 séries se perder a técnica. O total conta no check-up: não acrescente outras 100 flexões."
+      },
+      "squat": {
+        "exercise": "Agachamento",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          4,
+          4,
+          4,
+          3
+        ],
+        "per_set": [
+          15,
+          17,
+          18,
+          15
+        ],
+        "rest_seconds": 90,
+        "minimum": 15,
+        "maximum": 15,
+        "history": false,
+        "base_id": "agachamento",
+        "note": "Partida: 20 seguidas relatadas e sessões recentes registradas. Faça 4×15 com controle; os registros já contam no check-up, sem somar outra meta de 100."
+      },
+      "bridge": {
+        "exercise": "Ponte de Glúteos",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          12,
+          13,
+          15,
+          12
+        ],
+        "rest_seconds": 90,
+        "minimum": 10,
+        "maximum": 10,
+        "history": false,
+        "base_id": "",
+        "note": "Comece sem peso, com pés apoiados e elevando o quadril sem arquear a lombar. Ajuste a execução com o profissional da academia."
+      },
+      "row": {
+        "exercise": "Remada Baixa",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          4,
+          2
+        ],
+        "per_set": [
+          8,
+          9,
+          8,
+          8
+        ],
+        "rest_seconds": 120,
+        "minimum": 6,
+        "maximum": 12,
+        "history": true,
+        "base_id": "",
+        "note": "Escolha resistência que permita terminar com cerca de 2–3 repetições possíveis. O app não estima carga segura em kg."
+      },
+      "pull": {
+        "exercise": "Barra Fixa (Pronada)",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          4,
+          2
+        ],
+        "per_set": [
+          3,
+          4,
+          3,
+          3
+        ],
+        "rest_seconds": 150,
+        "minimum": 3,
+        "maximum": 5,
+        "history": true,
+        "base_id": "",
+        "note": "Sem pelo menos dois registros com séries válidas e margem para 3 repetições por série, o plano usa Remada Baixa. Não exige teste máximo."
+      },
+      "core": {
+        "exercise": "Abdominal Levantada",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          10,
+          11,
+          12,
+          10
+        ],
+        "rest_seconds": 90,
+        "minimum": 3,
+        "maximum": 12,
+        "history": true,
+        "base_id": "",
+        "note": "Elevação de pernas deitado. Volume total dividido em 3 séries, ajustado pelo histórico quando houver séries válidas. Mantenha lombar controlada; reduza amplitude ou dobre os joelhos se necessário."
+      },
+      "plank": {
+        "exercise": "Prancha",
+        "unit": "seg",
+        "field": "isometria_segundos",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          20,
+          25,
+          30,
+          20
+        ],
+        "rest_seconds": 90,
+        "minimum": 10,
+        "maximum": 30,
+        "history": true,
+        "base_id": "",
+        "note": "Tempo total dividido em 3 séries. Respire e pare a série antes de perder o alinhamento. O histórico pode reduzir o tempo inicial."
+      },
+      "walk": {
+        "exercise": "Caminhada",
+        "unit": "km",
+        "field": "distancia_km",
+        "sets": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "per_set": [
+          5,
+          5,
+          5,
+          5
+        ],
+        "rest_seconds": 0,
+        "minimum": 5,
+        "maximum": 5,
+        "history": false,
+        "base_id": "cardio",
+        "note": "O deslocamento a pé para o trabalho já conta. Caminhada e corrida registradas contam, mas não é necessário correr ou fazer HIIT."
+      }
+    }
   }
 }

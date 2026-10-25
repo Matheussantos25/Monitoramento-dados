@@ -124,16 +124,28 @@ def test_sleep_text_accepts_midnight_and_any_minute_rejects_invalid(monkeypatch)
     assert app.session_state["demo_health_entries"] == []
 
 
-def test_plan_shortcut_prefills_exercise_and_does_not_write_fake_activity():
+def test_plan_shortcut_prefills_exercise_and_does_not_write_fake_activity(monkeypatch):
     import os
     from unittest.mock import patch
     from streamlit.testing.v1 import AppTest
+    import solem_progress
+    original_progress=solem_progress.calculate_progress
+    def fixed_progress(records, *args, **kwargs):
+        kwargs['today']=date(2026,10,26)
+        return original_progress(records,*args,**kwargs)
+    monkeypatch.setattr(solem_progress,'calculate_progress',fixed_progress)
+    import solem_ui
+    monkeypatch.setattr(solem_ui,'calculate_progress',fixed_progress)
     with patch.dict(os.environ, {"SOLEM_DEMO":"1", "SOLEM_DEMO_PROFILE":"personal"}):
         app = AppTest.from_file(str(Path(__file__).resolve().parents[1]/"app.py"), default_timeout=40).run()
         original = list(app.session_state["solem_demo_records"])
         buttons = [b for b in app.button if b.key and b.key.startswith("plan_register_")]
-        if buttons:  # No shortcut on a recovery day.
-            name = buttons[0].label.removeprefix("Registrar ")
+        assert len(buttons)==6
+        if buttons:
+            from solem_health import now_local
+            from solem_training_plan import plan_day
+            key=buttons[0].key.removeprefix("plan_register_")
+            name=next(g['exercise'] for g in plan_day(original,date(2026,10,26))['goals'] if g['id']==key)
             buttons[0].click().run()
             assert app.selectbox(key="treino_exercicio").value == name
             assert app.session_state["solem_demo_records"] == original

@@ -9,6 +9,11 @@ from solem_progress import category_of, extras_of, number, record_date
 CYCLE = json.loads((Path(__file__).parent / "assets/weekly_training_plan.json").read_text(encoding="utf8"))["cycle"]
 START = date.fromisoformat(CYCLE["starts_on"])
 END = START + timedelta(days=27)
+REVISED = json.loads((Path(__file__).parent / "assets/weekly_training_plan.json").read_text(encoding="utf8"))["cycle_revised"]
+
+
+def cycle_config(day):
+    return REVISED if day >= date.fromisoformat(REVISED["starts_on"]) else CYCLE
 
 
 def clean_rows(records):
@@ -28,12 +33,13 @@ def amount(row, field):
     return max(0, number(raw))
 
 
-def baseline(rows, spec):
+def baseline(rows, spec, cycle=CYCLE):
+    start = date.fromisoformat(cycle["starts_on"])
     samples = []
     for row in rows:
         when = record_date(row.get("data"))
         sets = number(row.get("series"))
-        if row.get("exercicio") == spec["exercise"] and START-timedelta(days=28) <= when < START and 2 <= sets <= 8 and sets == int(sets):
+        if row.get("exercicio") == spec["exercise"] and start-timedelta(days=28) <= when < start and 2 <= sets <= 8 and sets == int(sets):
             value = amount(row, spec["field"]) / sets
             if 0 < value <= (180 if spec["unit"] == "seg" else 30):
                 samples.append(value)
@@ -44,15 +50,15 @@ def baseline(rows, spec):
     return target, len(samples), estimate
 
 
-def goals_at(rows, day, stage):
+def goals_at(rows, day, stage, cycle=CYCLE):
     goals = []
-    for key in CYCLE["days"][day.weekday()]["exercises"]:
-        spec = CYCLE["exercises"][key]
-        base, count, estimate = baseline(rows, spec)
+    for key in cycle["days"][day.weekday()]["exercises"]:
+        spec = cycle["exercises"][key]
+        base, count, estimate = baseline(rows, spec, cycle)
         fallback = key == "pull" and (estimate is None or estimate * .8 < 3)
         if fallback:
-            spec = CYCLE["exercises"]["row"]
-            base, count, estimate = baseline(rows, spec)
+            spec = cycle["exercises"]["row"]
+            base, count, estimate = baseline(rows, spec, cycle)
         per_set = base + spec["per_set"][stage] - spec["per_set"][0]
         sets = spec["sets"][stage]
         target = sets * per_set
@@ -63,32 +69,35 @@ def goals_at(rows, day, stage):
     return goals
 
 
-def cycle_day(records, day):
+def cycle_day(records, day, cycle=None):
+    cycle = cycle or cycle_config(day)
+    start = date.fromisoformat(cycle["starts_on"])
+    end = start + timedelta(days=27)
     rows = clean_rows(records)
-    index = (day-START).days // 7
-    weekday = CYCLE["days"][day.weekday()]
+    index = (day-start).days // 7
+    weekday = cycle["days"][day.weekday()]
     if not 0 <= index < 4:
-        return dict(cycle=True, active=False, completed=day>END, recovery=False, goals=[], percent=None,
-                    title="Ciclo concluído · revise antes de reiniciar" if day>END else "Ciclo começa em 22/10",
+        return dict(cycle=True, active=False, completed=day>end, recovery=False, goals=[], percent=None,
+                    title="Ciclo concluído · revise antes de reiniciar" if day>end else f"Ciclo começa em {start:%d/%m}",
                     duration="", week=day-timedelta(days=day.weekday()), cycle_week=0, stage=0, held=False)
     stage = 0
     for previous_week in range(index):
-        first = START + timedelta(days=previous_week*7)
+        first = start + timedelta(days=previous_week*7)
         achieved = 0
         for offset in range(7):
             when = first + timedelta(days=offset)
-            goals = goals_at(rows, when, stage)
+            goals = goals_at(rows, when, stage, cycle)
             if when.weekday() in (0, 2, 4) and goals and all(g["fraction"] >= .8 for g in goals):
                 achieved += 1
         if achieved >= 2:
             stage = min(2, stage+1)
     if index == 3:
         stage = 3  # Recovery week is never replaced by another overload week.
-    goals = goals_at(rows, day, stage)
+    goals = goals_at(rows, day, stage, cycle)
     pct = floor(sum(g["fraction"] for g in goals)/len(goals)*100+1e-7) if goals else None
     return dict(cycle=True, active=True, completed=False, recovery=not goals, goals=goals, percent=pct,
                 title=weekday["title"], duration=weekday["minutes"], week=day-timedelta(days=day.weekday()),
-                cycle_week=index+1, stage=stage+1, phase=CYCLE["labels"][stage], held=stage<index)
+                cycle_week=index+1, stage=stage+1, phase=cycle["labels"][stage], held=stage<index)
 
 
 def cycle_base_goals(records, day):

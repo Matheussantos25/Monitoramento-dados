@@ -97,6 +97,7 @@ private fun missionIcon(id: String): ImageVector = when(id) {
           }
         }
         WorkoutProgressBars(rows,generic,activityAvailable)
+        CycleTodayCards(rows,generic,activityAvailable,registerExercise,openWorkoutPlan)
         Button(openWorkoutPlan,modifier=Modifier.fillMaxWidth()) {Text("Plano semanal e calendário de treino")}
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             QuickDestination("Treinar", Icons.Outlined.FitnessCenter, Modifier.weight(1f)) { navigate(1) }

@@ -10,7 +10,8 @@ import kotlin.math.floor
     val version: Int, @SerialName("starts_on") val startsOn: String,
     @SerialName("lookback_days") val lookbackDays: Int,
     @SerialName("history_factor") val historyFactor: Double,
-    val exercises: Map<String, PlanExercise>, val days: List<PlanWeekday>, val cycle: TrainingCycleDefinition? = null
+    val exercises: Map<String, PlanExercise>, val days: List<PlanWeekday>, val cycle: TrainingCycleDefinition? = null,
+    @SerialName("cycle_revised") val cycleRevised: TrainingCycleDefinition? = null
 )
 @Serializable data class PlanExercise(val exercise: String, val unit: String, val field: String,
     val minimum: Int, val maximum: Int, val step: Int, val sets: Int,
@@ -27,9 +28,12 @@ data class WorkoutPlanDay(val date: LocalDate, val title: String, val duration: 
     val percent: Int? get() = if(goals.isEmpty()) null else floor(goals.map {it.fraction}.average()*100 + 1e-7).toInt()
 }
 
+fun cycleForDay(definition: WeeklyPlanDefinition, day: LocalDate): TrainingCycleDefinition? =
+    definition.cycleRevised?.takeIf {day >= LocalDate.parse(it.startsOn)} ?: definition.cycle
+
 fun weeklyPlanDay(records: List<TrainingRecord>, day: LocalDate, definition: WeeklyPlanDefinition,
     enabled: Boolean = true): WorkoutPlanDay {
-    definition.cycle?.let { if(enabled && day >= LocalDate.parse(it.startsOn)) return trainingCycleDay(records, day, it) }
+    cycleForDay(definition,day)?.let { if(enabled && day >= LocalDate.parse(it.startsOn)) return trainingCycleDay(records, day, it) }
     val weekday = definition.days[day.dayOfWeek.value - 1]
     val monday = day.minusDays((day.dayOfWeek.value - 1).toLong())
     val active = enabled && day >= LocalDate.parse(definition.startsOn)

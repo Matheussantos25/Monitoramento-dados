@@ -1,19 +1,33 @@
 """Synthetic parity fixtures; never reads user records or secrets."""
 import json
 import sys
-from datetime import timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT))
-from solem_training_cycle import START, END, cycle_day, cycle_base_goals
+from solem_training_cycle import START, END, REVISED, clean_rows, goals_at, cycle_day, cycle_base_goals
 from tests.test_training_cycle import record, completed_week
 
 history=[record(i,START-timedelta(days=i),"Barra Fixa (Pronada)",15,3) for i in (1,2)]
 week1=completed_week([],0,0)
 week2=completed_week(week1,1,1)
+revised_start=date.fromisoformat(REVISED['starts_on'])
+revised_rows=[]
+for week in range(2):
+    for offset in range(7):
+        day=revised_start+timedelta(days=week*7+offset)
+        for g in goals_at(clean_rows(revised_rows),day,week,REVISED):
+            revised_rows.append(record(len(revised_rows)+1,day,g['exercise'],
+                reps=g['target'] if g['unit']=='rep' else 0,sets=g['sets'],
+                seconds=g['target'] if g['unit']=='seg' else 0,km=g['target'] if g['unit']=='km' else 0))
 cases=[]
 for name,rows,day in [
+    ("revised_first",[],revised_start),
+    ("revised_held",[],revised_start+timedelta(days=7)),
+    ("revised_peak",revised_rows,revised_start+timedelta(days=14)),
+    ("revised_deload",revised_rows,revised_start+timedelta(days=21)),
+    ("revised_end",revised_rows,revised_start+timedelta(days=28)),
     ("first_strength",[],START+timedelta(days=1)),
     ("walk",[record(1,START,"Caminhada",km=2),record(2,START,"Corrida",km=3)],START),
     ("rest",[],START+timedelta(days=2)),

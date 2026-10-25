@@ -1,8 +1,12 @@
 from copy import deepcopy
 from datetime import timedelta
-from solem_training_cycle import START, END, CYCLE, cycle_day, goals_at, clean_rows
+from solem_training_cycle import START, END, CYCLE, cycle_day as versioned_cycle_day, goals_at, clean_rows
 from solem_training_plan import plan_day, workout_day
 from solem_checkup import daily_checkup
+
+
+def cycle_day(records, day):
+    return versioned_cycle_day(records, day, cycle=CYCLE)
 
 
 def record(identity, day, exercise, reps=0, sets=3, seconds=0, km=0):
@@ -127,6 +131,65 @@ training_plan_panel([],date(2026,10,23))
     assert any("Semana 1/4" in item.value for item in app.markdown)
     app.selectbox(key="cycle_preview_week").set_value(2).run()
     assert not app.exception
-    assert any("4×8 rep" in item.value for item in app.markdown)
-    assert any("3×18 rep" in item.value for item in app.markdown)
+    assert any("4×10 rep" in item.value for item in app.markdown)
+    assert any("4×18 rep" in item.value for item in app.markdown)
     assert [b.label for b in app.button if b.key and b.key.startswith("plan_register_")]
+
+
+def test_revised_cycle_preserves_prior_dates_and_increases_session_volume():
+    from datetime import date
+    from solem_training_cycle import REVISED, cycle_config
+    original=deepcopy(CYCLE)
+    for offset in range(4):
+        day=START+timedelta(days=offset)
+        assert versioned_cycle_day([],day)==cycle_day([],day)
+    day=date(2026,10,26)
+    rows=[record(1,date(2026,10,24),'Agachamento',60,3)]
+    saved=deepcopy(rows)
+    plan=versioned_cycle_day(rows,day)
+    goals={g['id']:g for g in plan['goals']}
+    assert goals['push']['target']==32 and goals['squat']['target']==60
+    assert goals['core']['target']==30 and goals['plank']['target']==60
+    assert len(goals)==6 and plan['cycle_week']==1
+    assert CYCLE==original and rows==saved and cycle_config(day)==REVISED
+    assert not plan_day(rows,day,enabled=False).get('cycle')
+
+
+def test_revised_progression_and_deload_use_only_completed_previous_weeks():
+    from datetime import date
+    from solem_training_cycle import REVISED
+    start=date.fromisoformat(REVISED['starts_on'])
+    rows=[]
+    for week in range(2):
+        for offset in range(7):
+            day=start+timedelta(days=week*7+offset)
+            for g in goals_at(clean_rows(rows),day,week,REVISED):
+                rows.append(record(len(rows)+1,day,g['exercise'],reps=g['target'] if g['unit']=='rep' else 0,
+                    sets=g['sets'],seconds=g['target'] if g['unit']=='seg' else 0,km=g['target'] if g['unit']=='km' else 0))
+    peak=versioned_cycle_day(rows,start+timedelta(days=14))
+    assert peak['stage']==3
+    assert next(g for g in peak['goals'] if g['id']=='push')['target']==40
+    assert next(g for g in peak['goals'] if g['id']=='squat')['target']==72
+    assert versioned_cycle_day([],start+timedelta(days=7))['held']
+    for history in [[],rows]:
+        recovery=versioned_cycle_day(history,start+timedelta(days=21))
+        assert recovery['stage']==4
+        assert next(g for g in recovery['goals'] if g['id']=='push')['target']==24
+        assert versioned_cycle_day(history,start+timedelta(days=27))['recovery']
+        assert versioned_cycle_day(history,start+timedelta(days=28))['completed']
+
+
+def test_cycle_cards_navigate_to_their_exercise_and_future_cannot_register():
+    from streamlit.testing.v1 import AppTest
+    app=AppTest.from_string('''
+from datetime import date
+from solem_training_plan_ui import training_plan_panel
+training_plan_panel([],date(2026,10,26),calendar=False)
+''',default_timeout=30).run()
+    assert not app.exception
+    assert len([b for b in app.button if b.key and b.key.startswith('plan_register_')])==6
+    app.button(key='plan_register_core').click().run()
+    assert not app.exception
+    assert app.session_state['checkup_workout_request']=='Abdominal Levantada'
+    app.date_input(key='cycle_selected_day').set_value(__import__('datetime').date(2026,10,28)).run()
+    assert all(b.disabled for b in app.button if b.key and b.key.startswith('plan_register_'))

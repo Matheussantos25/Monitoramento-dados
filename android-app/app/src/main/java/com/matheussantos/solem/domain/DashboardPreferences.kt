@@ -61,7 +61,7 @@ fun dailyMissions(records: List<TrainingRecord>, health: List<HealthEntry>, sett
         DailyMission("mewing", "Mewing com borracha", reps("Mewing com borracha"), settings.mewing, "rep", 1, "Mewing com borracha"),
         DailyMission("sleep", "Sono registrado", if (healthAvailable) sleep ?: 0.0 else null, settings.sleepMinutes, "min", 3)
     ).filter { it.id !in settings.hidden && (!generic || fitnessMission(it.id)) }
-    val cycle = definition?.cycle
+    val cycle = definition?.let { cycleForDay(it,day) }
     if(!generic && cycle != null && day >= LocalDate.parse(cycle.startsOn)) {
         val base = trainingCycleDay(records,day,cycle).goals.filter {it.spec.baseId.isNotEmpty()}.map {
             val id = if(it.spec.baseId == "cardio") "walk" else it.spec.baseId
