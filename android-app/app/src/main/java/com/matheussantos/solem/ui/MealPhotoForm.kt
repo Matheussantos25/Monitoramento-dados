@@ -23,7 +23,7 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
         Text("Nomes simplificados; cálculos pelas referências abaixo. Preparo e ingredientes podem mudar os valores.",style=MaterialTheme.typography.bodySmall)
         references.forEach {
             Text("${it.displayName} — ${it.name}",style=MaterialTheme.typography.bodySmall)
-            if(it.id.startsWith("tbca-") || it.id.startsWith("yoki-"))
+            if(it.id.startsWith("tbca-") || it.id.startsWith("yoki-") || it.id.startsWith("ibge-") || it.id == "taco-533")
                 Text(it.description,style=MaterialTheme.typography.bodySmall)
         }
     }

@@ -6,6 +6,18 @@ import org.junit.Test
 class MealNutritionTest {
     private val catalog: List<MealReference> = mealJson.decodeFromString(javaClass.getResource("/nutrition_catalog.json")!!.readText())
     private val rice=MealFood("Arroz","169757",150.0,"high")
+    @Test fun cuscuzAndSweetBreadKeepPortions() {
+        val items=listOf(MealFood("Cuscuz","taco-533",44.0),MealFood("Pão doce","ibge-8000201",62.9))
+        val cuscuz=calculateMeal(items.take(1),catalog)
+        val bread=calculateMeal(items.drop(1),catalog)
+        assertTrue(cuscuz.complete && bread.complete)
+        assertEquals(49.7,cuscuz.totals.kcal,0.01)
+        assertEquals(1.0,cuscuz.totals.protein,0.01)
+        assertEquals(223.4,bread.totals.kcal,0.01)
+        assertEquals(3.2,bread.totals.protein,0.01)
+        assertTrue(bread.basis.contains("IBGE"))
+        assertEquals(listOf(44.0,62.9),items.map {it.grams})
+    }
     @Test fun breadAndPotatoReferencesKeepWeights() {
         val breakfast=calculateMeal(listOf(MealFood("Pão com manteiga","tbca-BRC0418A",44.0)),catalog)
         assertTrue(breakfast.complete)
@@ -33,9 +45,9 @@ class MealNutritionTest {
         assertEquals(150.0,rice.grams,0.01)
     }
     @Test fun sourceAndCalculations() {
-        assertEquals(39,catalog.size)
+        assertEquals(41,catalog.size)
         assertEquals(24,catalog.count { it.id.all { c -> c.isDigit() } })
-        assertTrue(catalog.all { it.name.isNotBlank() && (it.sourceUrl.startsWith("https://fdc.nal.usda.gov/") || it.sourceUrl.startsWith("https://nepa.unicamp.br/") || it.sourceUrl.startsWith("https://tbca.net.br/") || it.sourceUrl.startsWith("https://www.yoki.com.br/")) })
+        assertTrue(catalog.all { it.name.isNotBlank() && (it.sourceUrl.startsWith("https://fdc.nal.usda.gov/") || it.sourceUrl.startsWith("https://nepa.unicamp.br/") || it.sourceUrl.startsWith("https://tbca.net.br/") || it.sourceUrl.startsWith("https://www.yoki.com.br/") || it.sourceUrl.startsWith("https://biblioteca.ibge.gov.br/")) })
         val estimate=calculateMeal(listOf(rice),catalog)
         assertEquals(195.0,estimate.totals.kcal,0.01)
         assertEquals(4.0,estimate.totals.protein,0.01)

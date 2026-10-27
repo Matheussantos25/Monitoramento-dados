@@ -37,13 +37,32 @@ def test_bread_and_potato_references_preserve_portions_and_cumulative_readings()
 
 def test_verified_catalog_and_platform_parity():
     foods = catalog()
-    assert len(foods) == 39
+    assert len(foods) == 41
     assert len([f for f in foods if f["id"].isdigit()]) == 24
-    assert all(food["name"] and food["source_url"].startswith(("https://fdc.nal.usda.gov/", "https://nepa.unicamp.br/", "https://tbca.net.br/", "https://www.yoki.com.br/")) for food in foods)
+    assert all(food["name"] and food["source_url"].startswith(("https://fdc.nal.usda.gov/", "https://nepa.unicamp.br/", "https://tbca.net.br/", "https://www.yoki.com.br/", "https://biblioteca.ibge.gov.br/")) for food in foods)
     from pathlib import Path
     root=Path(__file__).resolve().parents[1]
     for file in ("android-app/app/src/main/assets/nutrition_catalog.json", "android-app/app/src/test/resources/nutrition_catalog.json"):
         assert json.loads((root/file).read_text(encoding="utf-8")) == foods
+
+
+def test_cuscuz_and_sweet_bread_portions_and_voice():
+    from copy import deepcopy
+    from solem_voice import parse_meal
+    items = [{"name": "Cuscuz", "food_id": "taco-533", "grams": 44},
+             {"name": "Pão doce", "food_id": "ibge-8000201", "grams": 62.9}]
+    before = deepcopy(items)
+    cuscuz = nutrition(items[:1])
+    bread = nutrition(items[1:])
+    assert cuscuz["complete"] and bread["complete"]
+    assert cuscuz["totals"]["kcal"] == 49.7
+    assert cuscuz["totals"]["protein_g"] == 1.0
+    assert bread["totals"]["kcal"] == 223.4
+    assert bread["totals"]["protein_g"] == 3.2
+    assert "IBGE" in bread["basis"]
+    assert items == before
+    parsed = parse_meal("cuscuz 44, pão doce 106.9, acumulado", catalog())
+    assert [i["grams"] for i in parsed["items"]] == [44, 62.9]
 
 
 def test_nutrition_uses_source_not_model_numbers():

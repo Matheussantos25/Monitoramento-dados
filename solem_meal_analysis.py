@@ -42,8 +42,8 @@ def nutrition(items):
         for key in NUTRIENTS: totals[key] += table[food_id]["per100"][key] * amount / 100
     return {"items": clean, "totals": {key: math.floor(value * 10 + 0.5) / 10 for key, value in totals.items()},
             "missing": missing, "complete": missing == 0, "estimated": True,
-            "basis": "USDA / TACO / TBCA / rótulo Yoki (referências por alimento)" if any(i["food_id"].startswith(("tbca-", "yoki-")) for i in clean) else "USDA FoodData Central / SR Legacy + TACO NEPA/Unicamp" if any(i["food_id"].startswith("taco-") for i in clean) else "USDA FoodData Central / SR Legacy",
-            "catalog_version": "solem-nutrition-v3" if any(i["food_id"].startswith(("tbca-", "yoki-")) for i in clean) else "solem-taco-2011-sr-2018-v2" if any(i["food_id"].startswith("taco-") for i in clean) else "sr-2018-solem-1"}
+            "basis": "USDA / TACO / TBCA / IBGE / rótulo Yoki (referências por alimento)" if any(i["food_id"].startswith("ibge-") for i in clean) else "USDA / TACO / TBCA / rótulo Yoki (referências por alimento)" if any(i["food_id"].startswith(("tbca-", "yoki-")) for i in clean) else "USDA FoodData Central / SR Legacy + TACO NEPA/Unicamp" if any(i["food_id"].startswith("taco-") for i in clean) else "USDA FoodData Central / SR Legacy",
+            "catalog_version": "solem-nutrition-v4" if any(i["food_id"].startswith("ibge-") for i in clean) else "solem-nutrition-v3" if any(i["food_id"].startswith(("tbca-", "yoki-")) for i in clean) else "solem-taco-2011-sr-2018-v2" if any(i["food_id"].startswith("taco-") for i in clean) else "sr-2018-solem-1"}
 
 
 def cumulative_items(items, baseline, readings):

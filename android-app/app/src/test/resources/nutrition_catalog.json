@@ -559,5 +559,35 @@
       "fat_g": 39.6,
       "fiber_g": 3.6
     }
+  },
+  {
+    "id": "taco-533",
+    "name": "Cuscuz de milho, cozido com sal",
+    "display_name": "Cuscuz",
+    "description": "TACO / NEPA-Unicamp, 4ª edição (2011), alimento 533. Referência de cuscuz de milho cozido com sal, sem leite ou manteiga adicionados. Valores por 100 g.",
+    "source_url": "https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf",
+    "category": "habitual",
+    "per100": {
+      "kcal": 113,
+      "protein_g": 2.2,
+      "carbs_g": 25.3,
+      "fat_g": 0.7,
+      "fiber_g": 2.1
+    }
+  },
+  {
+    "id": "ibge-8000201",
+    "name": "Pão doce (referência IBGE)",
+    "display_name": "Pão doce",
+    "description": "IBGE, Tabelas de Composição Nutricional dos Alimentos Consumidos no Brasil (2011), código 8000201, preparo 99. Valores por 100 g. A referência inclui cobertura/glacê, sem frutas ou castanhas; receitas, recheios e coberturas variam. Estimativa genérica, não um rótulo do pão consumido.",
+    "source_url": "https://biblioteca.ibge.gov.br/visualizacao/livros/liv50002.pdf",
+    "category": "occasional",
+    "per100": {
+      "kcal": 355.23,
+      "protein_g": 5.15,
+      "carbs_g": 55.83,
+      "fat_g": 13.08,
+      "fiber_g": 2.02
+    }
   }
 ]

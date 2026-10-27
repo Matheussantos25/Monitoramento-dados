@@ -63,7 +63,9 @@ fun calculateMeal(items: List<MealFood>, catalog: List<MealReference>): MealEsti
         }
     }
     return MealEstimate(checked,MealNutrients(decimal(kcal),decimal(protein),decimal(carbs),decimal(fat),decimal(fiber)),missing,missing==0).let { estimate ->
-        if(checked.any { it.foodId.startsWith("tbca-") || it.foodId.startsWith("yoki-") }) estimate.copy(
+        if(checked.any { it.foodId.startsWith("ibge-") }) estimate.copy(
+            basis="USDA / TACO / TBCA / IBGE / rótulo Yoki (referências por alimento)",catalogVersion="solem-nutrition-v4")
+        else if(checked.any { it.foodId.startsWith("tbca-") || it.foodId.startsWith("yoki-") }) estimate.copy(
             basis="USDA / TACO / TBCA / rótulo Yoki (referências por alimento)",catalogVersion="solem-nutrition-v3")
         else if(checked.any { it.foodId.startsWith("taco-") }) estimate.copy(
             basis="USDA FoodData Central / SR Legacy + TACO NEPA/Unicamp",catalogVersion="solem-taco-2011-sr-2018-v2") else estimate

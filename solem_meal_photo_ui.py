@@ -9,7 +9,7 @@ def reference_details():
         st.caption("Os nomes são simplificados. O cálculo continua usando estas referências específicas; preparo e ingredientes podem mudar os valores.")
         for food in catalog():
             st.write(f"{food_display_name(food['name'])} — {food['name']}")
-            if food['id'].startswith(('tbca-', 'yoki-')):
+            if food['id'].startswith(('tbca-', 'yoki-', 'ibge-', 'taco-533')):
                 st.caption(food['description'])
 
 
