@@ -79,7 +79,7 @@ def meal_details(meal_type, items, weighed=False, weighing=None):
 
 def day_nutrition(meals):
     totals = dict.fromkeys(NUTRIENTS, 0.0)
-    counted, partial = 0, False
+    counted, partial, known_items = 0, False, 0
     for row in meals:
         if row.get("details", {}).get("sem_refeicao") is True:
             continue
@@ -92,6 +92,17 @@ def day_nutrition(meals):
             partial = True
             continue
         counted += 1
+        known_items += len(recomputed["items"]) - recomputed["missing"]
         partial |= not recomputed["complete"]
         for key in NUTRIENTS: totals[key] += recomputed["totals"][key]
-    return {"totals": {key: round(value, 1) for key, value in totals.items()}, "counted": counted, "partial": partial}
+    return {"totals": {key: round(value, 1) for key, value in totals.items()}, "counted": counted, "partial": partial, "known_items": known_items}
+
+
+def overview_nutrition(entries, day):
+    """Only the current account's loaded diary; never treat a load failure as zero."""
+    if entries is None:
+        return None
+    meals = [row for row in entries if row.get("kind") == "meal"
+             and str(row.get("day", ""))[:10] == str(day)
+             and row.get("details", {}).get("sem_refeicao") is not True]
+    return {**day_nutrition(meals), "meals": len(meals)}

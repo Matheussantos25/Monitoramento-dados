@@ -88,6 +88,8 @@ def overview(p, records=None, private_entries=None):
         private_entries = st.session_state.get("overview_health_entries")
     today = p["today"]
     st.html('<div class="section-intro journey-intro"><span class="eyebrow">SISTEMA / SUA JORNADA</span><h1>Progresso Geral</h1><p>Cada registro transforma constância em experiência.</p></div>')
+    from solem_nutrition_overview_ui import nutrition_highlight
+    nutrition_highlight(private_entries, today)
     level_pct = max(0, min(100, p['level_xp'] / 250 * 100))
     st.html(f'''<section class="system-status" aria-label="Status do personagem">
         <div class="system-status__top"><span>STATUS DO PERSONAGEM</span><span>JORNADA EM CURSO</span></div>

@@ -76,6 +76,14 @@ header[data-testid="stHeader"]{height:3rem;min-height:3rem;background:#090f1bee}
 @media(prefers-reduced-motion:no-preference){.system-status{animation:systemEnter .55s ease-out both}.system-status progress::-webkit-progress-value{transition:width .7s ease-out}@keyframes systemEnter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}}
 
 /* Cycle exercise cards share the check-up hierarchy and responsive grid. */
+.nutrition-today{padding:1.4rem 1.6rem;margin:.3rem 0 1.5rem;border:1px solid #426887;border-radius:18px;background:#112239;color:#e7f1ff}
+.nutrition-today header{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.2rem}
+.nutrition-today h2{font-size:1.25rem;margin:0}.nutrition-today header span{color:#a9c5df}
+.nutrition-today__grid{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem}
+.nutrition-today__grid>div{min-width:0}.nutrition-today__grid span{display:block;color:#c3d6eb;font-size:.9rem}
+.nutrition-today__grid strong{display:block;font-size:clamp(1.8rem,4vw,3rem);line-height:1.4;color:var(--journey-accent,#83dcff);font-variant-numeric:tabular-nums}
+.nutrition-today__grid small{font-size:1rem;color:#c3d6eb}.nutrition-today p{margin:1rem 0 .3rem}.nutrition-today>small{color:#a9c5df}
+@media(max-width:480px){.nutrition-today{padding:1rem}.nutrition-today__grid{gap:.7rem}.nutrition-today__grid strong{font-size:1.8rem}}
 [class*="st-key-cycle_card_"]{padding:1rem 1.1rem .7rem;background:#111f32;border:1px solid #344e6c;border-radius:12px;margin:.25rem 0 .6rem;box-shadow:inset 0 1px #b9eaff12}
 [class*="st-key-cycle_card_"] .stButton>button{width:100%;min-height:44px;border-color:#456583;color:#bfeaff;background:#172e45}
 [class*="st-key-cycle_card_"] .stButton>button:hover{background:#203b57;border-color:var(--accent)}

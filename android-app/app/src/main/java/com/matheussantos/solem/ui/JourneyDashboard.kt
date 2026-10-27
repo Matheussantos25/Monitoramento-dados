@@ -75,6 +75,7 @@ private fun missionIcon(id: String): ImageVector = when(id) {
                 Modifier.weight(1f), style=MaterialTheme.typography.bodyMedium, color=MaterialTheme.colorScheme.onSurfaceVariant)
             IconButton({navigate(17)}) { Icon(Icons.Outlined.Tune,"Personalizar painel") }
         }
+        DailyNutritionCard(health,healthAvailable,day) {healthSection(0)}
         Surface(shape=MaterialTheme.shapes.extraLarge, color=MaterialTheme.colorScheme.surfaceContainer) {
           Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
             Text("MISSÕES / HOJE",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
