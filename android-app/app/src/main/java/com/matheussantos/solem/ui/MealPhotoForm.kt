@@ -21,7 +21,11 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
     TextButton(onClick={expanded=!expanded}) { Text(if(expanded) "Ocultar referências e preparo" else "Referências nutricionais e preparo") }
     if(expanded) {
         Text("Nomes simplificados; cálculos pelas referências abaixo. Preparo e ingredientes podem mudar os valores.",style=MaterialTheme.typography.bodySmall)
-        references.forEach { Text("${it.displayName} — ${it.name}",style=MaterialTheme.typography.bodySmall) }
+        references.forEach {
+            Text("${it.displayName} — ${it.name}",style=MaterialTheme.typography.bodySmall)
+            if(it.id.startsWith("tbca-") || it.id.startsWith("yoki-"))
+                Text(it.description,style=MaterialTheme.typography.bodySmall)
+        }
     }
 }
 @Composable fun MealNutritionSummary(estimate: MealEstimate) {

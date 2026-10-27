@@ -15,8 +15,8 @@ android {
         applicationId = "com.matheussantos.solem"
         minSdk = 26
         targetSdk = 36
-        versionCode = 42
-        versionName = "0.18.0"
+        versionCode = 43
+        versionName = "0.18.1"
     }
 
     val properties = Properties()

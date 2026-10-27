@@ -9,6 +9,8 @@ def reference_details():
         st.caption("Os nomes são simplificados. O cálculo continua usando estas referências específicas; preparo e ingredientes podem mudar os valores.")
         for food in catalog():
             st.write(f"{food_display_name(food['name'])} — {food['name']}")
+            if food['id'].startswith(('tbca-', 'yoki-')):
+                st.caption(food['description'])
 
 
 def nutrient_metrics(result):

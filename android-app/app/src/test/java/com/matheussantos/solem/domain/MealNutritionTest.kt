@@ -6,6 +6,23 @@ import org.junit.Test
 class MealNutritionTest {
     private val catalog: List<MealReference> = mealJson.decodeFromString(javaClass.getResource("/nutrition_catalog.json")!!.readText())
     private val rice=MealFood("Arroz","169757",150.0,"high")
+    @Test fun breadAndPotatoReferencesKeepWeights() {
+        val breakfast=calculateMeal(listOf(MealFood("Pão com manteiga","tbca-BRC0418A",44.0)),catalog)
+        assertTrue(breakfast.complete)
+        assertEquals(187.4,breakfast.totals.kcal,0.01)
+        assertEquals(3.2,breakfast.totals.protein,0.01)
+        assertEquals("solem-nutrition-v3",breakfast.catalogVersion)
+        val items=listOf(MealFood("Batata palha","yoki-batata-palha-tradicional"),
+            MealFood("Arroz","169757"),MealFood("Frango","171477"),MealFood("Feijão","175200"))
+        val weighing=MealWeighing(readings=listOf(12.0,144.0,314.0,481.0))
+        val portions=cumulativeMealItems(items,weighing)
+        assertEquals(listOf(12.0,132.0,170.0,167.0),portions.map { it.grams })
+        val lunch=calculateMeal(portions,catalog)
+        assertTrue(lunch.complete)
+        assertEquals(757.1,lunch.totals.kcal,0.01)
+        assertEquals(71.9,lunch.totals.protein,0.01)
+        assertEquals(listOf(12.0,144.0,314.0,481.0),weighing.readings)
+    }
     @Test fun weighedMealAndEdit() {
         val items=listOf(rice,MealFood("Frango","171477",100.0))
         val result=calculateMeal(items,catalog)
@@ -16,9 +33,9 @@ class MealNutritionTest {
         assertEquals(150.0,rice.grams,0.01)
     }
     @Test fun sourceAndCalculations() {
-        assertEquals(37,catalog.size)
-        assertEquals(24,catalog.count { !it.id.startsWith("taco-") })
-        assertTrue(catalog.all { it.name.isNotBlank() && (it.sourceUrl.startsWith("https://fdc.nal.usda.gov/") || it.sourceUrl.startsWith("https://nepa.unicamp.br/")) })
+        assertEquals(39,catalog.size)
+        assertEquals(24,catalog.count { it.id.all { c -> c.isDigit() } })
+        assertTrue(catalog.all { it.name.isNotBlank() && (it.sourceUrl.startsWith("https://fdc.nal.usda.gov/") || it.sourceUrl.startsWith("https://nepa.unicamp.br/") || it.sourceUrl.startsWith("https://tbca.net.br/") || it.sourceUrl.startsWith("https://www.yoki.com.br/")) })
         val estimate=calculateMeal(listOf(rice),catalog)
         assertEquals(195.0,estimate.totals.kcal,0.01)
         assertEquals(4.0,estimate.totals.protein,0.01)

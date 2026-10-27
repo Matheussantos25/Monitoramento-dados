@@ -11,11 +11,35 @@ from solem_photos_ui import normalized_jpeg
 RICE = {"name": "Arroz", "food_id": "169757", "grams": 150, "confidence": "high"}
 
 
+def test_bread_and_potato_references_preserve_portions_and_cumulative_readings():
+    from copy import deepcopy
+    breakfast = [{"name": "Pão com manteiga", "food_id": "tbca-BRC0418A", "grams": 44}]
+    before = deepcopy(breakfast)
+    result = nutrition(breakfast)
+    assert result["complete"] and result["totals"]["kcal"] == 187.4
+    assert result["totals"]["protein_g"] == 3.2
+    assert result["catalog_version"] == "solem-nutrition-v3"
+    assert breakfast == before
+    items = [dict(name=name, food_id=id, grams=grams) for name,id,grams in [
+        ("Batata palha","yoki-batata-palha-tradicional",12),
+        ("Arroz","169757",132),("Frango","171477",170),("Feijão","175200",167)]]
+    weighing = dict(baseline_g=0, readings_g=[12,144,314,481])
+    before = deepcopy((items,weighing))
+    lunch = meal_details("Almoço",items,True,weighing)
+    assert (items,weighing) == before
+    assert [i["grams"] for i in lunch["nutrition"]["items"]] == [12,132,170,167]
+    assert lunch["weighing"]["readings_g"] == [12,144,314,481]
+    assert lunch["nutrition"]["complete"]
+    assert lunch["nutrition"]["totals"]["kcal"] == 757.1
+    assert lunch["nutrition"]["totals"]["protein_g"] == 71.9
+    assert lunch["ocasionais"] == ["Batata palha"]
+
+
 def test_verified_catalog_and_platform_parity():
     foods = catalog()
-    assert len(foods) == 37
-    assert len([f for f in foods if not f["id"].startswith("taco-")]) == 24
-    assert all(food["name"] and food["source_url"].startswith(("https://fdc.nal.usda.gov/", "https://nepa.unicamp.br/")) for food in foods)
+    assert len(foods) == 39
+    assert len([f for f in foods if f["id"].isdigit()]) == 24
+    assert all(food["name"] and food["source_url"].startswith(("https://fdc.nal.usda.gov/", "https://nepa.unicamp.br/", "https://tbca.net.br/", "https://www.yoki.com.br/")) for food in foods)
     from pathlib import Path
     root=Path(__file__).resolve().parents[1]
     for file in ("android-app/app/src/main/assets/nutrition_catalog.json", "android-app/app/src/test/resources/nutrition_catalog.json"):
