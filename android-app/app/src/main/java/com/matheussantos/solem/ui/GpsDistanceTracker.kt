@@ -5,6 +5,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -71,7 +74,7 @@ import java.time.format.DateTimeFormatter
     val signal=when(tracking.signal) {
         GpsSignal.GOOD -> "GPS recebendo sinal"
         GpsSignal.SEARCHING -> "Buscando sinal GPS…"
-        GpsSignal.WEAK -> "Sinal impreciso. Aguardando uma localização confiável."
+        GpsSignal.WEAK -> "O Android envia posições, mas ainda não são confiáveis para somar distância."
         GpsSignal.LOST -> "Sinal GPS perdido. Sua distância acumulada está preservada."
         GpsSignal.DISABLED -> "Localização desligada. Ative o GPS do aparelho para continuar."
         GpsSignal.INTERRUPTED -> "Medição interrompida. A distância anterior foi recuperada."
@@ -87,6 +90,14 @@ import java.time.format.DateTimeFormatter
         Text("Duração: "+clockText(tracking.duration(now)/1000))
         if(tracking.active && tracking.lastFixElapsed>0)
             Text("Último sinal confiável há "+((now-tracking.lastFixElapsed).coerceAtLeast(0)/1000)+" s",style=MaterialTheme.typography.bodySmall)
+        if(tracking.active) {
+            Text(tracking.locationSource.ifBlank {"Preparando localização"},style=MaterialTheme.typography.bodySmall)
+            tracking.accuracyMeters?.let {
+                Text("Última precisão estimada: ±%.0f m · recebida há %d s".format(it,
+                    (now-tracking.receivedElapsed).coerceAtLeast(0)/1000),style=MaterialTheme.typography.bodySmall)
+            }
+            if(tracking.recoveryAttempts>0) Text("Tentativas automáticas de reconectar: ${tracking.recoveryAttempts}",style=MaterialTheme.typography.bodySmall)
+        }
         if(tracking.hasGap) Text("Houve interrupção de sinal. Trechos sem localização não foram somados; o total pode ser menor que o percurso real.",
             style=MaterialTheme.typography.bodySmall)
         if(tracking.pending && !matching) Text("Você tem uma sessão de "+tracking.exercise+". Selecione esse exercício para retomar ou encerrar a medição.")
@@ -108,6 +119,21 @@ import java.time.format.DateTimeFormatter
             }) {Text(if(tracking.pending) "Encerrar e usar distância recuperada" else "Usar medição guardada")}
         }
         Text("Pare o GPS antes de salvar o treino. Retomar não recupera o trajeto percorrido sem sinal.",style=MaterialTheme.typography.bodySmall)
+        var showHelp by rememberSaveable {mutableStateOf(false)}
+        TextButton({showHelp=!showHelp}) {Text(if(showHelp) "Ocultar ajuda" else "GPS falha no bolso ou com tela apagada?")}
+        if(showHelp) {
+            Text("Antes de guardar o celular, aguarde uma posição confiável ao ar livre. No bolso, o corpo, a posição da antena e a capa podem reduzir a recepção. Se falhar, experimente outro bolso ou uma braçadeira.",style=MaterialTheme.typography.bodySmall)
+            Text("No Galaxy: confira Solem → Bateria → Sem restrições e remova o Solem dos apps em suspensão. Em Localização, confira precisão do Google e localização precisa do Solem. Os nomes variam conforme a versão do Android.",style=MaterialTheme.typography.bodySmall)
+            val power=context.getSystemService(PowerManager::class.java)
+            if(power.isPowerSaveMode) Text("Economia de energia está ativada e pode limitar a localização.",color=MaterialTheme.colorScheme.error)
+            Text("A localização combinada usa os recursos disponíveis no Android. Sem uma posição confiável, o app mantém o total já medido e avisa; não estima o trecho perdido.",style=MaterialTheme.typography.bodySmall)
+            TextButton(onClick={runCatching {
+                context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:${context.packageName}")))
+            }.onFailure {message="Abra Configurações → Aplicativos → Solem no Android."}}) {Text("Abrir ajustes do Solem")}
+            TextButton(onClick={runCatching {
+                context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            }.onFailure {message="Abra Configurações → Localização no Android."}}) {Text("Abrir ajustes de localização")}
+        }
         if(Build.VERSION.SDK_INT>=33 && !notificationAllowed) {
             Text("Ative as notificações para ver avisos de sinal e o botão Parar GPS na tela bloqueada.",style=MaterialTheme.typography.bodySmall)
             TextButton({notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)}) {Text("Ativar notificação do GPS")}

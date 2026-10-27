@@ -5,6 +5,38 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WalkSessionTest {
+    @Test fun weakPocketSignalIsDifferentFromNoUpdates() {
+        assertEquals(GpsSignal.WEAK,gpsSignal(1000,1000,60000,true,59000))
+        assertEquals(GpsSignal.LOST,gpsSignal(1000,1000,80000,true,59000))
+        assertEquals(GpsSignal.DISABLED,gpsSignal(1000,1000,60000,false,59000))
+        assertEquals(GpsSignal.GOOD,gpsSignal(61000,1000,62000,true,61000))
+    }
+    @Test fun silentProviderRetriesWithBackoffNotWeakOrStationaryProvider() {
+        assertTrue(shouldReconnectLocation(62000,0,1000,1000,true))
+        assertFalse(shouldReconnectLocation(62000,61000,1000,1000,true))
+        assertFalse(shouldReconnectLocation(90000,0,1000,62000,true))
+        assertTrue(shouldReconnectLocation(122000,0,1000,62000,true))
+        assertFalse(shouldReconnectLocation(122000,0,1000,62000,false))
+    }
+    @Test fun prolongedPoorReceptionPreservesDistanceAndResumesWithoutBridging() {
+        val counter=WalkDistanceAccumulator()
+        counter.accept(fix(0.0,1000),1000)
+        var total=counter.accept(fix(10.0,11000),11000).added
+        for(i in 1..30) total+=counter.accept(fix(10.0+i*3,11000L+i*2000,80.0),11000L+i*2000).added
+        assertEquals(10.0,total,.01)
+        val regained=counter.accept(fix(100.0,73000),73000)
+        assertTrue(regained.gap);assertEquals(0.0,regained.added,0.0)
+        total+=counter.accept(fix(104.0,77000),77000).added
+        assertEquals(14.0,total,.01)
+    }
+    @Test fun oldDraftsLoadAndDiagnosticsAreNotStored() {
+        val old="""{"owner":"account-a","meters":321.4,"pending":true}"""
+        val restored=Json.decodeFromString<WalkSession>(old)
+        assertEquals(321.4,restored.meters,0.0)
+        val encoded=Json.encodeToString(restored.copy(receivedElapsed=100,accuracyMeters=45.0,locationSource="test",recoveryAttempts=2))
+        assertFalse(encoded.contains("receivedElapsed"));assertFalse(encoded.contains("accuracyMeters"))
+        assertEquals(restored,Json.decodeFromString<WalkSession>(encoded))
+    }
     private fun fix(meters:Double,time:Long,accuracy:Double=3.0)=GpsFix(0.0,
         Math.toDegrees(meters/6_371_000),accuracy,time)
     @Test fun walkingSmallStepsAccumulateInsteadOfBeingDiscarded() {

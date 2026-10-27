@@ -15,8 +15,8 @@ android {
         applicationId = "com.matheussantos.solem"
         minSdk = 26
         targetSdk = 36
-        versionCode = 45
-        versionName = "0.18.3"
+        versionCode = 46
+        versionName = "0.18.4"
     }
 
     val properties = Properties()
@@ -61,6 +61,7 @@ android {
 }
 
 dependencies {
+    implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("io.noties.markwon:core:4.6.2")
     implementation(platform("androidx.compose:compose-bom:2026.06.00"))
     implementation("androidx.core:core-ktx:1.15.0")

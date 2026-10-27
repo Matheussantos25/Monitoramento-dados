@@ -13,14 +13,19 @@ enum class GpsSignal { SEARCHING, GOOD, WEAK, LOST, DISABLED, INTERRUPTED, STOPP
     val startedAtMillis: Long = 0, val startedElapsedMillis: Long = 0,
     val durationMillis: Long = 0, val bootCount: Int = -1,
     val hasGap: Boolean = false, val signal: GpsSignal = GpsSignal.STOPPED,
-    val lastFixElapsed: Long = 0
+    val lastFixElapsed: Long = 0,
+    @kotlinx.serialization.Transient val receivedElapsed: Long = 0,
+    @kotlinx.serialization.Transient val accuracyMeters: Double? = null,
+    @kotlinx.serialization.Transient val locationSource: String = "",
+    @kotlinx.serialization.Transient val recoveryAttempts: Int = 0
 ) {
     fun duration(now: Long) = if (active) maxOf(durationMillis, now-startedElapsedMillis) else durationMillis
     fun recovered(now: Long, boot: Int): WalkSession {
         val duration = if (active && boot >= 0 && boot == bootCount && now >= startedElapsedMillis)
             maxOf(durationMillis, now-startedElapsedMillis) else durationMillis
         return copy(active=false, durationMillis=duration, startedElapsedMillis=now-duration,
-            bootCount=boot, hasGap=hasGap || pending, lastFixElapsed=0,
+            bootCount=boot, hasGap=hasGap || pending, lastFixElapsed=0, receivedElapsed=0,
+            accuracyMeters=null, locationSource="", recoveryAttempts=0,
             signal=if(pending) GpsSignal.INTERRUPTED else GpsSignal.STOPPED)
     }
 }
@@ -61,9 +66,14 @@ class WalkDistanceAccumulator {
     }
 }
 
-fun gpsSignal(lastFix: Long, started: Long, now: Long, enabled: Boolean): GpsSignal = when {
+fun gpsSignal(lastFix: Long, started: Long, now: Long, enabled: Boolean, lastReceived: Long = lastFix): GpsSignal = when {
     !enabled -> GpsSignal.DISABLED
+    lastReceived>lastFix && now-lastReceived in 0..15_000 -> GpsSignal.WEAK
     now-(if(lastFix>0) lastFix else started)>30_000 -> GpsSignal.LOST
     lastFix==0L -> GpsSignal.SEARCHING
     else -> GpsSignal.GOOD
 }
+
+/** Retry only silence, not a stationary phone or a stream of imprecise fixes. */
+fun shouldReconnectLocation(now: Long, lastReceived: Long, started: Long, lastAttempt: Long, enabled: Boolean) =
+    enabled && now-maxOf(lastReceived,started)>45_000 && now-lastAttempt>=60_000
