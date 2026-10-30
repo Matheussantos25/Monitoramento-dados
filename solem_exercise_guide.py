@@ -24,4 +24,6 @@ def guide_payload(exercise):
 
 
 def exercise_guide(exercise):
-    return _component(**guide_payload(exercise), key=f"technique_{exercise}", default=None)
+    import streamlit as st
+    return _component(**guide_payload(exercise), comfort=st.session_state.get("journey_preferences", {}).get("comfort", False),
+                      key=f"technique_{exercise}", default=None)

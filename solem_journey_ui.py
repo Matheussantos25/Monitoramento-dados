@@ -47,6 +47,8 @@ def theme():
     st.html("<style>" + (Path(__file__).parent / "assets/journey.css").read_text(encoding="utf8") +
             f":root {{ --journey-accent: {accent}; --accent: {accent}; }}" +
             (".rank-promotion {display:none!important;}" if not prefs["effects"] else "") + "</style>")
+    from solem_experience_ui import experience_theme
+    experience_theme(prefs)
 
 
 def _ready():
@@ -90,16 +92,19 @@ def mission_summary(goals):
     from solem_ui import navigate
     a, b = st.columns(2)
     a.button("Personalizar minhas metas", key="journey_customize", on_click=navigate, args=("Metas e aparência",), use_container_width=True)
-    b.button("Checklist de publicações", key="journey_open_creator", on_click=navigate, args=("Publicações",), use_container_width=True)
+    if not st.session_state.get("generic_account"):
+        b.button("Checklist de publicações", key="journey_open_creator", on_click=navigate, args=("Publicações",), use_container_width=True)
+    else:
+        b.button("Registrar meu treino", key="journey_open_workout", on_click=navigate, args=("Treino",), use_container_width=True)
     # A celebration only follows a verified change in this session, never login.
     checkpoint = (str(now_local().date()), tuple(sorted((g["id"], g["target"]) for g in goals)))
     prior = st.session_state.get("journey_day_completion")
     complete = bool(goals) and done == len(goals)
     if prior and prior[0] == checkpoint and not prior[1] and complete:
         st.toast("Missões do dia concluídas. Seu esforço virou resultado!", icon=":material/verified:")
-        if prefs["effects"]:
+        if prefs["effects"] and not prefs.get("comfort", False):
             st.html('<section class="rank-promotion" role="status"><div class="rank-promotion__veil"></div><div class="rank-promotion__rays"></div><div class="rank-promotion__ring"></div><div class="rank-promotion__content"><span>MISSÕES DO DIA</span><h2>Missão cumprida.</h2><p>Seu esforço virou resultado.</p></div></section>')
-        if prefs["sound"]:
+        if prefs["sound"] and not prefs.get("comfort", False):
             from solem_ranks_ui import promotion_sound
             with st.container(key="rank_promotion_audio"):
                 st.audio(promotion_sound(), autoplay=True)
@@ -129,11 +134,17 @@ def settings_page():
         accent = st.selectbox("Cor de destaque", list(ACCENTS), index=list(ACCENTS).index(prefs["accent"]), key="journey_accent")
         effects = st.checkbox("Animações de conquista", value=prefs["effects"])
         sound = st.checkbox("Sons de conquista", value=prefs["sound"])
+        st.subheader("Conforto e acessibilidade")
+        comfort = st.checkbox("Modo tranquilo · reduzir movimento e silenciar conquistas", value=prefs.get("comfort", False))
+        contrast = st.checkbox("Reforçar contraste de textos e controles", value=prefs.get("contrast", False))
+        large_text = st.checkbox("Texto maior", value=prefs.get("large_text", False))
+        st.caption("Status também usam palavras e números, sem depender só de cor. O modo tranquilo não controla vídeos externos; escolha conteúdos adequados à sua sensibilidade.")
         st.caption("O navegador pode pedir interação antes de reproduzir som. A preferência de movimento reduzido do dispositivo é respeitada.")
         submitted = st.form_submit_button("Salvar minhas metas", type="primary")
     if submitted:
         def save():
-            new = preferences(dict(prefs, targets=values, enabled=enabled, accent=accent, effects=effects, sound=sound),
+            new = preferences(dict(prefs, targets=values, enabled=enabled, accent=accent, effects=effects, sound=sound,
+                                   comfort=comfort, contrast=contrast, large_text=large_text),
                               st.session_state["journey_personal"], st.session_state["generic_account"])
             store().save_settings(new, data["settings"])
         _save(save, "Metas e aparência salvas na sua conta.")

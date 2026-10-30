@@ -37,7 +37,8 @@ def defaults(personal=False, generic=False):
         enabled = [key for key in enabled if key not in ("created", "published")]
     root = "Canal principal · Gacha" if personal else "Meus canais"
     return dict(targets=targets, enabled=enabled, accent="Ciano", effects=True,
-                sound=True, strategy=f"{root}\n  Ideias\n  Roteiro\n  Gravação\n  Edição\n  Publicação")
+                sound=True, comfort=False, contrast=False, large_text=False, guide_done=False, media=[],
+                strategy=f"{root}\n  Ideias\n  Roteiro\n  Gravação\n  Edição\n  Publicação")
 
 
 def preferences(saved=None, personal=False, generic=False):
@@ -64,6 +65,12 @@ def preferences(saved=None, personal=False, generic=False):
     if len(result["strategy"]) > 10000:
         raise ValueError("O mapa deve ter até 10.000 caracteres.")
     mind_nodes(result["strategy"])
+    if any(type(result[k]) is not bool for k in ("comfort", "contrast", "large_text", "guide_done")):
+        raise ValueError("Preferências de acessibilidade inválidas.")
+    from solem_experience import media_link
+    if not isinstance(result["media"], list) or len(result["media"]) > 8:
+        raise ValueError("Guarde até 8 favoritos.")
+    result["media"] = [media_link(r["title"], r["url"]) for r in result["media"]]
     return result
 
 

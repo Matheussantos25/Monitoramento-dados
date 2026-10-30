@@ -59,6 +59,7 @@ import java.time.ZoneOffset
     val done = { success = true; error = null }
     val fields: @Composable ColumnScope.() -> Unit = {
         if(type == "Treino") {
+            if(existing == null) WorkoutMediaPanel()
             AssistChip(onClick={showWhen=!showWhen},label={Text("${if(date==today().toString()) "Hoje" else date} · ${time.take(5)} · alterar horário")})
         }
         if(type != "Treino" || showWhen) {

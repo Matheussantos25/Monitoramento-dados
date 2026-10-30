@@ -55,7 +55,15 @@ private val SolemType = Typography(
         surfaceContainer=Color(0xFFEAF0F7), surfaceContainerHigh=Color(0xFFE2EBF4), surfaceContainerHighest=Color(0xFFD9E4F0),
         outline=Color(0xFF708397), outlineVariant=Color(0xFFCBD7E5)
     )
-    MaterialTheme(colorScheme=colors, typography=SolemType,
+    val accessibleColors=if(!settings.contrast) colors else colors.copy(
+        onSurfaceVariant=if(dark) Color(0xFFF0F6FF) else Color(0xFF142337),
+        outline=if(dark) Color(0xFFC5D6E8) else Color(0xFF344960),
+        outlineVariant=if(dark) Color(0xFF91A8C0) else Color(0xFF5B7086))
+    val density=androidx.compose.ui.platform.LocalDensity.current
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides
+        androidx.compose.ui.unit.Density(density.density,density.fontScale * if(settings.largeText) 1.15f else 1f)) {
+    MaterialTheme(colorScheme=accessibleColors, typography=SolemType,
         shapes=Shapes(extraSmall=RoundedCornerShape(6.dp), small=RoundedCornerShape(12.dp), medium=RoundedCornerShape(18.dp), large=RoundedCornerShape(24.dp), extraLarge=RoundedCornerShape(32.dp)),
         content=content)
+    }
 }

@@ -768,7 +768,7 @@ if pagina == "Visão geral":
     st.session_state["overview_health_entries"] = overview_health_entries
     overview(progresso, df_raw.to_dict("records"))
     from solem_ranks_ui import rank_panel
-    with st.expander("Elos de treino e estudo · seu histórico preservado", expanded=not PERSONAL_JOURNEY):
+    with st.expander("Meu elo físico" if GENERIC_ACCOUNT else "Elos de treino e estudo · seu histórico preservado", expanded=False):
         rank_panel(df_raw.to_dict("records"), TOPICOS_EDITAL, progresso['today'])
 
 if pagina == "Saúde":
@@ -779,6 +779,8 @@ if pagina == "Saúde":
 # ABA 1: REGISTRO DE TREINO 
 # ==========================================
 if pagina == "Treino":
+    from solem_experience_ui import workout_media
+    workout_media()
     # Apply a Check-up destination on the receiving screen, before either
     # widget is created. Consume it once so manual selections remain editable.
     checkup_exercise = st.session_state.pop("checkup_workout_request", None)

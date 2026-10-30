@@ -28,6 +28,12 @@ import com.matheussantos.solem.domain.*
             PreferenceSwitch("Celebrar promoções", "Animação ao subir de nível ou elo",draft.motion) { draft=draft.copy(motion=it) }
             PreferenceSwitch("Som de promoção", "Respeita o volume de mídia do aparelho",draft.sound) { draft=draft.copy(sound=it) }
         }
+        Panel("Conforto e acessibilidade") {
+            PreferenceSwitch("Modo tranquilo", "Reduz movimento e silencia conquistas",draft.comfort) {draft=draft.copy(comfort=it)}
+            PreferenceSwitch("Contraste reforçado", "Textos e contornos mais nítidos",draft.contrast) {draft=draft.copy(contrast=it)}
+            PreferenceSwitch("Texto maior", "Amplia em 15%, além do tamanho escolhido no Android",draft.largeText) {draft=draft.copy(largeText=it)}
+            Text("Status usam palavras, símbolos e números. Vídeos escolhidos por você podem conter flashes; prefira áudio se isso causar desconforto.",style=MaterialTheme.typography.bodySmall)
+        }
         Panel("Tela inicial") {
             PreferenceSwitch("Ritmo da semana", if(generic) "Seus dias de treino" else "Seus dias de estudo e treino",draft.showWeek) { draft=draft.copy(showWeek=it) }
             PreferenceSwitch("Atividades recentes", "As últimas sessões do seu histórico",draft.showRecent) { draft=draft.copy(showRecent=it) }

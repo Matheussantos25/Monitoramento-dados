@@ -10,5 +10,7 @@ _calendar = components.declare_component(
 
 
 def journal_calendar(year, month, today, days, key_prefix="journal_calendar"):
+    import streamlit as st
     _calendar(year=year, month=month, today=today.isoformat(), days=days,
+              comfort=st.session_state.get("journey_preferences", {}).get("comfort", False),
               key=f"{key_prefix}_{year}_{month}", default=None)

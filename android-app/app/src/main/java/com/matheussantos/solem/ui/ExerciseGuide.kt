@@ -45,11 +45,12 @@ import kotlinx.serialization.json.Json
     var position by remember(exercise) { mutableFloatStateOf(0f) }
     var playing by remember(exercise) { mutableStateOf(false) }
     var reduced by remember { mutableStateOf(false) }
+    val appMotion = com.matheussantos.solem.ui.theme.LocalDashboardPreferences.current.motion
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     // Re-read the system preference whenever the app returns to the foreground.
-    DisposableEffect(lifecycle, exercise) {
+    DisposableEffect(lifecycle, exercise, appMotion) {
         fun motionPreference() {
-            reduced = runCatching { Settings.Global.getFloat(context.contentResolver,
+            reduced = !appMotion || runCatching { Settings.Global.getFloat(context.contentResolver,
                 Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }.getOrDefault(false)
             if (reduced) playing = false
         }

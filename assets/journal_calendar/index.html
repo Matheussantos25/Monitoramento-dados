@@ -64,7 +64,7 @@
       .event .kind { grid-column: 2; grid-row: 1; }
       .event .body { grid-column: 2; } }
     @media (prefers-reduced-motion: reduce) { .day { transition: none; } .focus.open { animation: none; } }
-  </style>
+  .comfort .day{transition:none!important}.comfort .focus.open{animation:none!important}</style>
 </head>
 <body>
   <div id="grid" class="grid" role="group" aria-label="Calendário mensal"></div>
@@ -133,6 +133,7 @@
       frameHeight();
     }
     function render(data) {
+      document.documentElement.classList.toggle("comfort", Boolean(data.comfort));
       if (!data || !Array.isArray(data.days)) return;
       const first = (new Date(data.year, data.month - 1, 1).getDay() + 6) % 7;
       const entries = [];

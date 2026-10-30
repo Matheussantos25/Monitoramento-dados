@@ -10,14 +10,14 @@ function select(p){position=p;if(paint)paint(p);$("position").value=String(Math.
   $("step").textContent=label||data.guide.view;$("drawing").setAttribute("aria-label",`${data.exercise}. ${data.motion?.direction||data.guide.view}`);
 }
 function stop(){if(raf!==null)cancelAnimationFrame(raf);raf=null;playing=false;started=null;
-  $("play").textContent=reduced.matches?"Movimento reduzido · use os controles":"Reproduzir movimento · 8 s";$("play").disabled=reduced.matches;}
+  $("play").textContent=(reduced.matches || data?.comfort)?"Movimento reduzido · use os controles":"Reproduzir movimento · 8 s";$("play").disabled=(reduced.matches || data?.comfort);}
 function tick(now){if(!playing)return;if(started===null)started=now;const elapsed=now-started;
   if(now-lastPaint>=1000/30||elapsed>=8000){select(ExerciseFigure.phase(elapsed));lastPaint=now;}
   if(elapsed>=8000){stop();select(0);return}raf=requestAnimationFrame(tick);
 }
-function start(){if(!data?.motion||data.motion.frames.length<2||reduced.matches||!$("panel").open)return;
+function start(){if(!data?.motion||data.motion.frames.length<2||(reduced.matches || data?.comfort)||!$("panel").open)return;
   if(playing){stop();return}playing=true;started=null;lastPaint=-Infinity;select(0);$("play").textContent="Pausar movimento";raf=requestAnimationFrame(tick);}
-function render(args){const changed=data?.exercise!==args.exercise;stop();if(changed){position=0;$("panel").open=false}data=args;
+function render(args){const changed=data?.exercise!==args.exercise;stop();if(changed){position=0;$("panel").open=false}data=args;stop();
   $("summary").textContent=`Ver execução e pegada · ${data.exercise}`;$("title").textContent=data.exercise;$("view").textContent=data.guide.view;$("notice").textContent=data.notice;$("avoid").textContent=data.guide.avoid;
   $("cues").replaceChildren();for(const cue of data.guide.cues){const li=document.createElement("li");li.textContent=cue;$("cues").appendChild(li)}
   $("source").hidden=!data.guide.source?.startsWith("https://");if(!$("source").hidden)$("source").href=data.guide.source;

@@ -17,7 +17,9 @@ class PersonalizationStore(context: Context, accountId: String, generic: Boolean
             studyMinutes = prefs.getInt("study", defaults.studyMinutes), mewing = prefs.getInt("mewing", defaults.mewing),
             sleepMinutes = prefs.getInt("sleep", defaults.sleepMinutes), hidden = prefs.getStringSet("hidden", defaults.hidden)!!.toSet(),
             motion = prefs.getBoolean("motion", true), sound = prefs.getBoolean("sound", true),
-            showWeek = prefs.getBoolean("week", true), showRecent = prefs.getBoolean("recent", true)).validated()
+            showWeek = prefs.getBoolean("week", true), showRecent = prefs.getBoolean("recent", true),
+            comfort = prefs.getBoolean("comfort", false), contrast = prefs.getBoolean("contrast", false),
+            largeText = prefs.getBoolean("large_text", false)).validated()
     }.getOrDefault(defaults)
     private val mutableState = MutableStateFlow(read())
     val state = mutableState.asStateFlow()
@@ -28,7 +30,9 @@ class PersonalizationStore(context: Context, accountId: String, generic: Boolean
             .putInt("walk", checked.walkKm).putInt("questions", checked.questions).putInt("study", checked.studyMinutes)
             .putInt("mewing", checked.mewing).putInt("sleep", checked.sleepMinutes).putStringSet("hidden", checked.hidden)
             .putBoolean("motion", checked.motion).putBoolean("sound", checked.sound)
-            .putBoolean("week", checked.showWeek).putBoolean("recent", checked.showRecent).apply()
+            .putBoolean("week", checked.showWeek).putBoolean("recent", checked.showRecent)
+            .putBoolean("comfort", checked.comfort).putBoolean("contrast", checked.contrast)
+            .putBoolean("large_text", checked.largeText).apply()
         mutableState.value = checked
     }
     fun reset() = save(defaults)

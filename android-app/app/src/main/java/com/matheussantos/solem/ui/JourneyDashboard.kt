@@ -70,6 +70,7 @@ private fun missionIcon(id: String): ImageVector = when(id) {
     val todayProgress = calculateProgress(rows.filter { it.data.take(10) == day.toString() })
     val rank = calculateRanks(rows, emptyMap(), day)
     Page(if(settings.nickname.isBlank()) "Progresso geral" else "Sua jornada, ${settings.nickname}") {
+        WelcomeGuide(navigate)
         Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically) {
             Text(day.format(DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM",Locale.forLanguageTag("pt-BR"))),
                 Modifier.weight(1f), style=MaterialTheme.typography.bodyMedium, color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -97,6 +98,7 @@ private fun missionIcon(id: String): ImageVector = when(id) {
                  style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
           }
         }
+        if(settings.showWeek) RhythmInsight(rows,activityAvailable)
         WorkoutProgressBars(rows,generic,activityAvailable)
         CycleTodayCards(rows,generic,activityAvailable,registerExercise,openWorkoutPlan)
         Button(openWorkoutPlan,modifier=Modifier.fillMaxWidth()) {Text("Plano semanal e calendário de treino")}

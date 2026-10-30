@@ -11,7 +11,8 @@ data class DashboardPreferences(
     val walkKm: Int = 5, val questions: Int = 150, val studyMinutes: Int = 60,
     val mewing: Int = 400, val sleepMinutes: Int = 480,
     val hidden: Set<String> = setOf("sleep"), val motion: Boolean = true,
-    val sound: Boolean = true, val showWeek: Boolean = true, val showRecent: Boolean = true
+    val sound: Boolean = true, val showWeek: Boolean = true, val showRecent: Boolean = true,
+    val comfort: Boolean = false, val contrast: Boolean = false, val largeText: Boolean = false
 ) {
     fun validated(): DashboardPreferences {
         require(theme in listOf("Escuro", "Claro", "Sistema") && accent in listOf("Glacial", "Âmbar", "Rubi"))

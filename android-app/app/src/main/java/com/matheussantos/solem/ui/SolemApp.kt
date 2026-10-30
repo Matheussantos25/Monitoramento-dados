@@ -48,7 +48,9 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
     }
     val store=remember(auth.accountId,auth.generic) { PersonalizationStore(context,auth.accountId,auth.generic) }
     val settings by store.state.collectAsStateWithLifecycle()
-    CompositionLocalProvider(LocalDashboardPreferences provides settings) {
+    val effectiveSettings = settings.copy(motion=settings.motion && !settings.comfort && android.animation.ValueAnimator.areAnimatorsEnabled(),
+        sound=settings.sound && !settings.comfort)
+    CompositionLocalProvider(LocalDashboardPreferences provides effectiveSettings) {
     SolemTheme(settings) { Surface(Modifier.fillMaxSize()) { when {
         !auth.initialized -> Column(Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally,

@@ -44,7 +44,7 @@ def rank_panel(records, topics, today):
     generic = st.session_state.get("generic_account", False)
     data = ranks(records, topics, today)
     st.subheader('Sua jornada ranqueada')
-    st.caption('Físico por repetições acumuladas · Estudos por acerto e volume de questões em cada tópico de estudo.' if generic else 'Físico por repetições acumuladas · Estudos por acerto e volume de questões em cada tópico do edital.')
+    st.caption('Seu elo físico acompanha as repetições acumuladas no histórico.' if generic else 'Físico por repetições acumuladas · Estudos por acerto e volume de questões em cada tópico do edital.')
     with st.expander('Efeitos e regras dos elos'):
         st.caption('As promoções são celebradas automaticamente com animação e som. Sem perda por descanso. Corrigir ou excluir registros recalcula os elos; a celebração não se repete ao atualizar a página. O navegador pode bloquear áudio automático até a primeira interação.')
         st.dataframe([{'Elo': n, 'Repetições acumuladas': REP_LIMITS[i], 'Acerto mínimo (%)': ACCURACY_LIMITS[i], 'Questões mínimas por tópico': SAMPLE_LIMITS[i]} for i, n in enumerate(NAMES)], hide_index=True)
@@ -58,9 +58,9 @@ def rank_panel(records, topics, today):
         promoted_key, promoted_tier = max(promotions, key=lambda item: item[1])
         promoted_label = 'Elo físico' if promoted_key == 'physical' else f'{promoted_key[0]} · {promoted_key[1]}'
         preferences = st.session_state.get('journey_preferences', {})
-        if preferences.get('effects', True):
+        if preferences.get('effects', True) and not preferences.get('comfort', False):
             promotion_overlay(promoted_tier, promoted_label)
-        if preferences.get('sound', True):
+        if preferences.get('sound', True) and not preferences.get('comfort', False):
             with st.container(key='legacy_rank_promotion_audio'):
                 st.audio(promotion_sound(), format='audio/wav', autoplay=True)
     art, detail = st.columns([1,4], vertical_alignment='center')

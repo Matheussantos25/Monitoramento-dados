@@ -88,6 +88,8 @@ def overview(p, records=None, private_entries=None):
         private_entries = st.session_state.get("overview_health_entries")
     today = p["today"]
     st.html('<div class="section-intro journey-intro"><span class="eyebrow">SISTEMA / SUA JORNADA</span><h1>Progresso Geral</h1><p>Cada registro transforma constância em experiência.</p></div>')
+    from solem_experience_ui import guide, weekly_insight
+    guide()
     from solem_nutrition_overview_ui import nutrition_highlight
     nutrition_highlight(private_entries, today)
     level_pct = max(0, min(100, p['level_xp'] / 250 * 100))
@@ -144,6 +146,7 @@ def overview(p, records=None, private_entries=None):
                                   on_click=navigate_checkup, args=(goal["page"], exercise), use_container_width=True)
         if private_entries is None:
             st.caption("A água depende do diário privado. Não foi possível consultá-lo nesta sessão; os demais indicadores continuam disponíveis.")
+        weekly_insight(records, today)
         from solem_training_plan_ui import training_plan_panel
         training_plan_panel(records, today, st.session_state.get("journey_preferences"),
                             st.session_state.get("generic_account", False))

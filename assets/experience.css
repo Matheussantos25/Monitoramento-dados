@@ -1,0 +1,11 @@
+/* Accessible refinement: native controls, no flashing, no infinite decoration. */
+.solem-guide{display:flex;align-items:center;gap:1.4rem;padding:1.25rem;background:#132237;border:1px solid #607d97;border-radius:18px}
+.solem-guide .guide-mascot{flex:0 0 80px}.solem-guide h3{margin:.4rem 0;font-size:1.4rem}.solem-guide p{max-width:64ch;margin:0;color:#d4e1f0;line-height:1.65}
+.solem-guide small{letter-spacing:.12em;color:#a8e3ff;font-weight:600}.guide-arm{transform-origin:83px 65px}
+.guide-wave .guide-mascot{animation:solem-wave 1.6s ease-in-out 1}@keyframes solem-wave{0%,100%{transform:translateY(0)}35%{transform:translateY(-5px)}70%{transform:translateY(0)}}
+.st-key-experience_week{padding:1.2rem;border-top:1px solid #47617d;border-bottom:1px solid #47617d;margin:1rem 0}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,[role=radio]:focus-visible{outline:3px solid #f4c87d!important;outline-offset:3px!important}
+.stButton button,.stLinkButton a{min-height:44px}h1,h2,h3{text-wrap:balance}p{line-height:1.6}strong,[data-testid=stMetricValue]{font-variant-numeric:tabular-nums}
+[data-testid=stCaptionContainer]{color:#afc4db}.rank-promotion__rays,.rank-promotion__ring{display:none!important}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.rank-promotion{display:none!important}}
+@media(max-width:480px){.solem-guide{display:block;padding:1rem}.solem-guide .guide-mascot{float:right;width:44px;margin:0 0 .5rem .75rem}.solem-guide h3{font-size:1.2rem}.st-key-experience_week{padding:.6rem 0}}
