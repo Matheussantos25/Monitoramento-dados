@@ -48,11 +48,11 @@ def language_form(client, table, old=None):
                 st.rerun()
 
 
-def language_page(records, client, table):
+def language_page(records, client, table, demo=False):
     st.title("Idiomas")
     st.caption("Sua mente em movimento. Anki, séries e prática: acompanhe cada sessão, no seu ritmo.")
     rows=[r for r in records if is_language(r)]
-    progress,register,history=st.tabs(["Progresso","Registrar sessão","Histórico e edição"])
+    progress,register,history,vocabulary=st.tabs(["Progresso","Registrar sessão","Histórico e edição","Vocabulário → Anki"])
     with progress:
         options=["Todos"]+sorted({extras_of(r.get("dados_extras")).get("idioma","Inglês") for r in rows})
         selected=st.selectbox("Idioma do painel",options)
@@ -88,3 +88,7 @@ def language_page(records, client, table):
                     if e.get('titulo'): st.write(e['titulo'])
                     if e.get('episodios'): st.caption(f"{e['episodios']} episódios/vídeos · Áudio: {e['idioma_audio']} · Legendas: {e['legendas']}")
                     language_form(client,table,row)
+
+    with vocabulary:
+        from solem_vocabulary_ui import vocabulary_panel
+        vocabulary_panel(demo=demo)

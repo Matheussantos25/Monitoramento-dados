@@ -1,6 +1,9 @@
 package com.matheussantos.solem.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.matheussantos.solem.viewmodel.WorkspaceViewModel
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -13,7 +16,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
 
-@Composable fun LanguagePage(rows: List<TrainingRecord>, busy: Boolean, vm: TrainingViewModel) {
+@Composable fun LanguagePage(rows: List<TrainingRecord>, busy: Boolean, vm: TrainingViewModel, workspaceVm: WorkspaceViewModel) {
     var section by rememberSaveable {mutableStateOf("Progresso")}
     var language by rememberSaveable {mutableStateOf("Todos")}
     var day by rememberSaveable {mutableStateOf(today().toString())}
@@ -22,10 +25,11 @@ import java.time.ZoneOffset
     val sessions=rows.filter {it.isLanguage()}
     Page("Idiomas") {
         Text("Sua mente em movimento. Anki, séries e prática, no seu ritmo.")
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            listOf("Progresso","Registrar","Histórico").forEach {name -> FilterChip(section==name,{section=name;editing=null},label={Text(name)})}
+        Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            listOf("Progresso","Registrar","Histórico","Vocabulário → Anki").forEach {name -> FilterChip(section==name,{section=name;editing=null},label={Text(name)})}
         }
         when(section) {
+            "Vocabulário → Anki" -> VocabularyPanel(workspaceVm)
             "Progresso" -> {
                 Choice("Idioma do painel",language,listOf("Todos")+sessions.map {it.extra("idioma")}.distinct().sorted()) {language=it}
                 Field("Dia do progresso (AAAA-MM-DD)",day) {day=it}

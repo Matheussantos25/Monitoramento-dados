@@ -743,7 +743,7 @@ pagina, progresso = shell(df_raw, on_logout=logout_private)
 
 if pagina == "Idiomas":
     from solem_languages_ui import language_page
-    language_page(df_raw.to_dict("records"), supabase, ACTIVITY_TABLE)
+    language_page(df_raw.to_dict("records"), supabase, ACTIVITY_TABLE, demo=IS_DEMO)
 
 if pagina == "Publicações":
     from solem_journey_ui import creator_page

@@ -203,7 +203,7 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
                 if (!generic) (11..16).forEach { index -> composable(index.toString()) { WorkspacePage(workspaceVm,pages[index]) } }
                 if (!generic) composable("18") {ScriptsPage(workspaceVm)}
                 composable("17") { PersonalizationPage(store,generic) }
-                composable("19") { LanguagePage(rows,busy,vm) }
+                composable("19") { LanguagePage(rows,busy,vm,workspaceVm) }
                 composable("edit/{id}") { entry ->
                     val record = rows.firstOrNull { it.id == entry.arguments?.getString("id")?.toLongOrNull() }
                     if (record == null) Text("Registro não encontrado. Atualize o histórico.")

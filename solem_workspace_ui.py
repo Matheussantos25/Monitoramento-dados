@@ -258,7 +258,8 @@ def render_finance(repo, items):
 
 def render_workspace(repo, items, module=None):
     from solem_scripts import script_data
-    items = [item for item in items if not script_data(item)]
+    from solem_vocabulary import vocabulary_data
+    items = [item for item in items if not script_data(item) and not vocabulary_data(item)]
     message = st.session_state.pop('ws_feedback', None)
     if message:
         st.success(message)
