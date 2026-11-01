@@ -732,7 +732,7 @@ if GENERIC_ACCOUNT:
 if not df_raw.empty:
     df_treinos = df_raw[~df_raw['grupo_muscular'].isin(['Nutrição', 'Métricas', 'Estudos'])].copy()
     df_dieta = df_raw[df_raw['grupo_muscular'] == 'Nutrição'].copy()
-    df_estudos = df_raw[df_raw['grupo_muscular'] == 'Estudos'].copy()
+    df_estudos = df_raw[(df_raw['grupo_muscular'] == 'Estudos') & ~df_raw['dados_extras'].apply(lambda x: safe_get(x, 'language_schema') == 1)].copy()
 else:
     df_treinos = pd.DataFrame()
     df_dieta = pd.DataFrame()
@@ -740,6 +740,10 @@ else:
 
 # --- INTERFACE MAIN ---
 pagina, progresso = shell(df_raw, on_logout=logout_private)
+
+if pagina == "Idiomas":
+    from solem_languages_ui import language_page
+    language_page(df_raw.to_dict("records"), supabase, ACTIVITY_TABLE)
 
 if pagina == "Publicações":
     from solem_journey_ui import creator_page
@@ -1698,6 +1702,10 @@ if pagina in ("Configurações", "Treino", "Estudar"):
     else:
         st.markdown("### Editar ou excluir registros")
     df_manage = df_raw.copy()
+    if not df_manage.empty:
+        df_manage = df_manage[~df_manage["dados_extras"].apply(lambda x: safe_get(x, "language_schema") == 1)]
+    if pagina in ("Estudar", "Configurações"):
+        st.caption("Sessões de idioma podem ser editadas em Idiomas → Histórico e edição.")
     if pagina == "Treino" and not df_manage.empty:
         df_manage = df_manage[~df_manage['grupo_muscular'].isin(['Estudos', 'Nutrição', 'Métricas'])]
     elif pagina == "Estudar" and not df_manage.empty:

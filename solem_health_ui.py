@@ -69,7 +69,9 @@ def health_page(client, healthy_options, occasional_options, demo=False):
         skipped = st.checkbox("Sem refeição — não comi", key=f"meal_skipped_new_{day}_{meal_type}")
         if skipped: st.caption("Registra que você não fez essa refeição. Não conta como refeição consumida nem gera pontos.")
         with st.form("health_meal", clear_on_submit=True):
-            meal_time = st.time_input("Horário da refeição", value=now_local().time().replace(second=0, microsecond=0))
+            meal_key = f"simple_meal_time_{day}"
+            st.session_state.setdefault(meal_key, now_local().time().replace(second=0, microsecond=0))
+            meal_time = st.time_input("Horário da refeição", key=meal_key, step=60)
             a, b = st.columns(2)
             with a:
                 healthy = st.multiselect("Alimentos habituais", meal_food_options(meal_type, healthy_options), disabled=skipped)
@@ -156,7 +158,9 @@ def health_page(client, healthy_options, occasional_options, demo=False):
             container = st.selectbox("Recipiente", ["Garrafa", "Copo"])
             volume = st.number_input("Volume por recipiente (ml)", min_value=50, max_value=5000, value=750, step=50)
             amount = st.number_input("Quantidade consumida", min_value=1, max_value=50, value=1)
-            drink_time = st.time_input("Horário do registro", value=now_local().time().replace(second=0, microsecond=0))
+            water_key = f"water_new_time_{day}"
+            st.session_state.setdefault(water_key, now_local().time().replace(second=0, microsecond=0))
+            drink_time = st.time_input("Horário do registro", key=water_key, step=60)
             st.metric("Total deste registro", f"{volume * amount:,} ml".replace(",", "."))
             submitted = st.form_submit_button("Adicionar água", use_container_width=True)
         if submitted: _save(client, day, drink_time.strftime("%H:%M:%S"), "water",

@@ -12,5 +12,5 @@ fun genericAccount(email: String?, createdAt: String?, preservedEmail: String, c
 fun activityTable(email: String?, preservedEmail: String): String =
     if (!email.isNullOrBlank() && email.trim().equals(preservedEmail, ignoreCase=true)) "treinos" else "solem_activities"
 
-fun fitnessPage(index: Int) = index in setOf(0, 1, 2, 3, 4, 8, 9, 10, 17)
+fun fitnessPage(index: Int) = index in setOf(0, 1, 2, 3, 4, 8, 9, 10, 17, 19)
 fun fitnessMission(id: String) = id in setOf("water", "flexao", "agachamento", "walk", "sleep")

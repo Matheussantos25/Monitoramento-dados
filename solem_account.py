@@ -32,7 +32,7 @@ def activity_table(email):
 
 
 def visible_pages(pages, generic):
-    allowed = {"Visão geral", "Treino", "Evolução física", "Saúde", "Metas e aparência", "Configurações"}
+    allowed = {"Visão geral", "Treino", "Evolução física", "Saúde", "Metas e aparência", "Configurações", "Idiomas"}
     return [page for page in pages if not generic or page in allowed]
 
 

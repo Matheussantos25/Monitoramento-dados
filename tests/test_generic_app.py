@@ -12,7 +12,7 @@ def test_new_account_empty_pages_generic_presets_and_save():
         assert not app.exception
         assert app.session_state["solem_demo_records"] == []
         assert not {"checkup_go_mewing", "checkup_go_study", "checkup_go_questions", "checkup_go_published"} & {x.key for x in app.button}
-        assert app.radio(key="solem_page").options == ["Visão geral", "Treino", "Evolução física", "Saúde", "Metas e aparência", "Configurações"]
+        assert app.radio(key="solem_page").options == ["Visão geral", "Treino", "Evolução física", "Saúde", "Metas e aparência", "Configurações", "Idiomas"]
         for page in app.radio(key="solem_page").options:
             app.radio(key="solem_page").set_value(page).run()
             assert not app.exception, [e.message for e in app.exception]

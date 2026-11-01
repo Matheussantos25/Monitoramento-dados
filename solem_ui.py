@@ -8,7 +8,7 @@ from solem_progress import calculate_progress
 from solem_journal_ui import monthly_journal
 from solem_checkup import daily_checkup
 
-PAGES = ["Visão geral", "Treino", "Evolução física", "Saúde", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Publicações", "Metas e aparência", "Configurações", "Ideias e roteiros"]
+PAGES = ["Visão geral", "Treino", "Evolução física", "Saúde", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Publicações", "Metas e aparência", "Configurações", "Ideias e roteiros", "Idiomas"]
 
 
 def apply_theme():
@@ -55,7 +55,7 @@ def shell(df, on_logout=None):
     with st.container(key="system_navigation"):
         with st.popover(f"☰  Menu  /  {page}"):
             for group, destinations in (
-                ("JORNADA", PAGES[:6]),
+                ("JORNADA", PAGES[:6]+["Idiomas"]),
                 ("BIBLIOTECA", PAGES[6:11]+["Ideias e roteiros"]),
                 ("PLANEJAMENTO", PAGES[11:14]),
                 ("CONTA", PAGES[14:16]),

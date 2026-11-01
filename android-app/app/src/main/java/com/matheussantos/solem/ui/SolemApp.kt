@@ -31,7 +31,7 @@ import com.matheussantos.solem.data.PersonalizationStore
 import com.matheussantos.solem.ui.theme.LocalDashboardPreferences
 import com.matheussantos.solem.ui.theme.SolemTheme
 
-val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Todos os registros", "Calendário", "Elos", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Personalizar", "Ideias e roteiros")
+val pages = listOf("Visão geral", "Treino", "Evolução física", "Saúde", "Peso", "Estudar", "Evolução nos estudos", "Prompts", "Todos os registros", "Calendário", "Elos", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Personalizar", "Ideias e roteiros", "Idiomas")
 
 val LocalGpsAccount = staticCompositionLocalOf { "" }
 
@@ -109,7 +109,7 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
         ModalDrawerSheet {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
                 Text("✳ solem",Modifier.padding(16.dp),style=MaterialTheme.typography.headlineMedium)
-                listOf("JORNADA" to listOf(0,1,2,3,5,6,9,10), "BIBLIOTECA" to listOf(18,11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(17,8))
+                listOf("JORNADA" to listOf(0,1,2,3,19,5,6,9,10), "BIBLIOTECA" to listOf(18,11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(17,8))
                     .map { (group, indices) -> group to indices.filter { !generic || fitnessPage(it) } }
                     .filter { it.second.isNotEmpty() }.forEach { (group, indices) ->
                     Text(group,Modifier.padding(16.dp,12.dp),style=MaterialTheme.typography.labelSmall)
@@ -136,9 +136,9 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
                 IconButton({vm.refresh();workspaceVm.loadHealth()},enabled=!busy && !healthState.busy) {Icon(Icons.Default.Refresh,"Atualizar dados")}})
     },bottomBar={if(!isRecord) NavigationBar {
         listOf(Triple(0,"Jornada",Icons.Outlined.AutoAwesome),Triple(3,"Saúde",Icons.Outlined.FavoriteBorder),
-            Triple(1,"Treino",Icons.Outlined.FitnessCenter),Triple(5,"Estudo",Icons.AutoMirrored.Outlined.MenuBook))
+            Triple(1,"Treino",Icons.Outlined.FitnessCenter),Triple(19,"Idiomas",Icons.AutoMirrored.Outlined.MenuBook))
             .filter { !generic || fitnessPage(it.first) }.forEach { (index,label,icon) ->
-            val active=when {route.startsWith("health/") || route=="4" -> 3;route=="2" -> 1;route=="6" -> 5;route in listOf("9","10") -> 0;else -> route.toIntOrNull()}
+            val active=when {route.startsWith("health/") || route=="4" -> 3;route=="2" -> 1;route in listOf("5","6") -> 19;route in listOf("9","10") -> 0;else -> route.toIntOrNull()}
             NavigationBarItem(selected=active==index,
                 onClick={nav.navigate(index.toString()) {launchSingleTop=true;popUpTo("0")}},icon={Icon(icon,null)},label={Text(label)})
         }
@@ -185,11 +185,11 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
                         Row(Modifier.padding(horizontal=20.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                             listOf("Registrar", "Registros").forEach { option -> FilterChip(selected=section==option, onClick={section=option}, label={Text(option)}) }
                         }
-                        if (section == "Registrar") StudyPage(rows, catalog, busy, vm)
-                        else History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }, "Estudo", Modifier.weight(1f))
+                        if (section == "Registrar") StudyPage(rows.filterNot {it.isLanguage()}, catalog, busy, vm)
+                        else History(rows.filterNot {it.isLanguage()}, busy, vm::delete, { nav.navigate("edit/" + it.id) }, "Estudo", Modifier.weight(1f))
                     }
                 }
-                if (!generic) composable("6") { StudyCharts(rows, catalog) }
+                if (!generic) composable("6") { StudyCharts(rows.filterNot {it.isLanguage()}, catalog) }
                 if (!generic) composable("7") { PromptsPage(workspaceVm, generic) }
                 composable("8") { History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }) }
                 composable("new-workout/{exercise}") { entry ->
@@ -203,10 +203,12 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
                 if (!generic) (11..16).forEach { index -> composable(index.toString()) { WorkspacePage(workspaceVm,pages[index]) } }
                 if (!generic) composable("18") {ScriptsPage(workspaceVm)}
                 composable("17") { PersonalizationPage(store,generic) }
+                composable("19") { LanguagePage(rows,busy,vm) }
                 composable("edit/{id}") { entry ->
                     val record = rows.firstOrNull { it.id == entry.arguments?.getString("id")?.toLongOrNull() }
                     if (record == null) Text("Registro não encontrado. Atualize o histórico.")
                     else if (kind(record) in listOf("Saúde", "Alimentação", "Peso")) Text("Este registro legado está na tabela compartilhada. Para novos dados pessoais, use a aba Saúde, que salva em uma tabela privada.", Modifier.padding(16.dp))
+                    else if(record.isLanguage()) Page("Editar sessão de idioma") { key(record.id) {LanguageEditor(record,busy,vm) {nav.popBackStack()}} }
                     else key(record.id) { EntryScreen(kind(record), catalog, rows, record, busy,
                         save = { id, value, _ -> vm.save(id, value) { nav.popBackStack() } }) }
                 }
@@ -236,6 +238,7 @@ fun kind(row: TrainingRecord) = when(row.group) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filtered, key = { it.id }) { row -> Panel(row.exercicio) {
                 val detail = when {
+                    row.isLanguage() -> "${row.extra("atividade_idioma")} · ${row.durationMinutes} min"
                     row.group == "Estudos" -> "${row.repeticoes} questões · ${row.durationMinutes} min"
                     row.distanceKm > 0 -> "%.2f km".format(row.distanceKm)
                     row.repeticoes > 0 -> "${row.repeticoes} repetições"
