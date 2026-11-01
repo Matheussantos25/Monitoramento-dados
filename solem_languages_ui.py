@@ -1,4 +1,5 @@
 from datetime import date, time
+import os
 import streamlit as st
 import pandas as pd
 from solem_health import now_local
@@ -49,6 +50,7 @@ def language_form(client, table, old=None):
 
 
 def language_page(records, client, table, demo=False):
+    demo = demo or os.environ.get("SOLEM_DEMO") == "1"
     st.title("Idiomas")
     st.caption("Sua mente em movimento. Anki, séries e prática: acompanhe cada sessão, no seu ritmo.")
     rows=[r for r in records if is_language(r)]
