@@ -76,8 +76,8 @@ def bar_card(data, x, y, *, title, unit="", key=None):
              "axis":{"title":None,"labelAngle":0,"labelOverlap":"greedy","labelPadding":12},
              "scale":{"paddingInner":0.45,"paddingOuter":0.35}},
         "y":{"field":y,"type":"quantitative","scale":{"domainMin":0,"nice":True},
-             "axis":None if count<=12 else {"title":unit or None,"tickCount":3,"labelPadding":10}},
-        "tooltip":[{"field":x,"type":"nominal"},{"field":y,"type":"quantitative","title":unit or y}],
+             "axis":None if count<=12 else {"title":None,"tickCount":3,"labelPadding":10}},
+        "tooltip":[{"field":x,"type":"nominal"},{"field":y,"type":"quantitative","title":y}],
     }
     layers=[{"mark":{"type":"bar","color":{"gradient":"linear","x1":0,"y1":1,"x2":0,"y2":0,
                 "stops":[{"offset":0,"color":"#206284"},{"offset":1,"color":"#83DCFF"}]},
