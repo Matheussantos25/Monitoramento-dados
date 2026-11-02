@@ -1,6 +1,17 @@
 package com.matheussantos.solem.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import com.matheussantos.solem.viewmodel.WorkspaceViewModel
@@ -20,6 +31,7 @@ import java.time.ZoneOffset
     var section by rememberSaveable {mutableStateOf("Progresso")}
     var language by rememberSaveable {mutableStateOf("Todos")}
     var day by rememberSaveable {mutableStateOf(today().toString())}
+    var period by rememberSaveable {mutableStateOf("Últimos 7 dias")}
     var editing by rememberSaveable {mutableStateOf<Long?>(null)}
     var generation by rememberSaveable {mutableIntStateOf(0)}
     val sessions=rows.filter {it.isLanguage()}
@@ -32,31 +44,45 @@ import java.time.ZoneOffset
             "Vocabulário → Anki" -> VocabularyPanel(workspaceVm)
             "Progresso" -> {
                 Choice("Idioma do painel",language,listOf("Todos")+sessions.map {it.extra("idioma")}.distinct().sorted()) {language=it}
-                Field("Dia do progresso (AAAA-MM-DD)",day) {day=it}
+                Choice("Período do progresso",period,languagePeriods){period=it}
+                Field("Data de referência (AAAA-MM-DD)",day) {day=it}
                 val parsed=runCatching {LocalDate.parse(day)}.getOrNull()
-                if(parsed==null) Text("Informe uma data válida.",color=MaterialTheme.colorScheme.error)
+                if(parsed==null || parsed>today()) Text("Informe uma data válida, até hoje.",color=MaterialTheme.colorScheme.error)
                 else {
                     val selected=language.takeUnless {it=="Todos"}
-                    val total=languageTotals(sessions,parsed,selected)
-                    Panel("Sua prática no dia") {
-                        Text("${total.minutes} min de estudo",style=MaterialTheme.typography.headlineMedium,color=MaterialTheme.colorScheme.primary)
-                        Text("${total.reviewMinutes} min de revisão no Anki · ${total.sessions} sessões")
-                        HorizontalDivider()
-                        Text("${total.reviewed} cards revisados · ${total.added} adicionados")
-                        Text("${total.episodes} episódios / vídeos")
+                    val (start,calendarEnd)=languagePeriodBounds(parsed,period)
+                    val end=minOf(calendarEnd,today())
+                    val range=languageRangeRecords(sessions,start,end,selected)
+                    val total=languageRangeTotals(range,start,end,selected)
+                    val active=range.map {it.data.take(10)}.distinct().size
+                    val dates=DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                    Text("${start.format(dates)} a ${end.format(dates)} · $language",style=MaterialTheme.typography.bodyMedium)
+                    Panel("Tempo de estudo") {
+                        Text("${total.minutes} min",style=MaterialTheme.typography.headlineLarge,color=MaterialTheme.colorScheme.primary)
+                        Text("$active / ${ChronoUnit.DAYS.between(start,end)+1} dias de prática · ${total.sessions} sessões")
+                        Text("${if(active>0)total.minutes/active else 0} min por dia com prática",style=MaterialTheme.typography.bodySmall)
                     }
-                    val week=(6 downTo 0).map {parsed.minusDays(it.toLong())}
-                    Bars("Últimos 7 dias",week.map {"%02d/%02d".format(it.dayOfMonth,it.monthValue) to languageTotals(sessions,it,selected).minutes.toDouble()},"min")
+                    Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        LanguageStat("Revisão no Anki","${total.reviewMinutes} min",Modifier.weight(1f))
+                        LanguageStat("Cards revisados",total.reviewed.toString(),Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        LanguageStat("Cards adicionados",total.added.toString(),Modifier.weight(1f))
+                        LanguageStat("Episódios / vídeos",total.episodes.toString(),Modifier.weight(1f))
+                    }
+                    if(total.sessions==0)Text("Nenhuma sessão neste intervalo. Escolha outro período ou registre sua próxima prática.")
+                    val unit=if(period=="Dia")"horário" else if(period in listOf("Semestre","Ano"))"mês" else "dia"
+                    LanguageRhythm("Seu ritmo por $unit",languageChart(sessions,start,end,period,selected))
                     Text("Tempo informado por você; não é uma avaliação de fluência.",style=MaterialTheme.typography.bodySmall)
                     Button({section="Registrar"},Modifier.fillMaxWidth()) {Text("Registrar prática")}
                 }
             }
-            "Registrar" -> key(generation) { LanguageEditor(null,busy,vm) {generation++;section="Progresso"} }
+            "Registrar" -> key(generation) { LanguageEditor(null,busy,vm,rows) {generation++;section="Progresso"} }
             else -> {
                 val old=sessions.firstOrNull {it.id==editing}
                 if(old!=null) {
                     TextButton({editing=null}) {Text("Voltar às sessões")}
-                    key(old.id) {LanguageEditor(old,busy,vm) {editing=null}}
+                    key(old.id) {LanguageEditor(old,busy,vm,rows) {editing=null}}
                 } else {
                     var page by rememberSaveable {mutableIntStateOf(0)}
                     val sorted=sessions.sortedWith(compareByDescending<TrainingRecord> {it.data}.thenByDescending {it.horario}.thenByDescending {it.id})
@@ -77,12 +103,12 @@ import java.time.ZoneOffset
     }
 }
 
-@Composable fun LanguageEditor(old: TrainingRecord?, busy: Boolean, vm: TrainingViewModel, done: ()->Unit) {
+@Composable fun LanguageEditor(old: TrainingRecord?, busy: Boolean, vm: TrainingViewModel, records: List<TrainingRecord>, done: ()->Unit) {
     var language by rememberSaveable {mutableStateOf(old?.extra("idioma") ?: "Inglês")}
     var custom by rememberSaveable {mutableStateOf(old?.extra("idioma")?.takeUnless {it in languageNames}.orEmpty())}
     var activity by rememberSaveable {mutableStateOf(old?.extra("atividade_idioma") ?: languageActivities[0])}
     var day by rememberSaveable {mutableStateOf(old?.data ?: today().toString())}
-    var at by rememberSaveable {mutableStateOf(old?.horario?.take(5) ?: LocalTime.now(ZoneOffset.ofHours(-3)).toString().take(5))}
+    var at by rememberSaveable {mutableStateOf(old?.horario ?: LocalTime.now(ZoneOffset.ofHours(-3)).toString().take(5))}
     var minutes by rememberSaveable {mutableStateOf(old?.durationMinutes?.toString() ?: "20")}
     var title by rememberSaveable {mutableStateOf(old?.extra("titulo").orEmpty())}
     var reviewed by rememberSaveable {mutableStateOf(old?.number("cards_revisados")?.toInt()?.toString() ?: "0")}
@@ -95,11 +121,15 @@ import java.time.ZoneOffset
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Choice("Idioma que estou aprendendo",language.takeIf {it in languageNames} ?: "Outro idioma",languageNames+"Outro idioma") {language=it;audio=it.takeUnless {it=="Outro idioma"} ?: custom}
         if(language !in languageNames) Field("Nome do idioma",custom){custom=it}
-        Choice("Atividade",activity,languageActivities){activity=it}
+        val activityLabels=languageActivities.map {if(it==languageActivities[2])"Série / anime / filme / vídeo" else it}
+        Choice("Atividade",activityLabels[languageActivities.indexOf(activity)],activityLabels){activity=languageActivities[activityLabels.indexOf(it)]}
         Field("Data da sessão (AAAA-MM-DD)",day){day=it}
-        Field("Horário da sessão (HH:MM)",at){at=it}
+        LanguageSuggestField("Horário da sessão",at,timeSuggestions(at),"Digite 22 para ver os horários das 22h; também aceita 2217 ou 22:17."){at=it}
         Field("Tempo efetivo da sessão (min)",minutes,true){minutes=it}
-        Field(if(activity==languageActivities[2]) "Nome da série / vídeo" else "Material ou baralho (opcional)",title){title=it}
+        if(activity==languageActivities[2]) {
+            val titles=languageMediaTitles(records).filter {it.contains(title,true)}
+            LanguageSuggestField("Série, anime, filme ou vídeo",title,titles,"Escolha um título do seu histórico ou digite um novo."){title=it.take(160)}
+        } else Field("Material ou baralho (opcional)",title){title=it.take(160)}
         if(activity==languageActivities[0]) Field("Cards revisados",reviewed,true){reviewed=it}
         if(activity in languageActivities.take(2)) {
             Field("Cards adicionados ao Anki",added,true){added=it}
@@ -114,11 +144,61 @@ import java.time.ZoneOffset
         OutlinedTextField(notes,{notes=it},Modifier.fillMaxWidth(),label={Text("Observações (opcional)")})
         error?.let {Text(it,color=MaterialTheme.colorScheme.error)}
         Button({
-            val value=runCatching { languageMutation(day,at,if(language in languageNames) language else custom,activity,minutes.toIntOrNull() ?: -1,
+            val value=runCatching { languageMutation(day,sessionTime(at),if(language in languageNames) language else custom,activity,minutes.toIntOrNull() ?: -1,
                 title,if(activity==languageActivities[0]) reviewed.toIntOrNull() ?: -1 else 0,
                 if(activity in languageActivities.take(2)) added.toIntOrNull() ?: -1 else 0,
                 if(activity==languageActivities[2]) episodes.toIntOrNull() ?: -1 else 0,audio,subtitles,notes,old) }
             value.onSuccess {error=null;vm.save(old?.id,it,done)}.onFailure {error=it.message ?: "Confira os dados."}
         },enabled=!busy,modifier=Modifier.fillMaxWidth()) {Text(if(busy) "Salvando…" else if(old==null) "Salvar sessão de idioma" else "Salvar alterações")}
+    }
+}
+
+@Composable private fun LanguageSuggestField(label:String,value:String,options:List<String>,hint:String,change:(String)->Unit) {
+    var expanded by remember {mutableStateOf(false)}
+    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+        OutlinedTextField(value,{change(it);expanded=true},modifier=Modifier.fillMaxWidth().onFocusChanged {expanded=it.isFocused},
+            label={Text(label)},singleLine=true,trailingIcon={TextButton({expanded=!expanded}){Text(if(expanded)"Fechar" else "Sugestões")}})
+        Text(hint,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(expanded && options.isNotEmpty()) {
+            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceContainer) {
+                LazyColumn(Modifier.fillMaxWidth().heightIn(max=180.dp)) {
+                    items(options.take(240),key={it}) {option ->
+                        ListItem(headlineContent={Text(option)},modifier=Modifier.clickable {change(option);expanded=false})
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable private fun LanguageStat(label:String,value:String,modifier:Modifier) {
+    Card(modifier) {Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value,style=MaterialTheme.typography.headlineSmall)
+    }}
+}
+
+@Composable private fun LanguageRhythm(title:String,points:List<Pair<String,Double>>) {
+    var showValues by rememberSaveable {mutableStateOf(false)}
+    val accent=MaterialTheme.colorScheme.primary
+    val line=MaterialTheme.colorScheme.outlineVariant
+    Panel(title) {
+        val maximum=points.maxOfOrNull {it.second}?.coerceAtLeast(1.0) ?: 1.0
+        Canvas(Modifier.fillMaxWidth().height(150.dp).semantics {contentDescription="Gráfico de minutos de estudo. Toque em Ver valores do gráfico para ler cada valor."}) {
+            val width=size.width/points.size.coerceAtLeast(1)
+            drawLine(line,Offset(0f,size.height),Offset(size.width,size.height))
+            points.forEachIndexed {index,point ->
+                val height=(point.second/maximum*size.height).toFloat()
+                if(height>0)drawRect(accent,Offset(index*width+width*0.15f,size.height-height),Size(width*0.7f,height))
+            }
+        }
+        if(points.isNotEmpty())Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+            Text(points.first().first,style=MaterialTheme.typography.labelSmall)
+            if(points.size>2)Text(points[points.size/2].first,style=MaterialTheme.typography.labelSmall)
+            if(points.size>1)Text(points.last().first,style=MaterialTheme.typography.labelSmall)
+        }
+        Text("Maior valor: ${points.maxOfOrNull {it.second}?.toInt() ?: 0} min",style=MaterialTheme.typography.bodySmall)
+        TextButton({showValues=!showValues}){Text(if(showValues)"Ocultar valores" else "Ver valores do gráfico")}
+        if(showValues)points.forEach {(label,value)->Text("$label · ${value.toInt()} min")}
     }
 }

@@ -1,10 +1,96 @@
 """Language sessions use the existing owner-scoped activity store, without migrating history."""
 from datetime import date, time, timedelta
+import calendar
+import re
 from solem_progress import extras_of, number, record_date
 
 LANGUAGES = ["Inglês", "Espanhol", "Francês", "Italiano", "Alemão", "Japonês", "Coreano", "Mandarim"]
 ACTIVITIES = ["Revisão no Anki", "Criação de cards", "Série / vídeo", "Leitura", "Conversação", "Escuta", "Escrita", "Aula / prática"]
 SUBTITLES = ["No idioma estudado", "Em português", "Sem legenda", "Outro idioma"]
+PERIODS = ["Dia", "Últimos 7 dias", "Mês", "Semestre", "Ano"]
+SESSION_TIMES = [f"{hour:02d}:{minute:02d}" for hour in range(24) for minute in range(60)]
+
+
+def session_time(value):
+    text = str(value or "").strip()
+    if re.fullmatch(r"\d{1,2}", text):
+        text = text.zfill(2) + ":00"
+    elif re.fullmatch(r"\d{3,4}", text):
+        text = text.zfill(4); text = text[:2] + ":" + text[2:]
+    elif re.fullmatch(r"\d{1,2}:\d{2}(:\d{2})?", text):
+        text = text.zfill(8 if text.count(":") == 2 else 5)
+    else:
+        raise ValueError("Informe um horário válido: 22, 2215 ou 22:15.")
+    try:
+        time.fromisoformat(text)
+    except ValueError:
+        raise ValueError("Use um horário entre 00:00 e 23:59.") from None
+    return text
+
+
+def media_titles(records):
+    """Only the current account's language/media history, most recent first."""
+    seen, titles = set(), []
+    for row in sorted(records, key=lambda r: (str(r.get("data", "")), str(r.get("horario", ""))), reverse=True):
+        e = extras_of(row.get("dados_extras"))
+        title = str(e.get("titulo", "")).strip()
+        if is_language(row) and e.get("atividade_idioma") == ACTIVITIES[2] and title and title.casefold() not in seen:
+            seen.add(title.casefold()); titles.append(title)
+    return titles
+
+
+def period_bounds(day, period):
+    if period == "Dia": return day, day
+    if period == "Últimos 7 dias": return day-timedelta(days=6), day
+    if period == "Mês": return day.replace(day=1), day.replace(day=calendar.monthrange(day.year,day.month)[1])
+    if period == "Semestre":
+        first = 1 if day.month <= 6 else 7
+        return date(day.year,first,1), date(day.year,first+5,calendar.monthrange(day.year,first+5)[1])
+    if period == "Ano": return date(day.year,1,1), date(day.year,12,31)
+    raise ValueError("Escolha um período válido.")
+
+
+def language_rows(records, start, end, language=None):
+    rows, seen = [], set()
+    for row in records:
+        day = record_date(row.get("data"))
+        if not is_language(row) or day is None or not start <= day <= end:
+            continue
+        if language and extras_of(row.get("dados_extras")).get("idioma") != language:
+            continue
+        if row.get("id") is not None:
+            if row["id"] in seen: continue
+            seen.add(row["id"])
+        rows.append(row)
+    return rows
+
+
+def language_period_summary(records, start, end, language=None):
+    rows = language_rows(records,start,end,language)
+    return dict(minutes=sum(number(r.get("duracao_min")) for r in rows),
+                review_minutes=sum(number(r.get("duracao_min")) for r in rows if extras_of(r.get("dados_extras")).get("atividade_idioma") == ACTIVITIES[0]),
+                reviewed=sum(number(extras_of(r.get("dados_extras")).get("cards_revisados")) for r in rows),
+                added=sum(number(extras_of(r.get("dados_extras")).get("cards_adicionados")) for r in rows),
+                episodes=sum(number(extras_of(r.get("dados_extras")).get("episodios")) for r in rows), sessions=len(rows),
+                active_days=len({record_date(r.get("data")) for r in rows}))
+
+
+def language_chart(records, start, end, period, language=None):
+    rows = language_rows(records,start,end,language)
+    if period == "Dia":
+        keys = [f"{h:02d}h" for h in range(24)]
+        bucket = lambda r: str(r.get("horario", "00:00"))[:2].zfill(2)+"h"
+    elif period in ("Semestre", "Ano"):
+        keys = [f"{m:02d}/{start.year}" for m in range(start.month,end.month+1)]
+        bucket = lambda r: record_date(r["data"]).strftime("%m/%Y")
+    else:
+        keys = [(start+timedelta(days=n)).strftime("%d/%m") for n in range((end-start).days+1)]
+        bucket = lambda r: record_date(r["data"]).strftime("%d/%m")
+    totals = dict.fromkeys(keys,0)
+    for row in rows:
+        key = bucket(row)
+        if key in totals: totals[key] += number(row.get("duracao_min"))
+    return [dict(label=k,minutes=n) for k,n in totals.items()]
 
 
 def is_language(row):

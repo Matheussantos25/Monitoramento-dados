@@ -208,7 +208,7 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
                     val record = rows.firstOrNull { it.id == entry.arguments?.getString("id")?.toLongOrNull() }
                     if (record == null) Text("Registro não encontrado. Atualize o histórico.")
                     else if (kind(record) in listOf("Saúde", "Alimentação", "Peso")) Text("Este registro legado está na tabela compartilhada. Para novos dados pessoais, use a aba Saúde, que salva em uma tabela privada.", Modifier.padding(16.dp))
-                    else if(record.isLanguage()) Page("Editar sessão de idioma") { key(record.id) {LanguageEditor(record,busy,vm) {nav.popBackStack()}} }
+                    else if(record.isLanguage()) Page("Editar sessão de idioma") { key(record.id) {LanguageEditor(record,busy,vm,rows) {nav.popBackStack()}} }
                     else key(record.id) { EntryScreen(kind(record), catalog, rows, record, busy,
                         save = { id, value, _ -> vm.save(id, value) { nav.popBackStack() } }) }
                 }

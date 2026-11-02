@@ -66,7 +66,10 @@ def test_new_account_create_edit_without_duplicate_and_keep_existing_history():
         assert next(m for m in app.metric if m.label=='Tempo de estudo').value=='30 min'
 
         app.selectbox(key='language_new_2_activity').set_value('Série / vídeo').run()
-        next(x for x in app.text_input if x.label=='Nome da série / vídeo').set_value('Série de teste')
+        title_input=next(x for x in app.selectbox if x.label=='Série, anime, filme ou vídeo')
+        # AppTest 1.59 does not serialize accept_new_options; emulate the frontend's new string option.
+        title_input.options.append('Série de teste')
+        title_input.set_value('Série de teste')
         [x for x in app.number_input if x.label=='Tempo efetivo da sessão (min)'][0].set_value(50)
         next(x for x in app.number_input if x.label=='Episódios / vídeos vistos').set_value(2)
         next(x for x in app.selectbox if x.label=='Legendas').set_value('Sem legenda')
