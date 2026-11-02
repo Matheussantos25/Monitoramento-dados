@@ -1,6 +1,7 @@
 """Authenticated health diary. New sensitive entries never go to public treinos."""
 from datetime import datetime
 import streamlit as st
+from solem_charts import plotly_card
 import plotly.graph_objects as go
 from solem_health import MEAL_TYPES, meal_food_options, now_local, private_weight_history, sleep_period
 from solem_health_private import delete_entry, list_entries, save_entry
@@ -216,7 +217,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
             fig.update_layout(xaxis_title=None, yaxis_title="kg", height=300,
                               plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                               font=dict(color="#DCE9F9"), margin=dict(l=5, r=5, t=10, b=10))
-            st.plotly_chart(fig, use_container_width=True)
+            plotly_card(fig)
         else:
             st.info("Registre o peso para acompanhar a evolução aqui.")
 

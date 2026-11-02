@@ -1,6 +1,14 @@
 package com.matheussantos.solem.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
@@ -18,15 +26,59 @@ import com.matheussantos.solem.data.model.HealthEntry
 import com.matheussantos.solem.domain.*
 
 @Composable fun Bars(title: String, points: List<Pair<String, Double>>, unit: String = "") {
-    Panel(title) {
-        if (points.isEmpty()) Text("Sem dados para os filtros selecionados.")
-        val max = points.maxOfOrNull { it.second }?.coerceAtLeast(1.0) ?: 1.0
-        points.forEach { (label, value) ->
-            Text(label, style = MaterialTheme.typography.bodySmall)
-            LinearProgressIndicator(progress = { (value / max).toFloat().coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().height(10.dp))
-            Text("%.1f %s".format(value, unit), style = MaterialTheme.typography.labelMedium)
+    Panel(title) { CleanBars(points,unit) }
+}
+
+@Composable fun CleanBars(points: List<Pair<String, Double>>, unit: String = "") {
+    var showValues by rememberSaveable { mutableStateOf(false) }
+    val accent=MaterialTheme.colorScheme.primary
+    val muted=MaterialTheme.colorScheme.outlineVariant
+    val maximum=(points.maxOfOrNull {it.second} ?: 0.0).coerceAtLeast(if(unit=="%")100.0 else 1.0)
+    val chronological=points.all {it.first.matches(Regex("[0-9/:-]+h?"))}
+    fun display(label:String)=runCatching {java.time.LocalDate.parse(label.take(10)).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM"))}.getOrDefault(label)
+    if(points.isEmpty()) Text("Sem dados para os filtros selecionados.")
+    else if(chronological) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val slot=(maxWidth/points.size).coerceAtLeast(44.dp)
+            Row(Modifier.horizontalScroll(rememberScrollState()),verticalAlignment=Alignment.Bottom) {
+                points.forEach {(label,value) ->
+                    Column(Modifier.width(slot).semantics {contentDescription="$label: ${formatOneDecimal(value)} $unit"},
+                        horizontalAlignment=Alignment.CenterHorizontally) {
+                        Box(Modifier.fillMaxWidth().height(178.dp),contentAlignment=Alignment.BottomCenter) {
+                            Column(horizontalAlignment=Alignment.CenterHorizontally) {
+                                if(value>0)Text(formatOneDecimal(value),style=MaterialTheme.typography.labelSmall)
+                                Spacer(Modifier.height(7.dp))
+                                if(value>0)Box(Modifier.width(28.dp).height((value/maximum*142).toFloat().dp)
+                                    .clip(RoundedCornerShape(topStart=7.dp,topEnd=7.dp,bottomStart=3.dp,bottomEnd=3.dp))
+                                    .background(Brush.verticalGradient(listOf(accent,accent.copy(alpha=0.3f)))))
+                                else Box(Modifier.width(12.dp).height(3.dp).background(muted,RoundedCornerShape(2.dp)))
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Text(display(label),style=MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
         }
+        Text(if(points.size>7)"$unit · Deslize para ver todo o período" else unit,style=MaterialTheme.typography.bodySmall)
+    } else {
+        points.forEach {(label,value) ->
+            Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Text(label,Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
+                    Text("${formatOneDecimal(value)} $unit",style=MaterialTheme.typography.labelMedium)
+                }
+                Box(Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(5.dp)).background(muted.copy(alpha=0.25f))) {
+                    if(value>0)Box(Modifier.fillMaxWidth((value/maximum).toFloat().coerceIn(0f,1f)).fillMaxHeight()
+                        .clip(RoundedCornerShape(5.dp)).background(Brush.horizontalGradient(listOf(accent.copy(alpha=0.4f),accent))))
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
+    if(points.isNotEmpty()) {
+        TextButton({showValues=!showValues}){Text(if(showValues)"Ocultar valores" else "Ver valores do gráfico")}
+        if(showValues)points.forEach {(label,value)->Text("$label · ${formatOneDecimal(value)} $unit",style=MaterialTheme.typography.bodyMedium)}
     }
 }
 @Composable fun PrivateWeightLine(rows: List<HealthEntry>) {
@@ -38,7 +90,7 @@ import com.matheussantos.solem.domain.*
             val color = MaterialTheme.colorScheme.primary
             val min = points.minOf { it.second }
             val max = points.maxOf { it.second }
-            Canvas(Modifier.fillMaxWidth().height(170.dp)) {
+            Canvas(Modifier.fillMaxWidth().height(170.dp).semantics {contentDescription="Evolução do peso. Valores disponíveis abaixo do gráfico."}) {
                 val path = Path()
                 points.forEachIndexed { index, (_, value) ->
                     val x = 12 + (size.width - 24) * index / (points.size - 1).coerceAtLeast(1)
@@ -46,12 +98,14 @@ import com.matheussantos.solem.domain.*
                     if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
                     drawCircle(color, 5f, Offset(x, y))
                 }
+                val area=Path().apply {addPath(path);lineTo(size.width-12,size.height);lineTo(12f,size.height);close()}
+                drawPath(area,Brush.verticalGradient(listOf(color.copy(alpha=0.18f),Color.Transparent)))
                 drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(3f))
             }
             Text("%.1f – %.1f kg • %s a %s".format(min, max, points.first().first, points.last().first))
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                points.forEach { (date, weight) -> Text("$date\n%.1f kg".format(weight)) }
-            }
+            var showWeights by rememberSaveable {mutableStateOf(false)}
+            TextButton({showWeights=!showWeights}) {Text(if(showWeights)"Ocultar valores" else "Ver valores do gráfico")}
+            if(showWeights)points.forEach {(date,weight)->Text("$date · %.1f kg".format(weight))}
         }
     }
 }

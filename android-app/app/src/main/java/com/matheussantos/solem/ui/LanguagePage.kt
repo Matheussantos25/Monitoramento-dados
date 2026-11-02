@@ -179,26 +179,5 @@ import java.time.ZoneOffset
 }
 
 @Composable private fun LanguageRhythm(title:String,points:List<Pair<String,Double>>) {
-    var showValues by rememberSaveable {mutableStateOf(false)}
-    val accent=MaterialTheme.colorScheme.primary
-    val line=MaterialTheme.colorScheme.outlineVariant
-    Panel(title) {
-        val maximum=points.maxOfOrNull {it.second}?.coerceAtLeast(1.0) ?: 1.0
-        Canvas(Modifier.fillMaxWidth().height(150.dp).semantics {contentDescription="Gráfico de minutos de estudo. Toque em Ver valores do gráfico para ler cada valor."}) {
-            val width=size.width/points.size.coerceAtLeast(1)
-            drawLine(line,Offset(0f,size.height),Offset(size.width,size.height))
-            points.forEachIndexed {index,point ->
-                val height=(point.second/maximum*size.height).toFloat()
-                if(height>0)drawRect(accent,Offset(index*width+width*0.15f,size.height-height),Size(width*0.7f,height))
-            }
-        }
-        if(points.isNotEmpty())Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-            Text(points.first().first,style=MaterialTheme.typography.labelSmall)
-            if(points.size>2)Text(points[points.size/2].first,style=MaterialTheme.typography.labelSmall)
-            if(points.size>1)Text(points.last().first,style=MaterialTheme.typography.labelSmall)
-        }
-        Text("Maior valor: ${points.maxOfOrNull {it.second}?.toInt() ?: 0} min",style=MaterialTheme.typography.bodySmall)
-        TextButton({showValues=!showValues}){Text(if(showValues)"Ocultar valores" else "Ver valores do gráfico")}
-        if(showValues)points.forEach {(label,value)->Text("$label · ${value.toInt()} min")}
-    }
+    Bars(title,points,"min")
 }

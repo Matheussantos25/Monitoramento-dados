@@ -2,6 +2,7 @@ from datetime import date, time
 import os
 import streamlit as st
 import pandas as pd
+from solem_charts import bar_card
 from solem_health import now_local
 from solem_progress import extras_of, record_date
 from solem_languages import LANGUAGES, ACTIVITIES, SUBTITLES, is_language, language_session, language_summary, language_week, PERIODS, SESSION_TIMES, session_time, media_titles, period_bounds, language_period_summary, language_chart
@@ -89,43 +90,8 @@ def language_page(records, client, table, demo=False):
         chart=language_chart(rows,start,end,period,lang)
         unit="Horário" if period=="Dia" else "Mês" if period in ("Semestre","Ano") else "Dia"
         data=pd.DataFrame({unit:[x['label'] for x in chart],"Minutos":[x['minutes'] for x in chart]})
-        # Explicit styling avoids the default grid and rotated date labels.
-        encoding={
-            "x":{"field":unit,"type":"ordinal","sort":None,
-                 "axis":{"title":None,"labelAngle":0,"labelOverlap":"greedy",
-                         "labelPadding":12,"labelLimit":80},
-                 "scale":{"paddingInner":0.45,"paddingOuter":0.35}},
-            "y":{"field":"Minutos","type":"quantitative",
-                 "scale":{"domainMin":0,"nice":True},
-                 "axis":None if len(chart)<=12 else {"title":None,"tickCount":3,"labelExpr":"datum.value + ' min'","labelPadding":10}},
-            "tooltip":[{"field":unit,"type":"nominal"},
-                       {"field":"Minutos","type":"quantitative","title":"Tempo de estudo","format":".0f"}],
-        }
-        layers=[{"mark":{"type":"bar","color":{"gradient":"linear","x1":0,"y1":1,"x2":0,"y2":0,
-                            "stops":[{"offset":0,"color":"#206284"},{"offset":1,"color":"#83DCFF"}]},
-                         "size":32 if len(chart)<=12 else 8,
-                         "cornerRadiusTopLeft":7,"cornerRadiusTopRight":7,
-                         "cornerRadiusBottomLeft":3,"cornerRadiusBottomRight":3},"encoding":encoding},
-                {"transform":[{"filter":"datum.Minutos == 0"}],
-                 "mark":{"type":"tick","orient":"horizontal","size":12,"thickness":3,"color":"#34465E"},
-                 "encoding":encoding}]
-        if len(chart)<=12:
-            layers.append({"transform":[{"filter":"datum.Minutos > 0"}],
-                           "mark":{"type":"text","dy":-12,"color":"#DCEEFF","fontSize":12,"fontWeight":600},
-                           "encoding":{"x":encoding["x"],"y":encoding["y"],
-                                       "text":{"field":"Minutos","type":"quantitative","format":".0f"}}})
-        with st.container(border=True):
-            st.markdown(f"**Seu ritmo por {unit.lower()}**")
-            st.caption("Minutos estudados · cada barra representa seu tempo registrado")
-            st.vega_lite_chart(data,{
-                "height":200,"padding":{"top":22,"bottom":4,"left":0,"right":8},
-                "background":"transparent","layer":layers,
-                "config":{"view":{"stroke":None},
-                          "axis":{"grid":False,"domain":False,"ticks":False,
-                                  "labelColor":"#A9BBD1","labelFontSize":12,"labelFont":"sans-serif"}},
-            },use_container_width=True,theme=None)
-            with st.expander("Ver valores do gráfico"):
-                st.dataframe(data,hide_index=True)
+        bar_card(data,unit,"Minutos",title=f"Seu ritmo por {unit.lower()}",
+                 unit="Minutos estudados · cada barra representa seu tempo registrado")
         st.caption("Tempo informado por você; não é uma avaliação de fluência.")
     with register:
         st.subheader("O que você praticou?")

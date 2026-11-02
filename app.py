@@ -4,6 +4,7 @@ from supabase import create_client, Client
 from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
+from solem_charts import plotly_card, bar_card
 import json
 import os
 import random
@@ -1021,7 +1022,7 @@ if pagina == "Evolução física":
         </div>
         """, unsafe_allow_html=True)
         st.write("---")
-        st.markdown("#### 📊 Volume de Repetições Diárias")
+        st.markdown("#### Repetições por dia")
         df_reps = df_filtrado[df_filtrado['repeticoes'] > 0].copy()
         if not df_reps.empty:
             df_reps_dia = df_reps.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
@@ -1033,14 +1034,17 @@ if pagina == "Evolução física":
                                    paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"),
                                    margin=dict(l=0, r=0, t=35, b=0), xaxis=dict(showgrid=False, tickformat="%d/%m"),
                                    yaxis=dict(showgrid=False, zeroline=False, range=[0, limite_reps]))
-            st.plotly_chart(fig_reps, use_container_width=True)
+            plotly_card(fig_reps, use_container_width=True)
         else: st.info("Sem dados de repetições para os exercícios selecionados.")
         df_distancia = df_filtrado[df_filtrado['distancia_km'] > 0]
         if not df_distancia.empty:
             st.markdown("#### Distância diária")
-            st.bar_chart(df_distancia.groupby('data')['distancia_km'].sum(), y_label="km")
+            distance_days=df_distancia.groupby('data',as_index=False)['distancia_km'].sum()
+            distance_days['Dia']=distance_days['data'].dt.strftime('%d/%m/%Y')
+            bar_card(distance_days[['Dia','distancia_km']].rename(columns={'distancia_km':'Distância'}),
+                     'Dia','Distância',title='Distância diária',unit='Quilômetros percorridos')
 
-        st.markdown("#### ⏱️ Tempo Sustentado (Cardio / Isometria)")
+        st.markdown("#### Tempo de cardio e isometria")
         df_dur = df_filtrado[(df_filtrado['isometria_segundos'] > 0) | (df_filtrado['duracao_min'] > 0)].copy()
         if not df_dur.empty:
             df_dur['tempo_total'] = df_dur.apply(lambda row: row['isometria_segundos'] if row['isometria_segundos'] > 0 else row['duracao_min'], axis=1)
@@ -1049,7 +1053,7 @@ if pagina == "Evolução física":
             fig_dur = px.bar(df_dur, x='dia_formatado', y='tempo_total', color='tipo_tempo', text_auto=True, barmode='group')
             fig_dur.update_traces(textfont_color='white')
             fig_dur.update_layout(xaxis_title="", yaxis_title="Tempo (Seg ou Min)", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), xaxis=dict(showgrid=False))
-            st.plotly_chart(fig_dur, use_container_width=True)
+            plotly_card(fig_dur, use_container_width=True)
         else:
             st.info("Sem dados de tempo/isometria para os exercícios selecionados.")
     else: st.warning("Nenhum treino encontrado para o filtro selecionado.")
@@ -1535,11 +1539,11 @@ if pagina == "Evolução nos estudos":
             fig_crit = px.bar(df_criticos_agg, x='% Acerto', y='Label', orientation='h', color='% Acerto', color_continuous_scale="Reds_r", text_auto='.1f')
             fig_crit.update_traces(texttemplate='%{x:.1f}%', textposition='outside', textfont_color='white')
             fig_crit.update_layout(xaxis_title="Taxa de Acerto (%)", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False, range=[0, 110]), yaxis=dict(showgrid=False, autorange="reversed"))
-            st.plotly_chart(fig_crit, use_container_width=True)
+            plotly_card(fig_crit, use_container_width=True)
         else: st.success("✔️ Não há dados críticos suficientes (resolva mais questões para a IA mapear suas fraquezas).")
 
         st.write("---")
-        st.markdown("#### 📉 Radar de Tópicos Menos Explorados (Fiz menos questões)")
+        st.markdown("#### Tópicos menos explorados")
         st.markdown("<span style='color: #AAA; font-size: 14px;'>Mostrando os subtópicos que você praticamente não tocou ainda.</span>", unsafe_allow_html=True)
         
         df_poucas_q = df_questoes_reais.copy()
@@ -1554,13 +1558,13 @@ if pagina == "Evolução nos estudos":
             limite_visual_menos = max(float(df_poucas_q_agg['total_questoes'].max()) * 2.5, 1)
             fig_menos.update_traces(textposition='outside', textfont_color='white')
             fig_menos.update_layout(xaxis_title="Total de Questões Resolvidas", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False, range=[0, limite_visual_menos]), yaxis=dict(showgrid=False, autorange="reversed"))
-            st.plotly_chart(fig_menos, use_container_width=True)
+            plotly_card(fig_menos, use_container_width=True)
         else:
             st.info("✔️ Não há dados suficientes para gerar este gráfico.")
 
         st.write("---")
         with st.container():
-            st.markdown("#### 📅 Bateria de Questões por Dia")
+            st.markdown("#### Questões por dia")
             df_q_dia = df_questoes_reais.groupby('data', as_index=False)['repeticoes'].sum().sort_values('data')
             df_q_dia['data_format'] = pd.to_datetime(df_q_dia['data'])
 
@@ -1619,7 +1623,7 @@ if pagina == "Evolução nos estudos":
                 yaxis=dict(showgrid=False, showticklabels=False, ticks="", zeroline=False),
                 margin=dict(l=0, r=0, t=30, b=25)
             )
-            st.plotly_chart(fig_q_dia, use_container_width=True)
+            plotly_card(fig_q_dia, use_container_width=True)
 
         st.write("---")
         st.markdown("#### 🗓️ Cronograma Estratégico (Próximos 30 Dias)")
@@ -1641,7 +1645,7 @@ if pagina == "Evolução nos estudos":
 
         st.write("---")
         with st.container(border=True):
-            st.markdown("#### 📊 Taxa de Acerto por Disciplina")
+            st.markdown("#### Acerto por disciplina")
             df_acertos = df_questoes_reais.groupby('exercicio', as_index=False)[['q_certas', 'q_erradas']].sum()
             df_acertos['total'] = df_acertos['q_certas'] + df_acertos['q_erradas']
             df_acertos = df_acertos[df_acertos['total'] > 0]
@@ -1650,11 +1654,11 @@ if pagina == "Evolução nos estudos":
                 fig_a = px.bar(df_acertos, x='exercicio', y='% Acerto', color='% Acerto', color_continuous_scale="Teal")
                 fig_a.update_traces(texttemplate='%{y:.1f}%', textposition='outside', textfont_color='white', cliponaxis=False)
                 fig_a.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, yaxis=dict(showgrid=False, range=[0, 110]), xaxis=dict(showgrid=False))
-                st.plotly_chart(fig_a, use_container_width=True)
+                plotly_card(fig_a, card=False)
             else: st.info("Registre 'Questões Corretas/Erradas' para gerar este gráfico.")
 
         st.markdown("---")
-        st.markdown("#### Análise por tópico de estudo" if GENERIC_ACCOUNT else "#### 📖 Análise Granular por Tópico do Edital")
+        st.markdown("#### Análise por tópico de estudo" if GENERIC_ACCOUNT else "#### Análise por tópico do edital")
         disciplinas_unicas = df_dash_est['exercicio'].unique().tolist()
         disciplina_selecionada = st.selectbox("Filtrar Tópicos por Disciplina:", ["Visão Geral (Todas)"] + disciplinas_unicas)
         df_tops = df_dash_est.copy()
@@ -1671,24 +1675,24 @@ if pagina == "Evolução nos estudos":
             c_top1, c_top2 = st.columns(2)
             with c_top1:
                 with st.container(border=True):
-                    st.markdown("##### ⏳ Tempo Investido (Horas)")
+                    st.markdown("##### Tempo investido (horas)")
                     df_top_horas = df_topicos_agg.sort_values('horas', ascending=True).tail(10)
                     if df_top_horas['horas'].sum() > 0:
                         fig_t = px.bar(df_top_horas, y='topico_curto', x='horas', orientation='h', color='horas', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'exercicio': True})
                         fig_t.update_traces(texttemplate='%{x:.1f}h', textposition='auto')
                         fig_t.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
-                        st.plotly_chart(fig_t, use_container_width=True)
+                        plotly_card(fig_t, card=False)
                     else: st.info("Sem registro de horas para os tópicos filtrados.")
                     
             with c_top2:
                 with st.container(border=True):
-                    st.markdown("##### 🎯 Taxa de Acerto (%)")
+                    st.markdown("##### Taxa de acerto (%)")
                     df_top_acertos = df_topicos_agg[df_topicos_agg['total_q'] > 0].sort_values('% Acerto', ascending=True).tail(10)
                     if not df_top_acertos.empty:
                         fig_q = px.bar(df_top_acertos, y='topico_curto', x='% Acerto', orientation='h', color='% Acerto', color_continuous_scale="Teal", hover_data={'topico_edital': True, 'total_q': True, 'exercicio': True})
                         fig_q.update_traces(texttemplate='%{x:.1f}%', textposition='outside', textfont_color='white', cliponaxis=False)
                         fig_q.update_layout(xaxis_title="", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E0E0E0"), coloraxis_showscale=False, xaxis=dict(showgrid=False, range=[0, 110]), yaxis=dict(showgrid=False))
-                        st.plotly_chart(fig_q, use_container_width=True)
+                        plotly_card(fig_q, card=False)
                     else: st.info("Cadastre Acertos/Erros para mapear seu desempenho por tópico.")
         else: st.info("Nenhuma sessão acadêmica cadastrada para essa disciplina.")
     else: st.info("Não há dados de estudo no período selecionado.")

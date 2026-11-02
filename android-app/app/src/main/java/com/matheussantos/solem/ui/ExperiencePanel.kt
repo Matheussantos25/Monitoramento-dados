@@ -94,17 +94,7 @@ import java.time.format.DateTimeFormatter
     Panel("Seu ritmo · últimos 7 dias") {
         if(!available) Text("Aguardando seu histórico. Nenhum valor foi tratado como zero.") else {
             Text("${days.count {it.sessions>0}} dias com treino · ${days.sumOf {it.sessions}} sessões")
-            val highest=(days.maxOfOrNull {it.sessions} ?: 1).coerceAtLeast(1)
-            Row(Modifier.fillMaxWidth().height(132.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.Bottom) {
-                days.forEach {day ->
-                    Column(Modifier.weight(1f).semantics {contentDescription="${day.date}: ${day.sessions} sessões"},horizontalAlignment=Alignment.CenterHorizontally) {
-                        Text("${day.sessions}",style=MaterialTheme.typography.labelSmall)
-                        Spacer(Modifier.height(5.dp))
-                        Box(Modifier.width(18.dp).height((4+day.sessions.toFloat()/highest*78).dp).background(MaterialTheme.colorScheme.primary,MaterialTheme.shapes.small))
-                        Text(day.date.format(DateTimeFormatter.ofPattern("dd/MM")),style=MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
+            CleanBars(days.map {it.date.toString() to it.sessions.toDouble()},"sessões")
             TextButton({table=!table}) {Text(if(table) "Recolher valores" else "Ler valores do gráfico")}
             if(table) days.forEach {Text("${it.date.format(DateTimeFormatter.ofPattern("dd/MM"))}: ${it.sessions} sessões · ${it.reps} rep · ${formatOneDecimal(it.km)} km",style=MaterialTheme.typography.bodyMedium)}
             Text(if(days.none {it.sessions>0}) "Seu gráfico começa com o primeiro treino salvo." else "Seu ritmo pode variar. Descanso não remove XP.",style=MaterialTheme.typography.bodySmall)

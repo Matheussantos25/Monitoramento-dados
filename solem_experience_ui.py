@@ -2,6 +2,7 @@
 from html import escape
 from pathlib import Path
 import streamlit as st
+from solem_charts import bar_card
 from solem_experience import media_link, workout_week
 
 
@@ -79,14 +80,10 @@ def weekly_insight(records, today):
     with st.container(key="experience_week"):
         st.subheader("Seu ritmo nos últimos 7 dias")
         st.caption(f"{active} dias com treino · {sum(r['sessions'] for r in rows)} sessões registradas. Descanso não remove XP.")
-        import plotly.graph_objects as go
-        chart = go.Figure(go.Bar(x=[r["date"].strftime("%d/%m") for r in rows], y=[r["sessions"] for r in rows],
-                                marker_color="#83dcff", text=[str(r["sessions"]) for r in rows], textposition="outside",
-                                hovertemplate="%{x}: %{y} sessões<extra></extra>"))
-        chart.update_layout(height=220, margin=dict(t=25, b=25, l=20, r=20), yaxis=dict(title="Sessões", dtick=1, range=[0, max(1, max(r["sessions"] for r in rows)) + 0.5]), showlegend=False)
-        st.plotly_chart(chart, use_container_width=True, config={"displayModeBar": False, "staticPlot": True}, key="experience_chart")
-        with st.expander("Ver os valores do gráfico"):
-            st.dataframe([{"Dia":r["date"].strftime("%d/%m"), "Sessões":r["sessions"], "Repetições":r["reps"], "Distância (km)":round(r["km"], 2)} for r in rows], hide_index=True, use_container_width=True)
+        import pandas as pd
+        data=pd.DataFrame([{"Dia":r["date"].strftime("%d/%m"), "Sessões":r["sessions"],
+                            "Repetições":r["reps"], "Distância (km)":round(r["km"],2)} for r in rows])
+        bar_card(data,"Dia","Sessões",title="Sua constância",unit="Sessões de treino por dia",key="experience_chart")
         if not active:
             st.info("Seu gráfico começa com o primeiro treino salvo. Abra Treino e registre uma atividade para acompanhar sua evolução.")
 
