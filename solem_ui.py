@@ -27,6 +27,7 @@ def apply_theme():
 
 def navigate(page):
     st.session_state["solem_page"] = page
+    st.session_state["menu_direct_page"] = page
 
 
 def navigate_checkup(page, exercise=None):
@@ -38,8 +39,12 @@ def navigate_checkup(page, exercise=None):
 
 
 def shell(df, on_logout=None):
-    from solem_account import visible_pages
-    available = visible_pages(PAGES, st.session_state.get("generic_account", False))
+    from solem_navigation import visible_menu
+    from solem_navigation_ui import menu_welcome
+    available = visible_menu(PAGES, st.session_state.get("journey_preferences", {}), st.session_state.get("generic_account", False))
+    direct = st.session_state.get("menu_direct_page")
+    if direct in PAGES and st.session_state.get("solem_page") == direct and direct not in available:
+        available.append(direct)
     progress = calculate_progress(df.to_dict("records"))
     if st.session_state.get('solem_page') not in available:
         st.session_state['solem_page'] = 'Visão geral'
@@ -47,6 +52,7 @@ def shell(df, on_logout=None):
         st.html('<div class="sidebar-brand">✳ <b>solem</b><small>SEU ESPAÇO PESSOAL</small></div>')
         page = st.radio("Navegação principal", available, key="solem_page", label_visibility="collapsed")
         st.caption(f"Nível {progress['level']} · {progress['xp']} XP")
+        st.button("Personalizar abas", on_click=navigate, args=("Metas e aparência",), key="menu_customize")
         if on_logout:
             st.divider()
             st.button('Sair', on_click=on_logout, key='solem_logout', use_container_width=True)
@@ -68,6 +74,7 @@ def shell(df, on_logout=None):
                     st.button(destination, key=f"system_nav_{PAGES.index(destination)}",
                               on_click=navigate, args=(destination,),
                               disabled=destination == page, use_container_width=True)
+    menu_welcome()
     message = st.session_state.pop("solem_feedback", None)
     if message:
         st.toast(message, icon=":material/check_circle:")

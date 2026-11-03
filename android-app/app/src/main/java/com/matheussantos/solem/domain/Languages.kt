@@ -8,6 +8,16 @@ import java.util.Locale
 
 val languageNames = listOf("Inglês", "Espanhol", "Francês", "Italiano", "Alemão", "Japonês", "Coreano", "Mandarim")
 val languageActivities = listOf("Revisão no Anki", "Criação de cards", "Série / vídeo", "Leitura", "Conversação", "Escuta", "Escrita", "Aula / prática")
+val contentTypes = listOf("Série", "Anime", "Filme", "Vídeo", "Podcast", "Música", "Audiolivro", "Outro")
+val languageSources = listOf("YouTube", "Netflix", "Prime Video", "Disney+", "Crunchyroll", "Spotify", "Arquivo / offline", "Outro")
+fun languageMediaActivity(activity:String) = activity in listOf(languageActivities[2], "Escuta")
+fun languageMaterialLabel(activity:String) = when(activity) {
+    languageActivities[0],languageActivities[1] -> "Baralho do Anki (opcional)"
+    "Leitura" -> "Livro, artigo ou texto (opcional)"
+    "Conversação" -> "Tema da conversa (opcional)"
+    "Escrita" -> "Tema ou texto produzido (opcional)"
+    else -> "Curso ou assunto (opcional)"
+}
 val subtitleModes = listOf("No idioma estudado", "Em português", "Sem legenda", "Outro idioma")
 val languagePeriods = listOf("Dia", "Últimos 7 dias", "Mês", "Semestre", "Ano")
 val sessionTimes = (0 until 1440).map {"%02d:%02d".format(Locale.ROOT,it/60,it%60)}
@@ -24,7 +34,7 @@ fun sessionTime(value:String):String {
 }
 fun timeSuggestions(query:String)=sessionTimes.filter {it.replace(":","").startsWith(query.trim().replace(":",""))}
 fun languageMediaTitles(records:List<TrainingRecord>):List<String> = records
-    .filter {it.isLanguage() && it.extra("atividade_idioma")==languageActivities[2] && it.extra("titulo").isNotBlank()}
+    .filter {it.isLanguage() && languageMediaActivity(it.extra("atividade_idioma")) && it.extra("titulo").isNotBlank()}
     .sortedWith(compareByDescending<TrainingRecord> {it.data}.thenByDescending {it.horario})
     .map {it.extra("titulo").trim()}.distinctBy {it.lowercase(Locale.ROOT)}
 fun languagePeriodBounds(day:LocalDate,period:String):Pair<LocalDate,LocalDate> = when(period) {
@@ -70,14 +80,16 @@ fun languageTotals(records: List<TrainingRecord>, day: LocalDate, language: Stri
 }
 
 fun languageMutation(day: String, at: String, language: String, activity: String, minutes: Int,
-    title: String="", reviewed: Int=0, added: Int=0, episodes: Int=0, audio: String="", subtitles: String="", notes: String="", old: TrainingRecord?=null): TrainingMutation {
+    title: String="", reviewed: Int=0, added: Int=0, episodes: Int=0, audio: String="", subtitles: String="", notes: String="", old: TrainingRecord?=null, source:String="", contentType:String=""): TrainingMutation {
     LocalDate.parse(day); LocalTime.parse(at)
     require(language.trim().length in 1..60 && activity in languageActivities) {"Informe idioma e atividade."}
     require(minutes in 1..1440) {"Informe de 1 a 1.440 minutos de prática."}
     require(title.trim().length<=160 && notes.trim().length<=2000) {"Título: até 160 caracteres. Observações: até 2.000."}
     require(listOf(reviewed,added,episodes).all {it in 0..10000}) {"Use contagens inteiras entre 0 e 10.000."}
-    val media=activity==languageActivities[2]
-    require(!media || (title.isNotBlank() && episodes in 1..100 && audio.isNotBlank() && subtitles in subtitleModes)) {"Informe título, episódios, áudio e legendas."}
+    val media=languageMediaActivity(activity)
+    require(activity!=languageActivities[2] || (title.isNotBlank() && episodes in 1..100 && audio.isNotBlank() && subtitles in subtitleModes)) {"Informe título, episódios, áudio e legendas."}
+    require(source.trim().length<=100 && (contentType.isEmpty() || contentType in contentTypes)) {"Confira a fonte e o tipo de conteúdo."}
+    require(!media || (episodes<=100 && (subtitles.isEmpty() || subtitles in subtitleModes))) {"Confira a quantidade e as legendas."}
     val extras=buildJsonObject {
         old?.extras?.filterKeys {it!="tempo_segundos_exato"}?.forEach { (k,v)->put(k,v) }
         put("language_schema",1);put("idioma",language.trim());put("atividade_idioma",activity);put("titulo",title.trim())
@@ -85,6 +97,8 @@ fun languageMutation(day: String, at: String, language: String, activity: String
         put("cards_adicionados",if(activity in languageActivities.take(2)) added else 0)
         put("episodios",if(media) episodes else 0);put("idioma_audio",if(media) audio.trim().take(60) else "")
         put("legendas",if(media) subtitles else "");put("observacoes",notes.trim())
+        put("fonte_idioma",if(activity !in languageActivities.take(2)) source.trim() else "")
+        put("tipo_conteudo",if(media) contentType else "")
         put("fonte_questoes","Idiomas");put("tempo_video",0);put("q_certas",0);put("q_erradas",0)
     }
     return TrainingMutation(day,at,"Estudos",language.trim(),durationMinutes=minutes,extras=extras)

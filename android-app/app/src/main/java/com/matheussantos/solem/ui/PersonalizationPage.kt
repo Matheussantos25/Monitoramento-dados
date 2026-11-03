@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.dp
 import com.matheussantos.solem.data.PersonalizationStore
 import com.matheussantos.solem.domain.*
 
-@Composable fun PersonalizationPage(store: PersonalizationStore, generic: Boolean) {
+@Composable fun PersonalizationPage(store: PersonalizationStore, generic: Boolean, menuPanel: @Composable ()->Unit = {}) {
     val saved by store.state.collectAsState()
     var draft by remember(saved) { mutableStateOf(saved) }
     var goals by remember(saved) { mutableStateOf(mapOf(
@@ -20,6 +20,7 @@ import com.matheussantos.solem.domain.*
     var feedback by remember { mutableStateOf<String?>(null) }
     var reset by remember { mutableStateOf(false) }
     Page("Do seu jeito") {
+        menuPanel()
         Text("Personalize sua jornada. Estas preferências ficam nesta conta, neste aparelho; não alteram seus registros nem as regras dos elos.", color=MaterialTheme.colorScheme.onSurfaceVariant)
         Panel("Aparência") {
             Field("Como quer ser chamado?", draft.nickname) { draft=draft.copy(nickname=it.take(40)); feedback=null }

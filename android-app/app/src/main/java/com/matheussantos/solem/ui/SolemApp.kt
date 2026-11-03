@@ -27,6 +27,7 @@ import com.matheussantos.solem.domain.*
 import com.matheussantos.solem.ui.state.TrainingUiState
 import com.matheussantos.solem.viewmodel.TrainingViewModel
 import com.matheussantos.solem.viewmodel.WorkspaceViewModel
+import com.matheussantos.solem.viewmodel.MenuViewModel
 import com.matheussantos.solem.data.PersonalizationStore
 import com.matheussantos.solem.ui.theme.LocalDashboardPreferences
 import com.matheussantos.solem.ui.theme.SolemTheme
@@ -84,6 +85,12 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
             com.matheussantos.solem.data.repository.TrainingRepository(workspaceVm.trainingClient, workspaceVm.trainingTable, accountId)
         ) as T
     })
+    val menuVm: MenuViewModel = viewModel(key="menu-$accountId",factory=object : androidx.lifecycle.ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T: androidx.lifecycle.ViewModel> create(modelClass:Class<T>):T = MenuViewModel(workspaceVm.trainingClient,accountId,generic) as T
+    })
+    val menu by menuVm.state.collectAsStateWithLifecycle()
+    var welcomeLater by rememberSaveable {mutableStateOf(false)}
     val context = LocalContext.current
     val nav = rememberNavController()
     val state by vm.state.collectAsStateWithLifecycle()
@@ -105,12 +112,19 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
     val catalog = remember(generic, rows) { Catalog(context, generic).withStudyTopics(rows) }
     LaunchedEffect(message) { message?.let { snack.showSnackbar(it); vm.consumeMessage() } }
     JourneyPromotionHost(rows,catalog,activityAvailable,store)
+    if(generic && menu.loaded && !menu.configured && !welcomeLater) {
+        Page("Bem-vindo ao Solem") {
+            MenuPreferencesPanel(menuVm,onboarding=true)
+            TextButton({welcomeLater=true}) {Text("Escolher depois")}
+        }
+        return
+    }
     ModalNavigationDrawer(drawerState=drawer,drawerContent={
         ModalDrawerSheet {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
                 Text("✳ solem",Modifier.padding(16.dp),style=MaterialTheme.typography.headlineMedium)
                 listOf("JORNADA" to listOf(0,1,2,3,19,5,6,9,10), "BIBLIOTECA" to listOf(18,11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(17,8))
-                    .map { (group, indices) -> group to indices.filter { !generic || fitnessPage(it) } }
+                    .map { (group, indices) -> group to indices.filter { androidTabIds[it] in menu.tabs } }
                     .filter { it.second.isNotEmpty() }.forEach { (group, indices) ->
                     Text(group,Modifier.padding(16.dp,12.dp),style=MaterialTheme.typography.labelSmall)
                     indices.forEach { index -> NavigationDrawerItem(label={Text(pages[index])},selected=backStack?.destination?.route==index.toString(),onClick={
@@ -137,7 +151,7 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
     },bottomBar={if(!isRecord) NavigationBar {
         listOf(Triple(0,"Jornada",Icons.Outlined.AutoAwesome),Triple(3,"Saúde",Icons.Outlined.FavoriteBorder),
             Triple(1,"Treino",Icons.Outlined.FitnessCenter),Triple(19,"Idiomas",Icons.AutoMirrored.Outlined.MenuBook))
-            .filter { !generic || fitnessPage(it.first) }.forEach { (index,label,icon) ->
+            .filter { androidTabIds[it.first] in menu.tabs }.forEach { (index,label,icon) ->
             val active=when {route.startsWith("health/") || route=="4" -> 3;route=="2" -> 1;route in listOf("5","6") -> 19;route in listOf("9","10") -> 0;else -> route.toIntOrNull()}
             NavigationBarItem(selected=active==index,
                 onClick={nav.navigate(index.toString()) {launchSingleTop=true;popUpTo("0")}},icon={Icon(icon,null)},label={Text(label)})
@@ -179,7 +193,7 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
                 composable("3") { HealthPage(catalog, workspaceVm) }
                 composable("4") { HealthPage(catalog, workspaceVm,2) }
                 composable("health/{section}") { entry -> HealthPage(catalog,workspaceVm,entry.arguments?.getString("section")?.toIntOrNull() ?: -1) }
-                if (!generic) composable("5") {
+                composable("5") {
                     var section by rememberSaveable { mutableStateOf("Registrar") }
                     Column(Modifier.fillMaxSize()) {
                         Row(Modifier.padding(horizontal=20.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -189,8 +203,8 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
                         else History(rows.filterNot {it.isLanguage()}, busy, vm::delete, { nav.navigate("edit/" + it.id) }, "Estudo", Modifier.weight(1f))
                     }
                 }
-                if (!generic) composable("6") { StudyCharts(rows.filterNot {it.isLanguage()}, catalog) }
-                if (!generic) composable("7") { PromptsPage(workspaceVm, generic) }
+                composable("6") { StudyCharts(rows.filterNot {it.isLanguage()}, catalog) }
+                composable("7") { PromptsPage(workspaceVm, generic) }
                 composable("8") { History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }) }
                 composable("new-workout/{exercise}") { entry ->
                     EntryScreen("Treino", catalog, rows, busy=busy,
@@ -200,9 +214,9 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
                 }
                 composable("9") { MonthlyJournal(rows, generic) }
                 composable("10") { if (state is TrainingUiState.Ready || state is TrainingUiState.Empty) RanksPage(rows, catalog) }
-                if (!generic) (11..16).forEach { index -> composable(index.toString()) { WorkspacePage(workspaceVm,pages[index]) } }
-                if (!generic) composable("18") {ScriptsPage(workspaceVm)}
-                composable("17") { PersonalizationPage(store,generic) }
+                (11..16).forEach { index -> composable(index.toString()) { WorkspacePage(workspaceVm,pages[index]) } }
+                composable("18") {ScriptsPage(workspaceVm)}
+                composable("17") { PersonalizationPage(store,generic) { MenuPreferencesPanel(menuVm) } }
                 composable("19") { LanguagePage(rows,busy,vm,workspaceVm) }
                 composable("edit/{id}") { entry ->
                     val record = rows.firstOrNull { it.id == entry.arguments?.getString("id")?.toLongOrNull() }

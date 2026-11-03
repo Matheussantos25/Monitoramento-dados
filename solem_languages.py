@@ -7,6 +7,18 @@ from solem_progress import extras_of, number, record_date
 LANGUAGES = ["Inglês", "Espanhol", "Francês", "Italiano", "Alemão", "Japonês", "Coreano", "Mandarim"]
 ACTIVITIES = ["Revisão no Anki", "Criação de cards", "Série / vídeo", "Leitura", "Conversação", "Escuta", "Escrita", "Aula / prática"]
 SUBTITLES = ["No idioma estudado", "Em português", "Sem legenda", "Outro idioma"]
+CONTENT_TYPES = ["Série", "Anime", "Filme", "Vídeo", "Podcast", "Música", "Audiolivro", "Outro"]
+SOURCES = ["YouTube", "Netflix", "Prime Video", "Disney+", "Crunchyroll", "Spotify", "Arquivo / offline", "Outro"]
+
+
+def media_activity(activity):
+    return activity in (ACTIVITIES[2], "Escuta")
+
+
+def material_label(activity):
+    return {ACTIVITIES[0]: "Baralho do Anki (opcional)", ACTIVITIES[1]: "Baralho do Anki (opcional)",
+            "Leitura": "Livro, artigo ou texto (opcional)", "Conversação": "Tema da conversa (opcional)",
+            "Escrita": "Tema ou texto produzido (opcional)", "Aula / prática": "Curso ou assunto (opcional)"}.get(activity, "Título do conteúdo")
 PERIODS = ["Dia", "Últimos 7 dias", "Mês", "Semestre", "Ano"]
 SESSION_TIMES = [f"{hour:02d}:{minute:02d}" for hour in range(24) for minute in range(60)]
 
@@ -34,7 +46,7 @@ def media_titles(records):
     for row in sorted(records, key=lambda r: (str(r.get("data", "")), str(r.get("horario", ""))), reverse=True):
         e = extras_of(row.get("dados_extras"))
         title = str(e.get("titulo", "")).strip()
-        if is_language(row) and e.get("atividade_idioma") == ACTIVITIES[2] and title and title.casefold() not in seen:
+        if is_language(row) and media_activity(e.get("atividade_idioma")) and title and title.casefold() not in seen:
             seen.add(title.casefold()); titles.append(title)
     return titles
 
@@ -98,7 +110,7 @@ def is_language(row):
 
 
 def language_session(day, at, language, activity, minutes, *, title="", reviewed=0, added=0,
-                     episodes=0, audio="", subtitles="", notes="", previous=None):
+                     episodes=0, audio="", subtitles="", notes="", previous=None, source="", content_type=""):
     date.fromisoformat(str(day)); time.fromisoformat(str(at))
     language, title, notes = language.strip(), title.strip(), notes.strip()
     if not 1 <= len(language) <= 60 or activity not in ACTIVITIES:
@@ -111,14 +123,21 @@ def language_session(day, at, language, activity, minutes, *, title="", reviewed
         raise ValueError("Use contagens inteiras entre 0 e 10.000.")
     if activity == "Série / vídeo" and (not title or not 1 <= episodes <= 100 or not audio.strip() or subtitles not in SUBTITLES):
         raise ValueError("Informe título, quantidade de episódios/vídeos, idioma do áudio e legendas.")
+    media = media_activity(activity)
+    if len(source.strip()) > 100 or (content_type and content_type not in CONTENT_TYPES):
+        raise ValueError("Confira a fonte e o tipo de conteúdo.")
+    if media and (episodes > 100 or (subtitles and subtitles not in SUBTITLES)):
+        raise ValueError("Confira a quantidade de conteúdos e as legendas.")
     # Only fields belonging to the current activity survive a change of type.
     extra = dict(extras_of((previous or {}).get("dados_extras")))
     extra.update(language_schema=1, idioma=language, atividade_idioma=activity, titulo=title,
                  cards_revisados=reviewed if activity == ACTIVITIES[0] else 0,
                  cards_adicionados=added if activity in ACTIVITIES[:2] else 0,
-                 episodios=episodes if activity == ACTIVITIES[2] else 0,
-                 idioma_audio=audio.strip()[:60] if activity == ACTIVITIES[2] else "",
-                 legendas=subtitles if activity == ACTIVITIES[2] else "", observacoes=notes,
+                 episodios=episodes if media else 0,
+                 idioma_audio=audio.strip()[:60] if media else "",
+                 legendas=subtitles if media else "", observacoes=notes,
+                 fonte_idioma=source.strip() if activity not in ACTIVITIES[:2] else "",
+                 tipo_conteudo=content_type if media else "",
                  fonte_questoes="Idiomas", tempo_video=0, q_certas=0, q_erradas=0)
     extra.pop("tempo_segundos_exato", None)
     return dict(data=str(day), horario=str(at), grupo_muscular="Estudos", exercicio=language,

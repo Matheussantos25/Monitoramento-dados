@@ -33,6 +33,8 @@ import java.time.ZoneOffset
     var day by rememberSaveable {mutableStateOf(today().toString())}
     var period by rememberSaveable {mutableStateOf("Últimos 7 dias")}
     var editing by rememberSaveable {mutableStateOf<Long?>(null)}
+    var lastActivity by rememberSaveable {mutableStateOf(languageActivities[0])}
+    var lastLanguage by rememberSaveable {mutableStateOf("Inglês")}
     var generation by rememberSaveable {mutableIntStateOf(0)}
     val sessions=rows.filter {it.isLanguage()}
     Page("Idiomas") {
@@ -77,7 +79,8 @@ import java.time.ZoneOffset
                     Button({section="Registrar"},Modifier.fillMaxWidth()) {Text("Registrar prática")}
                 }
             }
-            "Registrar" -> key(generation) { LanguageEditor(null,busy,vm,rows) {generation++;section="Progresso"} }
+            "Registrar" -> key(generation) { LanguageEditor(null,busy,vm,rows,initialActivity=lastActivity,initialLanguage=lastLanguage,
+                onNewSaved={activity,idiom -> lastActivity=activity;lastLanguage=idiom}) {generation++} }
             else -> {
                 val old=sessions.firstOrNull {it.id==editing}
                 if(old!=null) {
@@ -103,10 +106,10 @@ import java.time.ZoneOffset
     }
 }
 
-@Composable fun LanguageEditor(old: TrainingRecord?, busy: Boolean, vm: TrainingViewModel, records: List<TrainingRecord>, done: ()->Unit) {
-    var language by rememberSaveable {mutableStateOf(old?.extra("idioma") ?: "Inglês")}
-    var custom by rememberSaveable {mutableStateOf(old?.extra("idioma")?.takeUnless {it in languageNames}.orEmpty())}
-    var activity by rememberSaveable {mutableStateOf(old?.extra("atividade_idioma") ?: languageActivities[0])}
+@Composable fun LanguageEditor(old: TrainingRecord?, busy: Boolean, vm: TrainingViewModel, records: List<TrainingRecord>, initialActivity:String=languageActivities[0], initialLanguage:String="Inglês", onNewSaved:(String,String)->Unit={_,_->}, done: ()->Unit) {
+    var language by rememberSaveable {mutableStateOf(old?.extra("idioma") ?: initialLanguage)}
+    var custom by rememberSaveable {mutableStateOf((old?.extra("idioma") ?: initialLanguage).takeUnless {it in languageNames}.orEmpty())}
+    var activity by rememberSaveable {mutableStateOf(old?.extra("atividade_idioma") ?: initialActivity)}
     var day by rememberSaveable {mutableStateOf(old?.data ?: today().toString())}
     var at by rememberSaveable {mutableStateOf(old?.horario ?: LocalTime.now(ZoneOffset.ofHours(-3)).toString().take(5))}
     var minutes by rememberSaveable {mutableStateOf(old?.durationMinutes?.toString() ?: "20")}
@@ -116,27 +119,38 @@ import java.time.ZoneOffset
     var episodes by rememberSaveable {mutableStateOf((old?.number("episodios")?.toInt() ?: 1).coerceAtLeast(1).toString())}
     var audio by rememberSaveable {mutableStateOf(old?.extra("idioma_audio")?.ifBlank {language} ?: language)}
     var subtitles by rememberSaveable {mutableStateOf(old?.extra("legendas")?.takeIf {it in subtitleModes} ?: subtitleModes[0])}
+    var source by rememberSaveable {mutableStateOf(old?.extra("fonte_idioma").orEmpty())}
+    var contentType by rememberSaveable {mutableStateOf(old?.extra("tipo_conteudo")?.takeIf {it in contentTypes} ?: contentTypes[0])}
     var notes by rememberSaveable {mutableStateOf(old?.extra("observacoes").orEmpty())}
     var error by remember {mutableStateOf<String?>(null)}
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Choice("Idioma que estou aprendendo",language.takeIf {it in languageNames} ?: "Outro idioma",languageNames+"Outro idioma") {language=it;audio=it.takeUnless {it=="Outro idioma"} ?: custom}
         if(language !in languageNames) Field("Nome do idioma",custom){custom=it}
         val activityLabels=languageActivities.map {if(it==languageActivities[2])"Série / anime / filme / vídeo" else it}
-        Choice("Atividade",activityLabels[languageActivities.indexOf(activity)],activityLabels){activity=languageActivities[activityLabels.indexOf(it)]}
+        Choice("Atividade",activityLabels[languageActivities.indexOf(activity)],activityLabels){
+            val next=languageActivities[activityLabels.indexOf(it)]
+            if(next!=activity) {activity=next;title="";source="";reviewed="0";added="0";episodes="1";subtitles=if(next=="Escuta") "Sem legenda" else subtitleModes[0]}
+        }
+        val media=languageMediaActivity(activity)
+        if(media) Choice("Tipo de conteúdo",contentType,contentTypes){contentType=it}
         Field("Data da sessão (AAAA-MM-DD)",day){day=it}
         LanguageSuggestField("Horário da sessão",at,timeSuggestions(at),"Digite 22 para ver os horários das 22h; também aceita 2217 ou 22:17."){at=it}
         Field("Tempo efetivo da sessão (min)",minutes,true){minutes=it}
-        if(activity==languageActivities[2]) {
+        if(media) {
             val titles=languageMediaTitles(records).filter {it.contains(title,true)}
-            LanguageSuggestField("Série, anime, filme ou vídeo",title,titles,"Escolha um título do seu histórico ou digite um novo."){title=it.take(160)}
-        } else Field("Material ou baralho (opcional)",title){title=it.take(160)}
+            LanguageSuggestField(if(activity==languageActivities[2]) "Série, anime, filme ou vídeo" else "Título do conteúdo",title,titles,"Escolha um título do seu histórico ou digite um novo."){title=it.take(160)}
+        } else Field(languageMaterialLabel(activity),title){title=it.take(160)}
+        if(activity !in languageActivities.take(2)) {
+            if(media) LanguageSuggestField("Fonte (opcional)",source,languageSources.filter {it.contains(source,true)},"YouTube, Netflix, Spotify ou outra fonte."){source=it.take(100)}
+            else Field("Fonte, plataforma ou professor (opcional)",source){source=it.take(100)}
+        }
         if(activity==languageActivities[0]) Field("Cards revisados",reviewed,true){reviewed=it}
         if(activity in languageActivities.take(2)) {
             Field("Cards adicionados ao Anki",added,true){added=it}
             Text("Registro manual. O Solem não acessa sua conta do Anki.",style=MaterialTheme.typography.bodySmall)
         }
-        if(activity==languageActivities[2]) {
-            Field("Episódios / vídeos vistos",episodes,true){episodes=it}
+        if(media) {
+            Field(if(activity==languageActivities[2]) "Episódios / vídeos vistos" else "Conteúdos / episódios ouvidos",episodes,true){episodes=it}
             Text("Informe o tempo total assistido acima: 2 episódios de 25 min = 50 min. Não multiplicaremos novamente.",style=MaterialTheme.typography.bodySmall)
             Field("Idioma do áudio",audio){audio=it}
             Choice("Legendas",subtitles,subtitleModes){subtitles=it}
@@ -147,8 +161,8 @@ import java.time.ZoneOffset
             val value=runCatching { languageMutation(day,sessionTime(at),if(language in languageNames) language else custom,activity,minutes.toIntOrNull() ?: -1,
                 title,if(activity==languageActivities[0]) reviewed.toIntOrNull() ?: -1 else 0,
                 if(activity in languageActivities.take(2)) added.toIntOrNull() ?: -1 else 0,
-                if(activity==languageActivities[2]) episodes.toIntOrNull() ?: -1 else 0,audio,subtitles,notes,old) }
-            value.onSuccess {error=null;vm.save(old?.id,it,done)}.onFailure {error=it.message ?: "Confira os dados."}
+                if(media) episodes.toIntOrNull() ?: -1 else 0,audio,subtitles,notes,old,source,contentType) }
+            value.onSuccess {error=null;vm.save(old?.id,it) {if(old==null) onNewSaved(activity,if(language in languageNames) language else custom);done()}}.onFailure {error=it.message ?: "Confira os dados."}
         },enabled=!busy,modifier=Modifier.fillMaxWidth()) {Text(if(busy) "Salvando…" else if(old==null) "Salvar sessão de idioma" else "Salvar alterações")}
     }
 }

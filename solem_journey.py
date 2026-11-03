@@ -37,7 +37,7 @@ def defaults(personal=False, generic=False):
         enabled = [key for key in enabled if key not in ("created", "published")]
     root = "Canal principal · Gacha" if personal else "Meus canais"
     return dict(targets=targets, enabled=enabled, accent="Ciano", effects=True,
-                sound=True, comfort=False, contrast=False, large_text=False, guide_done=False, media=[],
+                sound=True, comfort=False, contrast=False, large_text=False, guide_done=False, media=[], menu_tabs=None, menu_done=False,
                 strategy=f"{root}\n  Ideias\n  Roteiro\n  Gravação\n  Edição\n  Publicação")
 
 
@@ -68,6 +68,11 @@ def preferences(saved=None, personal=False, generic=False):
     if any(type(result[k]) is not bool for k in ("comfort", "contrast", "large_text", "guide_done")):
         raise ValueError("Preferências de acessibilidade inválidas.")
     from solem_experience import media_link
+    from solem_navigation import menu_tabs
+    if result["menu_tabs"] is not None:
+        result["menu_tabs"] = menu_tabs(result["menu_tabs"])
+    if type(result["menu_done"]) is not bool:
+        raise ValueError("Preferência de menu inválida.")
     if not isinstance(result["media"], list) or len(result["media"]) > 8:
         raise ValueError("Guarde até 8 favoritos.")
     result["media"] = [media_link(r["title"], r["url"]) for r in result["media"]]

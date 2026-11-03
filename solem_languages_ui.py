@@ -6,14 +6,26 @@ from solem_charts import bar_card
 from solem_health import now_local
 from solem_progress import extras_of, record_date
 from solem_languages import LANGUAGES, ACTIVITIES, SUBTITLES, is_language, language_session, language_summary, language_week, PERIODS, SESSION_TIMES, session_time, media_titles, period_bounds, language_period_summary, language_chart
+from solem_languages import CONTENT_TYPES, SOURCES, media_activity, material_label
 
 
 def language_form(client, table, old=None, records=()):
     e = extras_of((old or {}).get("dados_extras"))
+    if not old:
+        e = dict(st.session_state.get("language_last_context", {}))
     key = "language_" + (str(old["id"]) if old else "new_"+str(st.session_state.get("language_form_generation",0)))
     choices = list(dict.fromkeys(LANGUAGES + ([e['idioma']] if e.get('idioma') else [])))
     language = st.selectbox("Idioma que estou aprendendo", choices, index=choices.index(e.get("idioma", "Inglês")), accept_new_options=True, key=key+"_language")
     activity = st.selectbox("Atividade", ACTIVITIES, index=ACTIVITIES.index(e.get("atividade_idioma", ACTIVITIES[0])), format_func=lambda v: "Série / anime / filme / vídeo" if v == ACTIVITIES[2] else v, key=key+"_activity")
+    # Keep widget identities separate per activity, so Anki drafts cannot become media titles.
+    media = media_activity(activity)
+    same_activity = e.get("atividade_idioma") == activity
+    details = e if same_activity else {}
+    content_type = ""
+    if media:
+        content_type = st.selectbox("Tipo de conteúdo", CONTENT_TYPES,
+            index=CONTENT_TYPES.index(details.get("tipo_conteudo")) if details.get("tipo_conteudo") in CONTENT_TYPES else 0,
+            key=key+"_"+activity+"_content_type")
     with st.form(key):
         c1,c2=st.columns(2)
         day=c1.date_input("Data da sessão", value=record_date(old["data"]) if old else now_local().date())
@@ -22,27 +34,36 @@ def language_form(client, table, old=None, records=()):
         times=list(dict.fromkeys(SESSION_TIMES+[st.session_state[clock_key]]))
         at=c2.selectbox("Horário da sessão", times, key=clock_key, accept_new_options=True, filter_mode="prefix", help="Digite 22 para filtrar os horários das 22h. Também pode informar 22:17 ou 2217.")
         minutes=st.number_input("Tempo efetivo da sessão (min)", 1, 1440, int(old["duracao_min"]) if old else 20)
-        if activity == ACTIVITIES[2]:
+        source = ""
+        if activity not in ACTIVITIES[:2]:
+            if media:
+                sources = list(dict.fromkeys(SOURCES + ([details["fonte_idioma"]] if details.get("fonte_idioma") else [])))
+                source = st.selectbox("Fonte (opcional)", sources,
+                    index=sources.index(details["fonte_idioma"]) if details.get("fonte_idioma") in sources else None,
+                    accept_new_options=True, key=key+"_"+activity+"_source", placeholder="YouTube, Netflix, Spotify…") or ""
+            else:
+                source = st.text_input("Fonte, plataforma ou professor (opcional)", details.get("fonte_idioma", ""), max_chars=100, key=key+"_"+activity+"_source")
+        if media:
             titles=media_titles(records)
-            if e.get("titulo") and e["titulo"] not in titles: titles.insert(0,e["titulo"])
-            title=st.selectbox("Série, anime, filme ou vídeo", titles, index=titles.index(e["titulo"]) if e.get("titulo") in titles else None, accept_new_options=True, filter_mode="contains", key=key+"_media_title", placeholder="Escolha um título ou digite um novo", help="Sugestões do seu histórico, mais recentes primeiro. Um novo título fica disponível após salvar a sessão.") or ""
+            if details.get("titulo") and details["titulo"] not in titles: titles.insert(0,details["titulo"])
+            title=st.selectbox("Série, anime, filme ou vídeo" if activity == ACTIVITIES[2] else "Título do conteúdo", titles, index=titles.index(details["titulo"]) if details.get("titulo") in titles else None, accept_new_options=True, filter_mode="contains", key=key+"_"+activity+"_media_title", placeholder="Escolha um título ou digite um novo", help="Sugestões do seu histórico, mais recentes primeiro. Um novo título fica disponível após salvar a sessão.") or ""
         else:
-            title=st.text_input("Material ou baralho (opcional)", e.get("titulo", ""), max_chars=160)
+            title=st.text_input(material_label(activity), details.get("titulo", ""), max_chars=160, key=key+"_"+activity+"_title")
         reviewed=added=episodes=0; audio=subtitles=""
         if activity == ACTIVITIES[0]:
             reviewed=st.number_input("Cards revisados", 0, 10000, int(e.get("cards_revisados",0)))
         if activity in ACTIVITIES[:2]:
             added=st.number_input("Cards adicionados ao Anki", 0, 10000, int(e.get("cards_adicionados",0)))
             st.caption("Registro manual. O Solem não acessa sua conta do Anki.")
-        if activity == ACTIVITIES[2]:
-            episodes=st.number_input("Episódios / vídeos vistos", 1, 100, max(1,int(e.get("episodios",1))))
+        if media:
+            episodes=st.number_input("Episódios / vídeos vistos" if activity == ACTIVITIES[2] else "Conteúdos / episódios ouvidos", 1, 100, max(1,int(details.get("episodios",1))))
             st.caption("No tempo acima, informe a soma dos minutos realmente assistidos. Ex.: 2 episódios de 25 min = 50 min; não multiplicaremos novamente.")
-            audio=st.text_input("Idioma do áudio", e.get("idioma_audio") or language, max_chars=60)
-            subtitles=st.selectbox("Legendas", SUBTITLES, index=SUBTITLES.index(e.get("legendas")) if e.get("legendas") in SUBTITLES else 0)
+            audio=st.text_input("Idioma do áudio", details.get("idioma_audio") or language, max_chars=60)
+            subtitles=st.selectbox("Legendas", SUBTITLES, index=SUBTITLES.index(details.get("legendas")) if details.get("legendas") in SUBTITLES else (2 if activity == "Escuta" else 0))
         notes=st.text_area("Observações (opcional)", e.get("observacoes", ""), max_chars=2000)
         if st.form_submit_button("Salvar alterações" if old else "Salvar sessão de idioma", use_container_width=True):
             try:
-                value=language_session(day,session_time(at),language,activity,minutes,title=title,reviewed=reviewed,added=added,episodes=episodes,audio=audio,subtitles=subtitles,notes=notes,previous=old)
+                value=language_session(day,session_time(at),language,activity,minutes,title=title,reviewed=reviewed,added=added,episodes=episodes,audio=audio,subtitles=subtitles,notes=notes,previous=old,source=source,content_type=content_type)
                 query=client.table(table)
                 result=(query.update(value).eq("id",int(old["id"])) if old else query.insert(value)).execute()
                 if not result.data:
@@ -53,6 +74,10 @@ def language_form(client, table, old=None, records=()):
                 st.error("Não foi possível confirmar a gravação. Atualize o histórico antes de tentar novamente.")
             else:
                 st.session_state["solem_feedback"]="Sessão de idioma salva."
+                if not old:
+                    st.session_state["language_last_context"] = dict(idioma=language, atividade_idioma=activity,
+                        fonte_idioma=source, tipo_conteudo=content_type, titulo=title,
+                        idioma_audio=audio, legendas=subtitles)
                 st.session_state["language_form_generation"]=st.session_state.get("language_form_generation",0)+1
                 st.rerun()
 
@@ -108,6 +133,8 @@ def language_page(records, client, table, demo=False):
                 e=extras_of(row.get('dados_extras'))
                 with st.expander(f"{record_date(row['data']).strftime('%d/%m/%Y')} · {str(row['horario'])[:5]} · {e['idioma']} · {e['atividade_idioma']} · {row['duracao_min']:g} min · #{row['id']}"):
                     if e.get('titulo'): st.write(e['titulo'])
+                    if e.get('fonte_idioma') or e.get('tipo_conteudo'):
+                        st.caption(" · ".join(str(e[k]) for k in ('tipo_conteudo', 'fonte_idioma') if e.get(k)))
                     if e.get('episodios'): st.caption(f"{e['episodios']} episódios/vídeos · Áudio: {e['idioma_audio']} · Legendas: {e['legendas']}")
                     language_form(client,table,row,records=rows)
 

@@ -118,6 +118,9 @@ def settings_page():
         return
     prefs = st.session_state["journey_preferences"]
     data = st.session_state["journey_data"]
+    from solem_navigation_ui import menu_editor
+    with st.expander("Minhas abas", expanded=True):
+        menu_editor()
     allowed = [k for k in GOALS if k != "created" and (not st.session_state.get("generic_account") or k in ("water", "flexao", "agachamento", "cardio"))]
     with st.form("journey_settings_form"):
         enabled = st.multiselect("Missões que aparecem no check-up", allowed,
