@@ -49,7 +49,8 @@ class MenuViewModel(private val client:SupabaseClient,private val owner:String,p
                 val saved=(previous["menu_tabs"] as? JsonArray)?.mapNotNull {(it as? JsonPrimitive)?.contentOrNull}
                 val values=mergedMenuTabs(selected,menuTabs(saved,generic),androidTabIds.toSet()-pinnedTabs)
                 val prefs=JsonObject(previous+mapOf("menu_tabs" to JsonArray(values.map(::JsonPrimitive)),"menu_done" to JsonPrimitive(true)))
-                val payload=buildJsonObject {put("preferences",prefs)}
+                // Pin even first inserts to this session's owner if auth changes during a request.
+                val payload=buildJsonObject {put("owner_id",owner);put("preferences",prefs)}
                 checkOwner()
                 val rows=if(old==null) client.from("solem_journey_settings").insert(payload){select()}.decodeList<JsonObject>()
                 else client.from("solem_journey_settings").update(payload) {
