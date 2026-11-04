@@ -42,25 +42,48 @@ def test_menu_defaults_pin_recovery_and_preserve_preferences_and_other_accounts(
     assert a.load()['settings']['preferences']['menu_tabs']==changed['menu_tabs']
 
 
-def test_save_listening_keeps_activity_language_and_does_not_duplicate_on_rerun():
+def test_save_listening_keeps_episode_context_and_does_not_duplicate_on_rerun():
     with patch.dict(os.environ,{'SOLEM_DEMO':'1','SOLEM_DEMO_PROFILE':'generic'}):
         app=AppTest.from_file('app.py',default_timeout=40).run()
+        app.session_state['solem_demo_records'].append(dict(id=999, **language_session(
+            date(2026,11,2),'21:00','Espanhol','Escuta',25,title='Minha série',episodes=1)))
         original=deepcopy(app.session_state['solem_demo_records'])
         app.radio(key='solem_page').set_value('Idiomas').run()
         app.selectbox(key='language_new_0_activity').set_value('Escuta').run()
         app.selectbox(key='language_new_0_language').set_value('Espanhol').run()
         assert not any('Cards' in x.label or 'baralho' in x.label for x in app.number_input)
         app.selectbox(key='language_new_0_Escuta_source').set_value('YouTube')
-        app.selectbox(key='language_new_0_Escuta_content_type').set_value('Vídeo')
+        app.selectbox(key='language_new_0_Escuta_content_type').set_value('Anime').run()
+        app.selectbox(key='language_new_0_Escuta_media_title').set_value('Minha série')
+        app.text_input(key='language_new_0_Escuta_audio').set_value('Japonês')
+        app.selectbox(key='language_new_0_Escuta_subtitles').set_value('Em português')
+        next(x for x in app.number_input if x.label=='Tempo efetivo da sessão (min)').set_value(45)
+        next(x for x in app.number_input if x.label=='Conteúdos / episódios ouvidos').set_value(2)
         next(x for x in app.button if x.label=='Salvar sessão de idioma').click().run()
         assert not app.exception
+        assert app.session_state['language_last_context']['titulo']=='Minha série'
         assert app.selectbox(key='language_new_1_activity').value=='Escuta'
         assert app.selectbox(key='language_new_1_language').value=='Espanhol'
         assert app.selectbox(key='language_new_1_Escuta_source').value=='YouTube'
+        assert app.selectbox(key='language_new_1_Escuta_content_type').value=='Anime'
+        assert app.selectbox(key='language_new_1_Escuta_media_title').value=='Minha série', app.session_state['language_last_context']
+        assert app.text_input(key='language_new_1_Escuta_audio').value=='Japonês'
+        assert app.selectbox(key='language_new_1_Escuta_subtitles').value=='Em português'
+        assert next(x for x in app.number_input if x.label=='Conteúdos / episódios ouvidos').value==1
+        assert next(x for x in app.number_input if x.label=='Tempo efetivo da sessão (min)').value==20
         app.run()
         rows=app.session_state['solem_demo_records']
         assert rows[:-1]==original and len(rows)==len(original)+1
         assert rows[-1]['dados_extras']['fonte_idioma']=='YouTube'
+        first=deepcopy(rows[-1])
+        next(x for x in app.button if x.label=='Salvar sessão de idioma').click().run()
+        assert not app.exception
+        rows=app.session_state['solem_demo_records']
+        assert len(rows)==len(original)+2 and rows[-2]==first
+        assert rows[-1]['dados_extras']['titulo']=='Minha série'
+        assert rows[-1]['dados_extras']['idioma_audio']=='Japonês'
+        assert rows[-1]['dados_extras']['legendas']=='Em português'
+        assert rows[-1]['dados_extras']['episodios']==1
 
 
 def test_choose_hide_restore_menu_without_changing_history():

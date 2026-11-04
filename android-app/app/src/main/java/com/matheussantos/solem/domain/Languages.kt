@@ -19,6 +19,21 @@ fun languageMaterialLabel(activity:String) = when(activity) {
     else -> "Curso ou assunto (opcional)"
 }
 val subtitleModes = listOf("No idioma estudado", "Em português", "Sem legenda", "Outro idioma")
+
+/** Defaults for the next entry, never a copy of session counts, notes or timestamps. */
+data class LanguageEntryContext(
+    val activity:String=languageActivities[0], val language:String="Inglês",
+    val title:String="", val source:String="", val contentType:String=contentTypes[0],
+    val audio:String="Inglês", val subtitles:String=subtitleModes[0]
+) : java.io.Serializable
+
+fun TrainingMutation.languageEntryContext():LanguageEntryContext {
+    fun text(key:String)=extras[key]?.jsonPrimitive?.contentOrNull.orEmpty()
+    return LanguageEntryContext(text("atividade_idioma"),text("idioma"),text("titulo"),
+        text("fonte_idioma"),text("tipo_conteudo").ifBlank {contentTypes[0]},
+        text("idioma_audio").ifBlank {text("idioma")},
+        text("legendas").takeIf {it in subtitleModes} ?: subtitleModes[0])
+}
 val languagePeriods = listOf("Dia", "Últimos 7 dias", "Mês", "Semestre", "Ano")
 val sessionTimes = (0 until 1440).map {"%02d:%02d".format(Locale.ROOT,it/60,it%60)}
 fun sessionTime(value:String):String {

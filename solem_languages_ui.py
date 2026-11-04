@@ -58,8 +58,10 @@ def language_form(client, table, old=None, records=()):
         if media:
             episodes=st.number_input("Episódios / vídeos vistos" if activity == ACTIVITIES[2] else "Conteúdos / episódios ouvidos", 1, 100, max(1,int(details.get("episodios",1))))
             st.caption("No tempo acima, informe a soma dos minutos realmente assistidos. Ex.: 2 episódios de 25 min = 50 min; não multiplicaremos novamente.")
-            audio=st.text_input("Idioma do áudio", details.get("idioma_audio") or language, max_chars=60)
-            subtitles=st.selectbox("Legendas", SUBTITLES, index=SUBTITLES.index(details.get("legendas")) if details.get("legendas") in SUBTITLES else (2 if activity == "Escuta" else 0))
+            audio=st.text_input("Idioma do áudio", details.get("idioma_audio") or language, max_chars=60, key=key+"_"+activity+"_audio")
+            subtitles=st.selectbox("Legendas", SUBTITLES, index=SUBTITLES.index(details.get("legendas")) if details.get("legendas") in SUBTITLES else (2 if activity == "Escuta" else 0), key=key+"_"+activity+"_subtitles")
+            if not old:
+                st.caption("Ao salvar, fonte, título, áudio e legenda ficam selecionados para o próximo episódio.")
         notes=st.text_area("Observações (opcional)", e.get("observacoes", ""), max_chars=2000)
         if st.form_submit_button("Salvar alterações" if old else "Salvar sessão de idioma", use_container_width=True):
             try:

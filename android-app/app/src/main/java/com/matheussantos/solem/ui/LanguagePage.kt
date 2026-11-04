@@ -33,8 +33,7 @@ import java.time.ZoneOffset
     var day by rememberSaveable {mutableStateOf(today().toString())}
     var period by rememberSaveable {mutableStateOf("Últimos 7 dias")}
     var editing by rememberSaveable {mutableStateOf<Long?>(null)}
-    var lastActivity by rememberSaveable {mutableStateOf(languageActivities[0])}
-    var lastLanguage by rememberSaveable {mutableStateOf("Inglês")}
+    var lastContext by rememberSaveable {mutableStateOf(LanguageEntryContext())}
     var generation by rememberSaveable {mutableIntStateOf(0)}
     val sessions=rows.filter {it.isLanguage()}
     Page("Idiomas") {
@@ -79,8 +78,8 @@ import java.time.ZoneOffset
                     Button({section="Registrar"},Modifier.fillMaxWidth()) {Text("Registrar prática")}
                 }
             }
-            "Registrar" -> key(generation) { LanguageEditor(null,busy,vm,rows,initialActivity=lastActivity,initialLanguage=lastLanguage,
-                onNewSaved={activity,idiom -> lastActivity=activity;lastLanguage=idiom}) {generation++} }
+            "Registrar" -> key(generation) { LanguageEditor(null,busy,vm,rows,initialContext=lastContext,
+                onNewSaved={lastContext=it}) {generation++} }
             else -> {
                 val old=sessions.firstOrNull {it.id==editing}
                 if(old!=null) {
@@ -106,21 +105,21 @@ import java.time.ZoneOffset
     }
 }
 
-@Composable fun LanguageEditor(old: TrainingRecord?, busy: Boolean, vm: TrainingViewModel, records: List<TrainingRecord>, initialActivity:String=languageActivities[0], initialLanguage:String="Inglês", onNewSaved:(String,String)->Unit={_,_->}, done: ()->Unit) {
-    var language by rememberSaveable {mutableStateOf(old?.extra("idioma") ?: initialLanguage)}
-    var custom by rememberSaveable {mutableStateOf((old?.extra("idioma") ?: initialLanguage).takeUnless {it in languageNames}.orEmpty())}
-    var activity by rememberSaveable {mutableStateOf(old?.extra("atividade_idioma") ?: initialActivity)}
+@Composable fun LanguageEditor(old: TrainingRecord?, busy: Boolean, vm: TrainingViewModel, records: List<TrainingRecord>, initialContext:LanguageEntryContext=LanguageEntryContext(), onNewSaved:(LanguageEntryContext)->Unit={}, done: ()->Unit) {
+    var language by rememberSaveable {mutableStateOf(old?.extra("idioma") ?: initialContext.language)}
+    var custom by rememberSaveable {mutableStateOf((old?.extra("idioma") ?: initialContext.language).takeUnless {it in languageNames}.orEmpty())}
+    var activity by rememberSaveable {mutableStateOf(old?.extra("atividade_idioma") ?: initialContext.activity)}
     var day by rememberSaveable {mutableStateOf(old?.data ?: today().toString())}
     var at by rememberSaveable {mutableStateOf(old?.horario ?: LocalTime.now(ZoneOffset.ofHours(-3)).toString().take(5))}
     var minutes by rememberSaveable {mutableStateOf(old?.durationMinutes?.toString() ?: "20")}
-    var title by rememberSaveable {mutableStateOf(old?.extra("titulo").orEmpty())}
+    var title by rememberSaveable {mutableStateOf(old?.extra("titulo") ?: initialContext.title)}
     var reviewed by rememberSaveable {mutableStateOf(old?.number("cards_revisados")?.toInt()?.toString() ?: "0")}
     var added by rememberSaveable {mutableStateOf(old?.number("cards_adicionados")?.toInt()?.toString() ?: "0")}
     var episodes by rememberSaveable {mutableStateOf((old?.number("episodios")?.toInt() ?: 1).coerceAtLeast(1).toString())}
-    var audio by rememberSaveable {mutableStateOf(old?.extra("idioma_audio")?.ifBlank {language} ?: language)}
-    var subtitles by rememberSaveable {mutableStateOf(old?.extra("legendas")?.takeIf {it in subtitleModes} ?: subtitleModes[0])}
-    var source by rememberSaveable {mutableStateOf(old?.extra("fonte_idioma").orEmpty())}
-    var contentType by rememberSaveable {mutableStateOf(old?.extra("tipo_conteudo")?.takeIf {it in contentTypes} ?: contentTypes[0])}
+    var audio by rememberSaveable {mutableStateOf(old?.extra("idioma_audio")?.ifBlank {language} ?: initialContext.audio)}
+    var subtitles by rememberSaveable {mutableStateOf((old?.extra("legendas") ?: initialContext.subtitles).takeIf {it in subtitleModes} ?: subtitleModes[0])}
+    var source by rememberSaveable {mutableStateOf(old?.extra("fonte_idioma") ?: initialContext.source)}
+    var contentType by rememberSaveable {mutableStateOf((old?.extra("tipo_conteudo") ?: initialContext.contentType).takeIf {it in contentTypes} ?: contentTypes[0])}
     var notes by rememberSaveable {mutableStateOf(old?.extra("observacoes").orEmpty())}
     var error by remember {mutableStateOf<String?>(null)}
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -154,6 +153,7 @@ import java.time.ZoneOffset
             Text("Informe o tempo total assistido acima: 2 episódios de 25 min = 50 min. Não multiplicaremos novamente.",style=MaterialTheme.typography.bodySmall)
             Field("Idioma do áudio",audio){audio=it}
             Choice("Legendas",subtitles,subtitleModes){subtitles=it}
+            if(old==null) Text("Ao salvar, fonte, título, áudio e legenda ficam selecionados para o próximo episódio.",style=MaterialTheme.typography.bodySmall)
         }
         OutlinedTextField(notes,{notes=it},Modifier.fillMaxWidth(),label={Text("Observações (opcional)")})
         error?.let {Text(it,color=MaterialTheme.colorScheme.error)}
@@ -162,7 +162,7 @@ import java.time.ZoneOffset
                 title,if(activity==languageActivities[0]) reviewed.toIntOrNull() ?: -1 else 0,
                 if(activity in languageActivities.take(2)) added.toIntOrNull() ?: -1 else 0,
                 if(media) episodes.toIntOrNull() ?: -1 else 0,audio,subtitles,notes,old,source,contentType) }
-            value.onSuccess {error=null;vm.save(old?.id,it) {if(old==null) onNewSaved(activity,if(language in languageNames) language else custom);done()}}.onFailure {error=it.message ?: "Confira os dados."}
+            value.onSuccess {saved -> error=null;vm.save(old?.id,saved) {if(old==null) onNewSaved(saved.languageEntryContext());done()}}.onFailure {error=it.message ?: "Confira os dados."}
         },enabled=!busy,modifier=Modifier.fillMaxWidth()) {Text(if(busy) "Salvando…" else if(old==null) "Salvar sessão de idioma" else "Salvar alterações")}
     }
 }

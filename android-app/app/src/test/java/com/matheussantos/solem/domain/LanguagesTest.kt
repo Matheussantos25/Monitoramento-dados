@@ -7,6 +7,27 @@ import org.junit.Test
 import java.time.LocalDate
 
 class LanguagesTest {
+    @Test fun nextEpisodeRetainsContextWithoutCopyingSessionMeasurements() {
+        val first=languageMutation("2026-11-03","22:15","Espanhol","Escuta",45,
+            title="Minha série",episodes=2,audio="Japonês",subtitles="Em português",
+            source="YouTube",contentType="Anime",notes="Só este episódio")
+        val context=first.languageEntryContext()
+        // rememberSaveable uses this same Serializable context across recreation.
+        val bytes=java.io.ByteArrayOutputStream()
+        java.io.ObjectOutputStream(bytes).use {it.writeObject(context)}
+        val restored=java.io.ObjectInputStream(java.io.ByteArrayInputStream(bytes.toByteArray())).use {it.readObject() as LanguageEntryContext}
+        assertEquals(context,restored)
+        assertEquals(LanguageEntryContext("Escuta","Espanhol","Minha série","YouTube","Anime","Japonês","Em português"),restored)
+        val next=languageMutation("2026-11-03","23:00",restored.language,restored.activity,20,
+            title=restored.title,episodes=1,audio=restored.audio,subtitles=restored.subtitles,
+            source=restored.source,contentType=restored.contentType)
+        assertEquals(context,next.languageEntryContext())
+        assertEquals(20,next.durationMinutes)
+        assertEquals(JsonPrimitive(1),next.extras["episodios"])
+        assertEquals(JsonPrimitive(""),next.extras["observacoes"])
+        assertEquals(JsonPrimitive(2),first.extras["episodios"])
+        assertEquals(45,first.durationMinutes)
+    }
     private val day=LocalDate.of(2026,11,1)
     private fun record(id:Long,m:TrainingMutation)=TrainingRecord(id,m.data,m.horario,m.group,m.exercicio,durationMinutes=m.durationMinutes,extras=m.extras)
     @Test fun totalTimeAndCardsDoNotBecomeQuestions() {
