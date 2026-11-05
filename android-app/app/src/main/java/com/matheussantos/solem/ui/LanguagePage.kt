@@ -72,8 +72,10 @@ import java.time.ZoneOffset
                         LanguageStat("Episódios / vídeos",total.episodes.toString(),Modifier.weight(1f))
                     }
                     if(total.sessions==0)Text("Nenhuma sessão neste intervalo. Escolha outro período ou registre sua próxima prática.")
-                    val unit=if(period=="Dia")"horário" else if(period in listOf("Semestre","Ano"))"mês" else "dia"
-                    LanguageRhythm("Seu ritmo por $unit",languageChart(sessions,start,end,period,selected))
+                    if(period!="Dia") {
+                        val unit=if(period in listOf("Semestre","Ano"))"mês" else "dia"
+                        LanguageRhythm("Seu ritmo por $unit",languageChart(sessions,start,end,period,selected))
+                    }
                     Text("Tempo informado por você; não é uma avaliação de fluência.",style=MaterialTheme.typography.bodySmall)
                     Button({section="Registrar"},Modifier.fillMaxWidth()) {Text("Registrar prática")}
                 }

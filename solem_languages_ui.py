@@ -114,11 +114,12 @@ def language_page(records, client, table, demo=False):
         b.metric("Episódios / vídeos",f"{summary['episodes']:g}",border=True,help="Também inclui filmes registrados como uma sessão de conteúdo.")
         if not summary['sessions']:
             st.info("Nenhuma sessão neste intervalo. Escolha outro período ou registre sua próxima prática.")
-        chart=language_chart(rows,start,end,period,lang)
-        unit="Horário" if period=="Dia" else "Mês" if period in ("Semestre","Ano") else "Dia"
-        data=pd.DataFrame({unit:[x['label'] for x in chart],"Minutos":[x['minutes'] for x in chart]})
-        bar_card(data,unit,"Minutos",title=f"Seu ritmo por {unit.lower()}",
-                 unit="Minutos estudados · cada barra representa seu tempo registrado")
+        if period != "Dia":
+            chart=language_chart(rows,start,end,period,lang)
+            unit="Mês" if period in ("Semestre","Ano") else "Dia"
+            data=pd.DataFrame({unit:[x['label'] for x in chart],"Minutos":[x['minutes'] for x in chart]})
+            bar_card(data,unit,"Minutos",title=f"Seu ritmo por {unit.lower()}",
+                     unit="Minutos estudados · cada barra representa seu tempo registrado")
         st.caption("Tempo informado por você; não é uma avaliação de fluência.")
     with register:
         st.subheader("O que você praticou?")

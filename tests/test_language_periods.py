@@ -66,8 +66,11 @@ language_page(rows,Client(),'test',demo=True)
     assert next(m for m in app.metric if m.label=='Tempo de estudo').value=='60 min'
     app.segmented_control(key='language_period').set_value('Dia').run()
     assert next(m for m in app.metric if m.label=='Tempo de estudo').value=='40 min'
+    assert not app.get('vega_lite_chart')
+    assert not any('Seu ritmo por horário' in x.value for x in app.markdown)
     app.segmented_control(key='language_period').set_value('Ano').run()
     assert next(m for m in app.metric if m.label=='Tempo de estudo').value=='60 min'
+    assert len(app.get('vega_lite_chart')) == 1
     app.selectbox(key='language_new_0_activity').set_value(ACTIVITIES[2]).run()
     titles=next(x for x in app.selectbox if x.label=='Série, anime, filme ou vídeo')
     assert 'Frieren' in titles.options

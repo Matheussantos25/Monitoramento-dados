@@ -90,19 +90,51 @@ import com.matheussantos.solem.domain.*
             val color = MaterialTheme.colorScheme.primary
             val min = points.minOf { it.second }
             val max = points.maxOf { it.second }
+            val padding = maxOf(0.5, (max-min)*0.2)
+            val lower = maxOf(0.0,min-padding)
+            val upper = max+padding
+            val dates = points.map {java.time.LocalDate.parse(it.first.take(10))}
+            val span = java.time.temporal.ChronoUnit.DAYS.between(dates.first(),dates.last()).coerceAtLeast(1)
+            val dateFormat = java.time.format.DateTimeFormatter.ofPattern("dd/MM")
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("Último registro",style=MaterialTheme.typography.labelMedium)
+                    Text("${formatOneDecimal(points.last().second)} kg",style=MaterialTheme.typography.headlineMedium,color=color)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("Variação no período",style=MaterialTheme.typography.labelMedium)
+                    Text(if(points.size>1)"%+.1f kg".format(points.last().second-points.first().second) else "—",style=MaterialTheme.typography.headlineMedium)
+                }
+            }
+            Text("${points.size} medidas · ${dates.first().format(dateFormat)} a ${dates.last().format(dateFormat)}",style=MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                Text("${formatOneDecimal(lower)} kg",style=MaterialTheme.typography.labelSmall)
+                Text("Escala do gráfico",style=MaterialTheme.typography.labelSmall)
+                Text("${formatOneDecimal(upper)} kg",style=MaterialTheme.typography.labelSmall)
+            }
             Canvas(Modifier.fillMaxWidth().height(170.dp).semantics {contentDescription="Evolução do peso. Valores disponíveis abaixo do gráfico."}) {
                 val path = Path()
+                val locations = mutableListOf<Offset>()
                 points.forEachIndexed { index, (_, value) ->
-                    val x = 12 + (size.width - 24) * index / (points.size - 1).coerceAtLeast(1)
-                    val y = size.height - 12 - ((value - min) / (max - min).coerceAtLeast(1.0) * (size.height - 24)).toFloat()
+                    val elapsed = java.time.temporal.ChronoUnit.DAYS.between(dates.first(),dates[index])
+                    val x = if(points.size==1) size.width/2 else 12 + (size.width - 24) * elapsed.toFloat()/span
+                    val y = size.height - 12 - ((value - lower) / (upper-lower) * (size.height - 24)).toFloat()
                     if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                    drawCircle(color, 5f, Offset(x, y))
+                    locations.add(Offset(x,y))
                 }
-                val area=Path().apply {addPath(path);lineTo(size.width-12,size.height);lineTo(12f,size.height);close()}
-                drawPath(area,Brush.verticalGradient(listOf(color.copy(alpha=0.18f),Color.Transparent)))
-                drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(3f))
+                if(points.size>1) {
+                    val area=Path().apply {addPath(path);lineTo(locations.last().x,size.height);lineTo(locations.first().x,size.height);close()}
+                    drawPath(area,Brush.verticalGradient(listOf(color.copy(alpha=0.18f),Color.Transparent)))
+                    drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx()))
+                }
+                locations.forEach {drawCircle(color,3.dp.toPx(),it)}
+                drawCircle(color,6.dp.toPx(),locations.last())
             }
-            Text("%.1f – %.1f kg • %s a %s".format(min, max, points.first().first, points.last().first))
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                Text(dates.first().format(dateFormat),style=MaterialTheme.typography.labelSmall)
+                if(points.size>1)Text(dates.last().format(dateFormat),style=MaterialTheme.typography.labelSmall)
+            }
+            Text(if(points.size==1)"Sua primeira medida. A próxima formará a linha de evolução." else "A linha liga apenas os dias registrados. Variações não são uma avaliação de saúde.",style=MaterialTheme.typography.bodySmall)
             var showWeights by rememberSaveable {mutableStateOf(false)}
             TextButton({showWeights=!showWeights}) {Text(if(showWeights)"Ocultar valores" else "Ver valores do gráfico")}
             if(showWeights)points.forEach {(date,weight)->Text("$date · %.1f kg".format(weight))}
