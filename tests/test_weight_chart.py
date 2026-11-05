@@ -6,7 +6,8 @@ from solem_weight_chart import weight_series
 def test_sparse_dates_exact_weights_and_single_point_scale():
     points = [(date(2026,11,5),68.6), (date(2026,10,1),68.05)]
     data, bounds = weight_series(points)
-    assert [(x['Data'],x['Peso']) for x in data] == [('2026-10-01',68.05),('2026-11-05',68.6)]
+    assert [(x['Data'],x['Peso']) for x in data] == [('2026-10-01T00:00:00',68.05),('2026-11-05T00:00:00',68.6)]
+    assert [x['Ultima'] for x in data] == [False, True]
     assert len(points) == 2 and points[0][0] == date(2026,11,5)
     assert bounds[0] < 68.05 < 68.6 < bounds[1]
     one, bounds = weight_series([(date(2026,11,5),68.6)])

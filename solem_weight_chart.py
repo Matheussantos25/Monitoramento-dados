@@ -9,7 +9,10 @@ def weight_series(points):
     values = [kg for _, kg in ordered]
     padding = max(0.5, (max(values) - min(values)) * 0.2)
     domain = [max(0, min(values) - padding), max(values) + padding]
-    return [dict(Data=day.isoformat(), Peso=kg, Base=domain[0]) for day, kg in ordered], domain
+    # An explicit local time avoids JavaScript interpreting date-only ISO as UTC
+    # and displaying the previous calendar day west of Greenwich.
+    return [dict(Data=day.isoformat()+"T00:00:00", Peso=kg, Base=domain[0], Ultima=index==len(ordered)-1)
+            for index, (day, kg) in enumerate(ordered)], domain
 
 
 def weight_card(points):
@@ -46,7 +49,7 @@ def weight_card(points):
                  "encoding": {"y2": {"field": "Base"}}},
                 {"mark": {"type": "line", "color": "#83DCFF", "strokeWidth": 3,
                           "point": {"filled": True, "size": 35}}},
-                {"transform": [{"filter": {"field": "Data", "equal": latest["Data"]}}],
+                {"transform": [{"filter": {"field": "Ultima", "equal": True}}],
                  "mark": {"type": "point", "filled": True, "size": 110, "color": "#83DCFF",
                           "stroke": "#DCEEFF", "strokeWidth": 2}},
             ],
