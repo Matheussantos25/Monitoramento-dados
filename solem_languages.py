@@ -135,7 +135,7 @@ def language_session(day, at, language, activity, minutes, *, title="", reviewed
                  cards_adicionados=added if activity in ACTIVITIES[:2] else 0,
                  episodios=episodes if media else 0,
                  idioma_audio=audio.strip()[:60] if media else "",
-                 legendas=subtitles if media else "", observacoes=notes,
+                 legendas="Sem legenda" if activity == "Escuta" else subtitles if media else "", observacoes=notes,
                  fonte_idioma=source.strip() if activity not in ACTIVITIES[:2] else "",
                  tipo_conteudo=content_type if media else "",
                  fonte_questoes="Idiomas", tempo_video=0, q_certas=0, q_erradas=0)

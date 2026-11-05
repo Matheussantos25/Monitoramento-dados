@@ -35,10 +35,15 @@ import java.util.UUID
     var trash by rememberSaveable {mutableStateOf(false)}
     var search by rememberSaveable {mutableStateOf("")}
     LaunchedEffect(Unit){vm.refresh()}
-    Text("Da série para o seu Anki",style=MaterialTheme.typography.headlineSmall)
-    Text("Capture a palavra e revise frase, significado e imagem. Seu caderno é privado. Nada é enviado automaticamente ao Anki.")
+    Text("Seu baralho de vocabulário",style=MaterialTheme.typography.headlineSmall)
+    Text("Frase na frente, significado e imagem no verso. Revise aqui ou exporte para o Anki.")
     state.message?.let {Text(it,color=if(state.failed)MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)}
     if(state.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
+    var mode by rememberSaveable {mutableStateOf("Revisar")}
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        listOf("Revisar","Criar e editar").forEach {name -> FilterChip(mode==name,{mode=name},label={Text(name)})}
+    }
+    if(mode=="Revisar") {VocabularyReviewPanel(state.items,state.busy,vm);return}
     Field("Buscar no caderno",search){search=it}
     Row {Checkbox(trash,{trash=it;selected=null});Text("Lixeira do vocabulário")}
     val items=state.items.filter {vocabularyDocument(it)!=null && it.archived==trash && (it.title+it.body).contains(search,true)}
@@ -103,7 +108,10 @@ import java.util.UUID
         TextButton({definition=sense.definition;source=sense.source;forms=sense.forms}){Text("Usar este significado")}
         if(sense.sentence.isNotBlank())TextButton({sentence=sense.sentence;source=sense.source;forms=sense.forms}){Text("Usar exemplo do dicionário")}
     }
+    Text("Front · Frente",style=MaterialTheme.typography.titleMedium)
+    Text("A palavra informada acima aparece em negrito no cartão.",style=MaterialTheme.typography.bodySmall)
     OutlinedTextField(sentence,{sentence=it.take(2000)},label={Text("Frase em inglês")},modifier=Modifier.fillMaxWidth(),minLines=2)
+    Text("Back · Verso",style=MaterialTheme.typography.titleMedium)
     OutlinedTextField(definition,{definition=it.take(3000)},label={Text("Significado em inglês")},modifier=Modifier.fillMaxWidth(),minLines=2)
     Field("Série, episódio ou contexto (opcional)",context){context=it.take(300)}
     if(source.isNotBlank())Text(source,style=MaterialTheme.typography.bodySmall)
@@ -129,7 +137,7 @@ import java.util.UUID
     if(image.isNotBlank())TextButton({image="";imagePage="";credit=""}){Text("Remover imagem selecionada")}
     if(loading)LinearProgressIndicator(Modifier.fillMaxWidth())
     if(message.isNotBlank())Text(message)
-    val current=Vocabulary(word.trim(),sentence,definition,context,source,image,imagePage,credit,forms)
+    val current=Vocabulary(word.trim(),sentence,definition,context,source,image,imagePage,credit,forms,review=data.review)
     Button({try {
         val item=PersonalItem(old?.id ?: newId,"note",word.trim(),vocabularyBody(current))
         vm.save(item,old){onSaved(it.id)}
@@ -163,11 +171,11 @@ import java.util.UUID
     }
 }
 
-@Composable private fun VocabularyHtml(html:String) {
+@Composable internal fun VocabularyHtml(html:String) {
     val color=MaterialTheme.colorScheme.onSurface.toArgb()
     AndroidView(factory={TextView(it).apply {textSize=18f;setTextIsSelectable(true)}},update={it.setTextColor(color);it.text=Html.fromHtml(html,Html.FROM_HTML_MODE_LEGACY)},modifier=Modifier.fillMaxWidth())
 }
-@Composable private fun VocabularyImage(url:String,description:String) {
+@Composable internal fun VocabularyImage(url:String,description:String) {
     val bitmap by produceState<android.graphics.Bitmap?>(null,url) {
         value=withContext(Dispatchers.IO) {runCatching {
             val bytes=VocabularyLookup.imageBytes(url).first

@@ -8,6 +8,7 @@ import zipfile
 from html.parser import HTMLParser
 from urllib.parse import quote, urlencode, urlparse
 from urllib.request import Request, build_opener, HTTPRedirectHandler
+from solem_vocabulary_review import review_state
 
 PREFIX = "SOLEM_VOCAB_V1\n"
 LIMITS = dict(word=100, sentence=2000, definition=3000, context=300, source=1500, forms=2000,
@@ -21,7 +22,9 @@ def vocabulary_data(item):
     try:
         data = json.loads(item["body"][len(PREFIX):])
         if isinstance(data, dict) and all(isinstance(data.get(k, ""), str) for k in LIMITS):
-            return {k: data.get(k, "") for k in LIMITS}
+            clean = {k: data.get(k, "") for k in LIMITS}
+            if 'review' in data: clean['review'] = review_state(data['review'])
+            return clean
     except (ValueError, TypeError):
         pass
     return None
@@ -33,6 +36,7 @@ def vocabulary_body(data):
         raise ValueError("Informe uma palavra de até 100 caracteres; reduza os campos muito longos.")
     if clean["image"] and not media_url(clean["image"]):
         raise ValueError("Escolha uma imagem da busca do Wikimedia Commons.")
+    if 'review' in data: clean['review'] = review_state(data['review'])
     return PREFIX + json.dumps(clean, ensure_ascii=False)
 
 
@@ -126,15 +130,13 @@ def card_html(data, image_override=None):
     if "<b>" not in front:
         raise ValueError("A palavra precisa aparecer na frase. Ajuste a palavra para a forma usada na série.")
     escape = lambda s: html.escape(s).replace("\n", "<br>")
-    back = front + "<hr><b>" + escape(data["word"]) + "</b><p>" + escape(data["definition"]) + "</p>"
-    if data.get("context"):
-        back += "<p>" + escape(data["context"]) + "</p>"
-    if data.get("source"):
-        back += "<small>" + escape(data["source"]) + " · Texto revisável pelo usuário</small>"
+    back = "<p>" + escape(data["definition"]) + "</p>"
     url = image_override if image_override is not None else data.get("image", "")
     if url and (image_override is not None or media_url(url)):
         back += '<p><img src="' + html.escape(url, quote=True) + '" alt="' + html.escape(data["word"], quote=True) + '" style="max-width:100%;max-height:320px"></p>'
         back += "<small>" + escape(data.get("image_credit", "")) + "<br>" + escape(data.get("image_page", "")) + "</small>"
+    if data.get("source"):
+        back += "<p><small>" + escape(data["source"]) + "</small></p>"
     return front, back
 
 

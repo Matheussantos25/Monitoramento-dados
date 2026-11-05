@@ -111,7 +111,7 @@ fun languageMutation(day: String, at: String, language: String, activity: String
         put("cards_revisados",if(activity==languageActivities[0]) reviewed else 0)
         put("cards_adicionados",if(activity in languageActivities.take(2)) added else 0)
         put("episodios",if(media) episodes else 0);put("idioma_audio",if(media) audio.trim().take(60) else "")
-        put("legendas",if(media) subtitles else "");put("observacoes",notes.trim())
+        put("legendas",if(activity=="Escuta") "Sem legenda" else if(media) subtitles else "");put("observacoes",notes.trim())
         put("fonte_idioma",if(activity !in languageActivities.take(2)) source.trim() else "")
         put("tipo_conteudo",if(media) contentType else "")
         put("fonte_questoes","Idiomas");put("tempo_video",0);put("q_certas",0);put("q_erradas",0)

@@ -152,8 +152,8 @@ import java.time.ZoneOffset
             Field(if(activity==languageActivities[2]) "Episódios / vídeos vistos" else "Conteúdos / episódios ouvidos",episodes,true){episodes=it}
             Text("Informe o tempo total assistido acima: 2 episódios de 25 min = 50 min. Não multiplicaremos novamente.",style=MaterialTheme.typography.bodySmall)
             Field("Idioma do áudio",audio){audio=it}
-            Choice("Legendas",subtitles,subtitleModes){subtitles=it}
-            if(old==null) Text("Ao salvar, fonte, título, áudio e legenda ficam selecionados para o próximo episódio.",style=MaterialTheme.typography.bodySmall)
+            if(activity!="Escuta") Choice("Legendas",subtitles,subtitleModes){subtitles=it}
+            if(old==null) Text(if(activity=="Escuta") "Escuta é registrada sem legenda. Fonte, título e áudio ficam selecionados após salvar." else "Ao salvar, fonte, título, áudio e legenda ficam selecionados para o próximo episódio.",style=MaterialTheme.typography.bodySmall)
         }
         OutlinedTextField(notes,{notes=it},Modifier.fillMaxWidth(),label={Text("Observações (opcional)")})
         error?.let {Text(it,color=MaterialTheme.colorScheme.error)}

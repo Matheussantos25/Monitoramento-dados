@@ -56,7 +56,7 @@ def test_save_listening_keeps_episode_context_and_does_not_duplicate_on_rerun():
         app.selectbox(key='language_new_0_Escuta_content_type').set_value('Anime').run()
         app.selectbox(key='language_new_0_Escuta_media_title').set_value('Minha série')
         app.text_input(key='language_new_0_Escuta_audio').set_value('Japonês')
-        app.selectbox(key='language_new_0_Escuta_subtitles').set_value('Em português')
+        assert not any(x.label=='Legendas' for x in app.selectbox)
         next(x for x in app.number_input if x.label=='Tempo efetivo da sessão (min)').set_value(45)
         next(x for x in app.number_input if x.label=='Conteúdos / episódios ouvidos').set_value(2)
         next(x for x in app.button if x.label=='Salvar sessão de idioma').click().run()
@@ -68,7 +68,7 @@ def test_save_listening_keeps_episode_context_and_does_not_duplicate_on_rerun():
         assert app.selectbox(key='language_new_1_Escuta_content_type').value=='Anime'
         assert app.selectbox(key='language_new_1_Escuta_media_title').value=='Minha série', app.session_state['language_last_context']
         assert app.text_input(key='language_new_1_Escuta_audio').value=='Japonês'
-        assert app.selectbox(key='language_new_1_Escuta_subtitles').value=='Em português'
+        assert not any(x.label=='Legendas' for x in app.selectbox)
         assert next(x for x in app.number_input if x.label=='Conteúdos / episódios ouvidos').value==1
         assert next(x for x in app.number_input if x.label=='Tempo efetivo da sessão (min)').value==20
         app.run()
@@ -82,7 +82,7 @@ def test_save_listening_keeps_episode_context_and_does_not_duplicate_on_rerun():
         assert len(rows)==len(original)+2 and rows[-2]==first
         assert rows[-1]['dados_extras']['titulo']=='Minha série'
         assert rows[-1]['dados_extras']['idioma_audio']=='Japonês'
-        assert rows[-1]['dados_extras']['legendas']=='Em português'
+        assert rows[-1]['dados_extras']['legendas']=='Sem legenda'
         assert rows[-1]['dados_extras']['episodios']==1
 
 

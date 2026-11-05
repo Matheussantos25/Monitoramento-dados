@@ -13,7 +13,7 @@ import java.util.zip.ZipOutputStream
 import java.security.MessageDigest
 
 const val VOCAB_PREFIX="SOLEM_VOCAB_V1\n"
-@Serializable data class Vocabulary(val word:String="",val sentence:String="",val definition:String="",val context:String="",val source:String="",val image:String="",val image_page:String="",val image_credit:String="",val forms:String="")
+@Serializable data class Vocabulary(val word:String="",val sentence:String="",val definition:String="",val context:String="",val source:String="",val image:String="",val image_page:String="",val image_credit:String="",val forms:String="",val review:VocabularyReview?=null)
 data class WordSense(val definition:String,val sentence:String,val part:String,val source:String,val forms:String="")
 data class WordImage(val image:String,val image_page:String,val image_credit:String,val title:String)
 private val vocabJson=Json {ignoreUnknownKeys=true}
@@ -35,11 +35,10 @@ fun vocabularyCard(v:Vocabulary,imageOverride:String?=null):Pair<String,String> 
     require(v.sentence.isNotBlank() && v.definition.isNotBlank()) {"Complete a frase e o significado em inglês antes de exportar."}
     val front=vocabularyFront(v.sentence,v.word,v.forms)
     require(front.contains("<b>")) {"A palavra precisa aparecer na frase. Use a forma que ouviu na série."}
-    var back=front+"<hr><b>"+vocabEscape(v.word)+"</b><p>"+vocabEscape(v.definition)+"</p>"
-    if(v.context.isNotBlank()) back+="<p>"+vocabEscape(v.context)+"</p>"
-    if(v.source.isNotBlank()) back+="<small>"+vocabEscape(v.source)+" · Texto revisável pelo usuário</small>"
+    var back="<p>"+vocabEscape(v.definition)+"</p>"
     val image=imageOverride ?: v.image
     if(image.isNotBlank() && (imageOverride!=null || vocabularyMediaUrl(image))) back+="<p><img src=\""+vocabEscape(image)+"\" alt=\""+vocabEscape(v.word)+"\" style=\"max-width:100%;max-height:320px\"></p><small>"+vocabEscape(v.image_credit)+"<br>"+vocabEscape(v.image_page)+"</small>"
+    if(v.source.isNotBlank()) back+="<p><small>"+vocabEscape(v.source)+"</small></p>"
     return front to back
 }
 fun vocabularyAnkiText(v:Vocabulary,imageOverride:String?=null):String {

@@ -72,7 +72,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
         with st.form("health_meal", clear_on_submit=True):
             meal_key = f"simple_meal_time_{day}"
             st.session_state.setdefault(meal_key, now_local().time().replace(second=0, microsecond=0))
-            meal_time = st.time_input("Horário da refeição", key=meal_key, step=60)
+            meal_time = st.time_input("Horário da refeição", value=st.session_state[meal_key], key=meal_key, step=60)
             a, b = st.columns(2)
             with a:
                 healthy = st.multiselect("Alimentos habituais", meal_food_options(meal_type, healthy_options), disabled=skipped)
@@ -161,7 +161,9 @@ def health_page(client, healthy_options, occasional_options, demo=False):
             amount = st.number_input("Quantidade consumida", min_value=1, max_value=50, value=1)
             water_key = f"water_new_time_{day}"
             st.session_state.setdefault(water_key, now_local().time().replace(second=0, microsecond=0))
-            drink_time = st.time_input("Horário do registro", key=water_key, step=60)
+            # clear_on_submit resets the browser to the widget's explicit default.
+            # Omitting value uses the server clock (UTC), even with local session state.
+            drink_time = st.time_input("Horário do registro", value=st.session_state[water_key], key=water_key, step=60)
             st.metric("Total deste registro", f"{volume * amount:,} ml".replace(",", "."))
             submitted = st.form_submit_button("Adicionar água", use_container_width=True)
         if submitted: _save(client, day, drink_time.strftime("%H:%M:%S"), "water",

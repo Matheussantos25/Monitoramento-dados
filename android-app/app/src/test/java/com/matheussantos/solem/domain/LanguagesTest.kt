@@ -17,7 +17,7 @@ class LanguagesTest {
         java.io.ObjectOutputStream(bytes).use {it.writeObject(context)}
         val restored=java.io.ObjectInputStream(java.io.ByteArrayInputStream(bytes.toByteArray())).use {it.readObject() as LanguageEntryContext}
         assertEquals(context,restored)
-        assertEquals(LanguageEntryContext("Escuta","Espanhol","Minha série","YouTube","Anime","Japonês","Em português"),restored)
+        assertEquals(LanguageEntryContext("Escuta","Espanhol","Minha série","YouTube","Anime","Japonês","Sem legenda"),restored)
         val next=languageMutation("2026-11-03","23:00",restored.language,restored.activity,20,
             title=restored.title,episodes=1,audio=restored.audio,subtitles=restored.subtitles,
             source=restored.source,contentType=restored.contentType)

@@ -3,6 +3,22 @@ from unittest.mock import patch
 from streamlit.testing.v1 import AppTest
 
 
+def test_water_reset_default_and_saved_time_are_local_not_server_utc():
+    app=AppTest.from_string('from solem_health_ui import health_page\nhealth_page(None, [], [], demo=True)',default_timeout=30)
+    with patch('solem_health_ui.now_local',return_value=datetime(2026,11,4,11,20)):
+        app.run()
+        widget=app.time_input(key='water_new_time_2026-11-04')
+        assert widget.value==time(11,20)
+        assert widget.proto.default=='11:20'  # The browser's clear_on_submit reset value.
+        next(x for x in app.button if x.label=='Adicionar água').click().run()
+        assert not app.exception
+        assert app.session_state['demo_health_entries'][0]['logged_at']=='11:20:00'
+        assert app.time_input(key='water_new_time_2026-11-04').proto.default=='11:20'
+        app.time_input(key='water_new_time_2026-11-04').set_value(time(9,35))
+        next(x for x in app.button if x.label=='Adicionar água').click().run()
+        assert app.session_state['demo_health_entries'][-1]['logged_at']=='09:35:00'
+
+
 def test_meal_keeps_selected_time_when_clock_changes_before_submit():
     app=AppTest.from_string('''
 from solem_health_ui import health_page
