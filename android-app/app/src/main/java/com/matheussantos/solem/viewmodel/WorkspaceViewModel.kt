@@ -265,6 +265,12 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
         mutableState.update { it.copy(items=it.items.filterNot { x -> x.id==saved.id } + saved, message="Salvo no Supabase. Atualize no outro dispositivo.") }
         done(saved)
     }
+    fun addFolderImages(items: List<PersonalItem>, done: () -> Unit) = action {
+        repo.addFolderImages(items)
+        load()
+        done()
+        mutableState.update { it.copy(message="Imagens adicionadas à pasta: ${items.size}.") }
+    }
     fun archive(item: PersonalItem) = action { repo.archive(item,!item.archived); load() }
     fun loadHealth() = action {
         try { val rows=healthRepo.list();mutableState.update { it.copy(healthEntries=rows,healthLoaded=true,healthFailed=false) } }

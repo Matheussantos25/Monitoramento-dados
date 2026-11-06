@@ -2,8 +2,10 @@
 import base64
 import io
 import json
+from pathlib import PurePath
+from hashlib import sha256
 from urllib.parse import urlsplit
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import streamlit as st
 from PIL import Image, ImageOps
@@ -46,6 +48,27 @@ def compact_image(upload):
         picture.thumbnail((max(1, picture.width * 3 // 4), max(1, picture.height * 3 // 4)))
 
 
+def folder_images(uploads, folder_id, draft, title=""):
+    if not 1 <= len(uploads) <= 20:
+        raise ValueError("Selecione de 1 a 20 imagens por vez.")
+    rows = []
+    for index, upload in enumerate(uploads, 1):
+        name = PurePath(upload.name).stem.strip() or f"Imagem {index}"
+        upload.seek(0)
+        try:
+            image = compact_image(upload)
+        except (OSError, ValueError, Image.DecompressionBombError) as exc:
+            raise ValueError(f"Confira o arquivo {upload.name}. Use uma imagem válida de até 24 megapixels.") from exc
+        label = title.strip() or name
+        if title.strip() and len(uploads) > 1:
+            label = f"{label[:150]} · {index}"
+        digest = sha256(image.encode("ascii")).hexdigest()
+        row_id = uuid5(UUID(draft), f"{index}/{name}/{digest}")
+        body = PREFIX + json.dumps(dict(folder=folder_id, type="image", value=image))
+        rows.append(dict(id=str(row_id), kind="note", title=label[:160], body=body))
+    return rows
+
+
 def folder_panel(repo, folder, materials):
     from solem_workspace_ui import safe_error
     with st.expander("Pasta de materiais · imagens, links e referências", expanded=True):
@@ -75,25 +98,31 @@ def folder_panel(repo, folder, materials):
         kind = kinds[st.radio("Adicionar à pasta", list(kinds), horizontal=True, key=key+"_type")]
         draft = st.session_state.setdefault(key+"_draft", str(uuid4()))
         with st.form(key+"_"+kind+"_"+draft):
-            title = st.text_input("Título do material", max_chars=160)
+            title = st.text_input("Título das imagens (opcional)" if kind == "image" else "Título do material", max_chars=160)
             if kind == "image":
-                upload = st.file_uploader("Imagem · uma cópia compacta será salva", type=["jpg","jpeg","png","webp"], max_upload_size=10)
+                uploads = st.file_uploader("Selecionar imagens", type=["jpg", "jpeg", "png", "webp"],
+                                          accept_multiple_files=True, max_upload_size=10,
+                                          help="Escolha até 20 imagens. O nome de cada arquivo será usado como título se deixar o campo vazio.")
             elif kind == "link":
                 value = st.text_input("Endereço do link", placeholder="https://", max_chars=2000).strip()
             else:
                 value = st.text_area("Referência ou trecho", max_chars=16000).strip()
-            if st.form_submit_button("Adicionar material"):
+            if st.form_submit_button("Adicionar imagens à pasta" if kind == "image" else "Adicionar material"):
                 try:
-                    if not title.strip():
-                        raise ValueError("Dê um título ao material.")
                     if kind == "image":
-                        value = compact_image(upload)
-                    if not value or (kind == "link" and not web_link(value)):
-                        raise ValueError("Informe uma referência ou um link http/https válido.")
-                    body = PREFIX + json.dumps(dict(folder=folder["id"], type=kind, value=value), ensure_ascii=False)
-                    repo.save(dict(kind="note", title=title.strip(), body=body), new_id=draft)
+                        rows = folder_images(uploads, folder["id"], draft, title)
+                        repo.add_folder_images(rows)
+                        message = f"Imagens adicionadas à pasta: {len(rows)}."
+                    else:
+                        if not title.strip():
+                            raise ValueError("Dê um título ao material.")
+                        if not value or (kind == "link" and not web_link(value)):
+                            raise ValueError("Informe uma referência ou um link http/https válido.")
+                        body = PREFIX + json.dumps(dict(folder=folder["id"], type=kind, value=value), ensure_ascii=False)
+                        repo.save(dict(kind="note", title=title.strip(), body=body), new_id=draft)
+                        message = "Material adicionado à pasta."
                     st.session_state[key+"_draft"] = str(uuid4())
-                    st.session_state.ws_feedback = "Material adicionado à pasta."
+                    st.session_state.ws_feedback = message
                     st.rerun()
                 except Exception as exc:
                     st.error(safe_error(exc))

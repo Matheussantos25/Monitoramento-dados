@@ -95,6 +95,11 @@ class Workspace:
             raise ValueError('Não foi possível confirmar o salvamento. Atualize antes de tentar novamente.')
         return result[0]
 
+    def add_folder_images(self, rows):
+        for row in rows:
+            validate_item(row)
+        self.client.table("solem_items").upsert(rows, on_conflict="id", ignore_duplicates=True).execute()
+
     def archive(self, old, archived):
         result = self.client.table('solem_items').update({'archived':archived}).eq('id',old['id']).eq('revision',old['revision']).execute().data
         if len(result) != 1:

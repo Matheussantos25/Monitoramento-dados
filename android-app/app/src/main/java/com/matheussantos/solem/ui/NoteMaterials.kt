@@ -3,6 +3,7 @@ package com.matheussantos.solem.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.provider.OpenableColumns
 import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -68,6 +69,15 @@ private fun compactImage(context: Context, uri: Uri): String {
     } finally { bitmap.recycle() }
 }
 
+private data class SelectedImage(val id: String, val name: String, val content: String)
+
+private fun selectedImage(context: Context, uri: Uri, index: Int): SelectedImage {
+    val name = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+        if (it.moveToFirst()) it.getString(0) else null
+    }?.substringBeforeLast('.')?.trim().orEmpty().ifBlank { "Imagem $index" }
+    return SelectedImage(UUID.randomUUID().toString(), name, compactImage(context, uri))
+}
+
 @Composable internal fun FolderMaterials(vm: WorkspaceViewModel, folder: PersonalItem,
     materials: List<Pair<PersonalItem,NoteMaterial>>, busy: Boolean) {
     val context = LocalContext.current
@@ -77,18 +87,28 @@ private fun compactImage(context: Context, uri: Uri): String {
     var type by remember { mutableStateOf("Imagem") }
     var title by remember { mutableStateOf("") }
     var value by remember { mutableStateOf("") }
-    var image by remember { mutableStateOf("") }
+    var images by remember { mutableStateOf(emptyList<SelectedImage>()) }
     var processing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var trash by remember { mutableStateOf(false) }
     var draftId by remember { mutableStateOf(UUID.randomUUID().toString()) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) scope.launch {
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { result ->
+        val uris = result.distinct()
+        if (uris.size > 20) {
+            error = "Selecione até 20 imagens por vez."
+        } else if (uris.isNotEmpty()) scope.launch {
             processing = true
-            image = ""
-            try { image = withContext(Dispatchers.IO) { compactImage(context, uri) }; error = "" }
-            catch (_: Exception) { error = "Escolha uma imagem válida de até 24 megapixels." }
-            finally { processing = false }
+            try {
+                images = withContext(Dispatchers.IO) {
+                    uris.mapIndexed { index, uri -> selectedImage(context, uri, index + 1) }
+                }
+                error = ""
+            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                throw cancel
+            } catch (_: Exception) {
+                images = emptyList()
+                error = "Confira a seleção. Cada imagem deve ter até 24 megapixels."
+            } finally { processing = false }
         }
     }
     Row { Checkbox(trash,{trash=it}); Text("Lixeira desta pasta") }
@@ -114,19 +134,36 @@ private fun compactImage(context: Context, uri: Uri): String {
     }
     if (trash) return
     Choice("Adicionar à pasta",type,types.keys.toList()) { type=it;value="";error="" }
-    Field("Título do material",title) { title=it.take(160) }
-    if(type=="Imagem") OutlinedButton({picker.launch("image/*")},enabled=!processing) {
-        Text(if(processing) "Preparando imagem…" else if(image.isEmpty()) "Selecionar imagem · cópia compacta" else "Imagem selecionada · trocar")
-    } else if(type=="Link") Field("Endereço http/https",value) {value=it.take(2000)}
-    else OutlinedTextField(value,{value=it.take(16000)},label={Text("Referência ou trecho")})
-    if(error.isNotEmpty()) Text(error,color=MaterialTheme.colorScheme.error)
-    Button({
-        val content = if(type=="Imagem") image else value.trim()
-        if(type=="Link" && !webLink(content)) error="Informe um link http/https válido."
-        else {
-            val data=NoteMaterial(folder.id,types.getValue(type),content)
-            val item=PersonalItem(draftId,"note",title.trim(),prefix+Json.encodeToString(data))
-            vm.save(item,null) { title="";value="";image="";error="";draftId=UUID.randomUUID().toString() }
+    Field(if (type == "Imagem") "Título das imagens (opcional)" else "Título do material", title) { title=it.take(160) }
+    if (type == "Imagem") {
+        OutlinedButton({ picker.launch("image/*") }, enabled=!processing && !busy) {
+            Text(if (processing) "Preparando imagens…" else "Selecionar imagens")
         }
-    },enabled=!busy && !processing && title.isNotBlank() && (if(type=="Imagem") image.isNotEmpty() else value.isNotBlank())) {Text("Adicionar material")}
+        if (images.isNotEmpty()) Text(images.joinToString("\n") { it.name })
+        Button({
+            val items = images.mapIndexed { index, image ->
+                val label = when {
+                    title.isBlank() -> image.name
+                    images.size == 1 -> title.trim()
+                    else -> "${title.trim().take(150)} · ${index + 1}"
+                }
+                val data = NoteMaterial(folder.id, "image", image.content)
+                PersonalItem(image.id, "note", label.take(160), prefix + Json.encodeToString(data))
+            }
+            vm.addFolderImages(items) { images = emptyList(); title = ""; error = "" }
+        }, enabled=!busy && !processing && images.isNotEmpty()) { Text("Adicionar imagens à pasta") }
+    } else {
+        if(type=="Link") Field("Endereço http/https",value) {value=it.take(2000)}
+        else OutlinedTextField(value,{value=it.take(16000)},label={Text("Referência ou trecho")})
+        Button({
+            val content = value.trim()
+            if(type=="Link" && !webLink(content)) error="Informe um link http/https válido."
+            else {
+                val data=NoteMaterial(folder.id,types.getValue(type),content)
+                val item=PersonalItem(draftId,"note",title.trim(),prefix+Json.encodeToString(data))
+                vm.save(item,null) { title="";value="";error="";draftId=UUID.randomUUID().toString() }
+            }
+        },enabled=!busy && !processing && title.isNotBlank() && value.isNotBlank()) {Text("Adicionar material")}
+    }
+    if(error.isNotEmpty()) Text(error,color=MaterialTheme.colorScheme.error)
 }

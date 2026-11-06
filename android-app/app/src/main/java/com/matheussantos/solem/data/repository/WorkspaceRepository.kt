@@ -55,6 +55,19 @@ class WorkspaceRepository {
         require(changed.size == 1) { "Registro alterado em outro dispositivo. Atualize antes de editar novamente." }
         return changed.single()
     }
+    suspend fun addFolderImages(items: List<PersonalItem>) {
+        require(items.size in 1..20)
+        val rows = items.map { item ->
+            validatePersonalItem(item)
+            buildJsonObject {
+                put("id", item.id)
+                put("kind", "note")
+                put("title", item.title)
+                put("body", item.body)
+            }
+        }
+        client.from("solem_items").upsert(JsonArray(rows)) { ignoreDuplicates = true }
+    }
     suspend fun archive(item: PersonalItem, archived: Boolean) {
         val changed = client.from("solem_items").update(buildJsonObject { put("archived",archived) }) { select(); filter { eq("id",item.id); eq("revision",item.revision) } }.decodeList<PersonalItem>()
         require(changed.size == 1) { "Registro alterado em outro dispositivo. Atualize a lista." }
