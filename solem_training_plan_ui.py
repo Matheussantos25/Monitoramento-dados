@@ -8,10 +8,37 @@ import solem_journal_component
 from solem_training_cycle import START, CYCLE, REVISED, cycle_config, clean_rows, goals_at
 
 
+def supplement_guide(entries, today):
+    from solem_health import private_weight_history
+    from solem_meal_analysis import overview_nutrition
+
+    with st.expander("Whey e creatina · como escolher"):
+        st.caption("Guia para adultos saudáveis que praticam treino de força.")
+        st.markdown("**Whey concentrado**")
+        st.write("Comece pela proteína das refeições. O whey pode complementar o dia quando for difícil atingir a quantidade pela alimentação. Compare os gramas de proteína por porção no rótulo. Em caso de alergia à proteína do leite, evite whey.")
+        weights = [kg for day, kg in private_weight_history(entries or []) if day <= today]
+        if weights:
+            kg = weights[-1]
+            label = f"{kg:.1f}".replace(".", ",")
+            st.write(f"Com seu último peso de {label} kg, a referência de 1,6 g/kg equivale a cerca de **{kg * 1.6:.0f} g de proteína por dia**, somando alimentos e suplementos.")
+        nutrition = overview_nutrition(entries, today)
+        if nutrition and nutrition["known_items"]:
+            protein = f"{nutrition['totals']['protein_g']:.1f}".replace(".", ",")
+            st.write(f"**{protein} g de proteína** nas refeições registradas hoje com cálculo nutricional.")
+            if nutrition["partial"]:
+                st.caption("Total parcial. Há alimentos ou refeições sem estimativa.")
+        st.link_button("Ver whey concentrado na Growth", "https://www.gsuplementos.com.br/whey-protein-concentrado-1kg-growth-supplements-p985936")
+        st.markdown("**Creatina monohidratada**")
+        st.write("Prefira um produto com creatina monohidratada como único ingrediente. Ela pode ajudar em esforços curtos e repetidos, como séries de musculação. Para adultos saudáveis, a dose usual de manutenção é 3–5 g ao dia, inclusive no descanso. Siga a porção indicada no rótulo. Se tem doença renal, converse com seu médico antes de usar.")
+        st.link_button("Ver creatina monohidratada na Growth", "https://www.gsuplementos.com.br/creatina-monohidratada-100gr-growth-supplements-p985930")
+        st.markdown("[Consultar produto na Anvisa](https://consultas.anvisa.gov.br/#/alimentos/) · [Guia de suplementos do NIH](https://ods.od.nih.gov/factsheets/ExerciseAndAthleticPerformance-Consumer/) · [Estudo sobre proteína e treino de força](https://pubmed.ncbi.nlm.nih.gov/28698222/)")
+
+
 def training_plan_panel(records, today, preferences=None, generic=False, calendar=True):
     from solem_ui import navigate_checkup
     st.subheader("Seu ciclo de treino" if not generic else "Seu treino")
     personal = not generic and st.session_state.get("journey_personal", False)
+    supplement_guide(st.session_state.get("overview_health_entries"), today)
     day = st.date_input("Dia do ciclo", today, key="cycle_selected_day") if not generic else today
     future = day > today
     stats = workout_day(records, day, preferences, generic, today, personal)
