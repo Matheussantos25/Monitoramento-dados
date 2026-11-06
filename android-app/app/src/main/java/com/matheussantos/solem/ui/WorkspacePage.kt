@@ -168,13 +168,17 @@ import java.time.LocalDate
                 Field("Mês (AAAA-MM)",month) {month=it}
                 Text("Planejar ou concluir aqui não gera XP. Registre a prática em Treino ou Estudar.")
             }
-            val filtered = state.items.filter { scriptDocument(it)==null && vocabularyDocument(it)==null && it.kind==kind && it.archived==archived && (it.title+" "+it.body).contains(search,true) && (kind!="plan" || it.eventDate.orEmpty().startsWith(month)) }.sortedWith(compareBy({it.eventDate.orEmpty()},{it.eventTime},{it.title}))
+            val materials = remember(state.items) {
+                state.items.mapNotNull { item -> noteMaterial(item)?.let { item to it } }.groupBy { it.second.folder }
+            }
+            val materialIds = remember(materials) { materials.values.flatten().map { it.first.id }.toSet() }
+            val filtered = state.items.filter { it.id !in materialIds && scriptDocument(it)==null && vocabularyDocument(it)==null && it.kind==kind && it.archived==archived && (it.title+" "+it.body).contains(search,true) && (kind!="plan" || it.eventDate.orEmpty().startsWith(month)) }.sortedWith(compareBy({it.eventDate.orEmpty()},{it.eventTime},{it.title}))
             if(kind=="investment") {
                 Text("Valores manuais em BRL, sem cotação ao vivo, corretora ou operações. Diferença nominal, não rentabilidade anualizada.")
                 val cost=filtered.sumOf {it.investedCents};val value=filtered.sumOf{it.valueCents}
                 Panel("Totais da lista filtrada") {Text("Aplicado: R$ %.2f".format(cost/100.0));Text("Saldo informado: R$ %.2f".format(value/100.0));Text("Diferença: R$ %.2f".format((value-cost)/100.0))}
             }
-            if(!archived) Button({editing=null;creating=true},enabled=!state.busy) {Text("＋ Nova página")}
+            if(!archived) Button({editing=null;creating=true},enabled=!state.busy) {Text(if(kind=="note") "＋ Nova anotação / pasta" else "＋ Nova página")}
             if(creating || editing!=null) {
                 key(kind,editing?.id,editing?.revision,creating) {
                     PersonalEditor(kind,editing,state.busy,{editing=null;creating=false}) { value -> vm.save(value,editing) {saved->editing=saved;creating=false} }
@@ -200,6 +204,11 @@ import java.time.LocalDate
                     Row {
                         if(!archived) TextButton({editing=item;creating=false},enabled=!state.busy) {Text("Editar")}
                         TextButton({vm.archive(item);editing=null;creating=false},enabled=!state.busy) {Text(if(archived) "Restaurar" else "Excluir (lixeira)")}
+                    }
+                    if(kind=="note" && !archived) key(item.id) {
+                        var folderOpen by remember { mutableStateOf(false) }
+                        OutlinedButton({ folderOpen=!folderOpen }) { Text(if(folderOpen) "Fechar pasta" else "Pasta de materiais") }
+                        if(folderOpen) FolderMaterials(vm,item,materials[item.id].orEmpty(),state.busy)
                     }
                     if(kind=="pdf" && !archived) {
                         Text("Envie o arquivo após criar o registro. Se houve falha de rede, tente exportar antes de reenviar. Arquivos existentes não são sobrescritos.")

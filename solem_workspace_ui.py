@@ -266,6 +266,10 @@ def render_workspace(repo, items, module=None):
     if module is None:
         module = st.selectbox('Módulo', list(KINDS), key='ws_module')
     kind = KINDS[module]
+    from solem_note_materials import material, folder_panel
+    materials = [(item, data) for item in items if (data := material(item))]
+    material_ids = {item["id"] for item, _ in materials}
+    items = [item for item in items if item["id"] not in material_ids]
     library, document = st.columns([1, 3], gap='large')
     with library:
         st.markdown('##### Páginas')
@@ -281,7 +285,7 @@ def render_workspace(repo, items, module=None):
         next_selected = st.session_state.pop('ws_next_selected', None)
         if next_selected in by_id:
             st.session_state[selection_key] = next_selected
-        if st.button('＋ Nova página', disabled=archived, use_container_width=True):
+        if st.button('＋ Nova anotação / pasta' if kind == 'note' else '＋ Nova página', disabled=archived, use_container_width=True):
             st.session_state[selection_key] = 'new'
         st.caption(f'{len(filtered)} páginas' if filtered else 'Sua coleção começa com uma página.')
         selected = st.radio('Abrir ou editar', ['new']+list(by_id), format_func=lambda x:'Página em branco' if x == 'new' else by_id[x]['title'], key=selection_key, label_visibility='collapsed')
@@ -297,6 +301,11 @@ def render_workspace(repo, items, module=None):
                 b.metric('Saldo informado', f'R$ {value/100:,.2f}')
                 c.metric('Diferença nominal', f'R$ {(value-cost)/100:,.2f}')
                 st.caption('Valores manuais em reais, nas datas informadas.')
+            if kind == "note" and not archived:
+                if selected in by_id:
+                    folder_panel(repo, by_id[selected], materials)
+                else:
+                    st.caption("Crie uma anotação com título para abrir sua pasta de imagens, links e referências.")
             render_document(repo, kind, archived, selected, by_id.get(selected))
 
 def render_document(repo, kind, archived, selected, old):
