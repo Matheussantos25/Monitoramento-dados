@@ -53,6 +53,13 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
     }
 }
 
+@Composable internal fun OccasionalChoice(references: List<MealReference>, add: (MealFood) -> Unit) {
+    val foods = references.filter { it.category == "occasional" }.associateBy { it.displayName }
+    Choice("Adicionar besteira ou alimento ocasional", "", foods.keys.toList()) { label ->
+        foods[label]?.let { add(MealFood(it.name, it.id)) }
+    }
+}
+
 @Composable private fun MealDraftReview(day: LocalDate, catalog: Catalog, workspace: WorkspaceViewModel,
     references: List<MealReference>, initial: List<MealFood>, busy: Boolean,
     previous: HealthEntry?, saved: () -> Unit, weighed: Boolean, spoken: VoiceDraft?) {
@@ -105,6 +112,7 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
             }
         } }
     }
+    if (items.size < 12) OccasionalChoice(references) { items = items + it; confirmed = false }
     TextButton(onClick={items=items+MealFood("Outro alimento");confirmed=false},enabled=items.size<12) { Text("Adicionar alimento") }
     Text("Sem referência compatível? Use o registro simples; não substitua por outro alimento.",style=MaterialTheme.typography.bodySmall)
     val estimate=runCatching { calculateMeal(items,references) }

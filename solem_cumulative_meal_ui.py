@@ -5,7 +5,7 @@ from solem_meal_analysis import catalog, cumulative_items, nutrition, meal_detai
 from solem_health import MEAL_TYPES, now_local
 
 def cumulative_review(client, day, proposal, save, key, old=None, demo=False):
-    from solem_meal_photo_ui import nutrient_metrics, reference_details
+    from solem_meal_photo_ui import nutrient_metrics, reference_details, occasional_shortcut
     table=catalog(); labels={food["id"]:food_display_name(food["name"]) for food in table}
     names={food["id"]:food["name"] for food in table}
     reference_details()
@@ -28,6 +28,7 @@ def cumulative_review(client, day, proposal, save, key, old=None, demo=False):
             reading=st.number_input("Leitura da balança após este alimento (g)",0.0,34000.0,
                 float(old_readings[index] if len(old_readings)==len(source) else reconstructed),1.0,key=f"{key}_reading_{index}")
             items.append({**item,"food_id":chosen});readings.append(reading)
+    occasional_shortcut(table, key)
     added=st.multiselect("Adicionar alimentos na ordem da pesagem",list(labels),format_func=labels.get,key=f"{key}_added")
     for index,food_id in enumerate(added):
         # Removing/reordering an earlier addition invalidates subsequent readings.

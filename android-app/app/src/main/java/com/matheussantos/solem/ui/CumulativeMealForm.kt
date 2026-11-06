@@ -52,6 +52,7 @@ private fun parseScale(value:String)=value.replace(',','.').toDoubleOrNull() ?: 
             if(index==items.lastIndex) TextButton({items=items.dropLast(1);readings=readings.dropLast(1);confirmed=false},enabled=!busy) {Text("Remover última adição")}
         }
     }
+    if (items.size < 12) OccasionalChoice(references) { items = items + it; readings = readings + ""; confirmed = false }
     TextButton({items=items+MealFood("Outro alimento");readings=readings+"";confirmed=false},enabled=!busy && items.size<12) {Text("Adicionar próximo alimento")}
     Text("Remova adições do fim para o começo para não juntar pesos de alimentos diferentes. Para outras exclusões, use o modo individual.",style=MaterialTheme.typography.bodySmall)
     val weighing=MealWeighing(baseline=parseScale(baseline),readings=readings.map(::parseScale))

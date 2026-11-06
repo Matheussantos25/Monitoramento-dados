@@ -63,7 +63,8 @@ fun calculateMeal(items: List<MealFood>, catalog: List<MealReference>): MealEsti
         }
     }
     return MealEstimate(checked,MealNutrients(decimal(kcal),decimal(protein),decimal(carbs),decimal(fat),decimal(fiber)),missing,missing==0).let { estimate ->
-        if(checked.any { it.foodId.startsWith("ibge-") }) estimate.copy(
+        if(checked.any { it.foodId == "mars-snickers-original" }) estimate.copy(basis="Referências por alimento, incluindo rótulo do Snickers Original")
+        else if(checked.any { it.foodId.startsWith("ibge-") }) estimate.copy(
             basis="USDA / TACO / TBCA / IBGE / rótulo Yoki (referências por alimento)",catalogVersion="solem-nutrition-v4")
         else if(checked.any { it.foodId.startsWith("tbca-") || it.foodId.startsWith("yoki-") }) estimate.copy(
             basis="USDA / TACO / TBCA / rótulo Yoki (referências por alimento)",catalogVersion="solem-nutrition-v3")

@@ -155,7 +155,7 @@ import java.time.ZoneOffset
                         })
                     measuredSeconds?.let { Text("Tempo medido: ${clockText(it)}. Minutos arredondados para cima; segundos exatos preservados ao salvar sem alterar a duração.", style = MaterialTheme.typography.bodySmall) }
                 }
-                Choice("Estado mental", mood, listOf("Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado")) { mood = it }
+                Choice("Estado mental", mood, listOf("Normal", "Motivado", "Desmotivado")) { mood = it }
             }
             "Alimentação" -> {
                 Choice("Tipo de refeição", mealType, listOf("Café da manhã", "Lanche da manhã", "Almoço", "Lanche da tarde", "Jantar", "Ceia", "Outra")) { mealType = it }

@@ -45,7 +45,7 @@ class MealNutritionTest {
         assertEquals(150.0,rice.grams,0.01)
     }
     @Test fun sourceAndCalculations() {
-        assertEquals(41,catalog.size)
+        assertEquals(42,catalog.size)
         assertEquals(24,catalog.count { it.id.all { c -> c.isDigit() } })
         assertTrue(catalog.all { it.name.isNotBlank() && (it.sourceUrl.startsWith("https://fdc.nal.usda.gov/") || it.sourceUrl.startsWith("https://nepa.unicamp.br/") || it.sourceUrl.startsWith("https://tbca.net.br/") || it.sourceUrl.startsWith("https://www.yoki.com.br/") || it.sourceUrl.startsWith("https://biblioteca.ibge.gov.br/")) })
         val estimate=calculateMeal(listOf(rice),catalog)

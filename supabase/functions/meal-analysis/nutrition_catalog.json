@@ -589,5 +589,20 @@
       "fat_g": 13.08,
       "fiber_g": 2.02
     }
+  },
+  {
+    "id": "mars-snickers-original",
+    "name": "Snickers Original",
+    "display_name": "Snickers Original",
+    "description": "Barra original de chocolate, amendoim e caramelo. Referência por 45 g: 216 kcal, 4 g de proteína, 27 g de carboidratos, 10 g de gorduras e 1,2 g de fibra. Confira sua embalagem.",
+    "source_url": "https://www.sondadelivery.com.br/rudge/produto/chocolate-amendoim-snickers-45g/1000031231",
+    "category": "occasional",
+    "per100": {
+      "kcal": 480,
+      "protein_g": 8.8889,
+      "carbs_g": 60,
+      "fat_g": 22.2222,
+      "fiber_g": 2.6667
+    }
   }
 ]

@@ -4,6 +4,20 @@ from solem_health import MEAL_TYPES, now_local
 from solem_meal_analysis import catalog, nutrition, meal_details, day_nutrition, food_display_name
 
 
+def occasional_shortcut(table, key):
+    selected_key = f"{key}_added"
+    picker_key = f"{key}_occasional"
+    def append_food():
+        food = st.session_state[picker_key]
+        selected = st.session_state.get(selected_key, [])
+        if food and food not in selected:
+            st.session_state[selected_key] = [*selected, food]
+        st.session_state[picker_key] = None
+    labels = {f["id"]: f.get("display_name", f["name"]) for f in table if f.get("category") == "occasional"}
+    st.selectbox("Adicionar besteira ou alimento ocasional", list(labels), format_func=labels.get,
+                 index=None, placeholder="Escolha um doce, biscoito ou salgado", key=picker_key, on_change=append_food)
+
+
 def reference_details():
     with st.expander("Referências nutricionais e preparo"):
         st.caption("Os nomes são simplificados. O cálculo continua usando estas referências específicas; preparo e ingredientes podem mudar os valores.")
@@ -79,6 +93,7 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
                     values = nutrition([entry])["totals"]
                     st.caption(f"Este alimento: {values['kcal']:.1f} kcal · {values['protein_g']:.1f} g de proteína")
     # Add missing ingredients without another AI request (also supports manual corrections).
+    occasional_shortcut(table, key)
     added = st.multiselect("Adicionar alimentos à refeição", list(labels), format_func=labels.get, key=f"{key}_added")
     for food_id in added:
         grams = st.number_input(f"Peso de {labels[food_id]} (g)", 0.0, 2000.0, 0.0, 1.0, key=f"{key}_extra_{food_id}")

@@ -89,7 +89,7 @@ ALIMENTOS_SAUDAVEIS = ["Banana", "Uva", "Maçã", "Laranja", "Melão", "Melancia
                        "Castanhas", "Cuscuz com leite", "Inhame", "Sopa", "Batata-doce", "Macaxeira"]
 ALIMENTOS_SAUDAVEIS.sort()
 
-ALIMENTOS_BESTEIROL = ["Refrigerante", "Hambúrguer", "Pizza", "Lasanha", "Churros", "Pastel", "Coxinha", "Sorvete", "Batata Frita", "Sonho de Valsa", "Biscoito Recheado", "Chocotone"]
+ALIMENTOS_BESTEIROL = ["Refrigerante", "Hambúrguer", "Pizza", "Lasanha", "Churros", "Pastel", "Coxinha", "Sorvete", "Batata Frita", "Sonho de Valsa", "Snickers Original", "Biscoito Recheado", "Chocotone"]
 ALIMENTOS_BESTEIROL.sort()
 
 DISCIPLINAS_ESTUDO = [
@@ -895,7 +895,7 @@ if pagina == "Treino":
                                                         step=15 if field == "descanso_seg" else 1, key=key)
             isometria_tentativas = values.get("series", values.get("repeticoes", 0)) if "isometria_segundos" in fields else 0
             st.markdown("---")
-            humor = st.selectbox("Estado Mental no Treino", ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"])
+            humor = st.selectbox("Estado Mental no Treino", ["Normal", "Motivado", "Desmotivado"])
             
             if st.form_submit_button("Salvar treino", use_container_width=True):
                 grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if exercicio_input in l), "Outro")
@@ -968,7 +968,7 @@ if pagina == "Treino":
             st.markdown("---")
             c_round1, c_round2 = st.columns(2)
             with c_round1: rounds = st.number_input("Número TOTAL de Rounds Completos", min_value=0, step=1, value=5)
-            with c_round2: humor = st.selectbox("Estado Mental no Treino", ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"], key="humor_amrap")
+            with c_round2: humor = st.selectbox("Estado Mental no Treino", ["Normal", "Motivado", "Desmotivado"], key="humor_amrap")
             st.info(f"📊 **Total Projetado:** Serão gravados **{rounds * 5} Barras**, **{rounds * 10} Flexões** e **{rounds * 15} Agachamentos** no histórico.")
             
             if st.form_submit_button("🚀 Gravar AMRAP", use_container_width=True):
@@ -1890,9 +1890,10 @@ if pagina in ("Configurações", "Treino", "Estudar"):
                         new_dur = st.number_input("Duração Cardio (min)", min_value=0, value=int(dur_val if pd.notnull(dur_val) else 0))
                         dist_val = row_data.get('distancia_km', 0.0)
                         new_dist = st.number_input("Distância (km)", min_value=0.0, value=float(dist_val if pd.notnull(dist_val) else 0.0))
-                    humores = ["Normal", "Foco Extremo", "Motivado", "Cansado", "Estressado"]
+                    humores = ["Normal", "Motivado", "Desmotivado"]
                     old_humor = extras.get('humor', 'Normal')
-                    new_humor = st.selectbox("Estado Mental", humores, index=humores.index(old_humor) if old_humor in humores else 0)
+                    new_humor = st.selectbox("Estado Mental", humores, index=humores.index(old_humor) if old_humor in humores else None,
+                                             placeholder=f"Manter registro anterior ({old_humor})") or old_humor
 
                 elif is_nutricao:
                     st.info("💡 Edite os alimentos listados abaixo (separados por vírgula).")
