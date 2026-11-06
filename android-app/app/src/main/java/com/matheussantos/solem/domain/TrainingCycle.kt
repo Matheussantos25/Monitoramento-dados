@@ -9,6 +9,8 @@ import kotlin.math.floor
 
 @Serializable data class TrainingCycleDefinition(
     @SerialName("starts_on") val startsOn: String, val weeks: Int,
+    @SerialName("required_sessions") val requiredSessions: Int = 2,
+    @SerialName("pull_alternative") val pullAlternative: String = "row",
     val labels: List<String>, val days: List<PlanWeekday>, val exercises: Map<String, CycleExercise>)
 @Serializable data class CycleExercise(val exercise: String, val unit: String, val field: String,
     val sets: List<Int>, @SerialName("per_set") val perSet: List<Int>,
@@ -45,11 +47,11 @@ fun trainingCycleDay(records: List<TrainingRecord>, day: LocalDate, cycle: Train
         var spec = cycle.exercises.getValue(key)
         var baseline = baseline(spec)
         val fallback = key == "pull" && (baseline.third == null || baseline.third!! * .8 < 3)
-        if(fallback) { spec = cycle.exercises.getValue("row"); baseline = baseline(spec) }
+        if(fallback) { spec = cycle.exercises.getValue(cycle.pullAlternative); baseline = baseline(spec) }
         val perSet = baseline.first + spec.perSet[stage] - spec.perSet[0]
         val names = if(key == "walk") listOf("Caminhada","Corrida") else listOf(spec.exercise)
         val value = rows.filter {it.data.take(10)==date.toString() && it.exercicio in names}.sumOf {amount(it,spec)}
-        val note = (if(fallback) "Sem referência suficiente por série na barra: remada como alternativa. " else "") + spec.note
+        val note = (if(fallback) "Sem referência suficiente por série na barra: use ${spec.exercise}. " else "") + spec.note
         PlanGoal(PlanExercise(spec.exercise,spec.unit,spec.field,spec.minimum,spec.maximum,1,spec.sets[stage],spec.restSeconds,note,spec.baseId),
             perSet*spec.sets[stage],value,baseline.second)
     }
@@ -59,9 +61,9 @@ fun trainingCycleDay(records: List<TrainingRecord>, day: LocalDate, cycle: Train
         val achieved = (0..6).count {offset ->
             val date = first.plusDays(offset.toLong())
             val goals = goalsAt(date,stage)
-            date.dayOfWeek.value in listOf(1,3,5) && goals.isNotEmpty() && goals.all {it.fraction >= .8}
+            goals.any { it.spec.unit == "rep" } && goals.all {it.fraction >= .8}
         }
-        if(achieved >= 2) stage = (stage+1).coerceAtMost(2)
+        if(achieved >= cycle.requiredSessions) stage = (stage+1).coerceAtMost(2)
     }
     if(index == 3) stage = 3
     if(previewStage != null) stage = previewStage.coerceIn(0,3)

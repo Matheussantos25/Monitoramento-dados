@@ -69,7 +69,8 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
             } }
             DisposableEffect(owner) { onDispose { sessionStore.clear() } }
             CompositionLocalProvider(androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner provides owner,
-                LocalGpsAccount provides auth.accountId) {
+                LocalGpsAccount provides auth.accountId,
+                LocalPersonalCycle provides remember(auth.accountId) { workspaceVm.trainingTable == "treinos" }) {
                 AuthenticatedSolemApp(workspaceVm, auth.accountId, auth.generic,store)
             }
         }

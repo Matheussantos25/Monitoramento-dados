@@ -33,10 +33,10 @@ def _value(row, field):
     return max(0, number(raw))
 
 
-def plan_day(records, day, enabled=True):
-    from solem_training_cycle import START, cycle_day
+def plan_day(records, day, enabled=True, personal=False):
+    from solem_training_cycle import START, cycle_day, cycle_config
     if enabled and day >= START:
-        return cycle_day(records, day)
+        return cycle_day(records, day, cycle_config(day, personal))
     weekday = PLAN["days"][day.weekday()]
     week = day - timedelta(days=day.weekday())
     rows = workout_rows(records)
@@ -63,19 +63,19 @@ def plan_day(records, day, enabled=True):
                 percent=pct, active=active, recovery=active and not goals, week=week)
 
 
-def workout_day(records, day, preferences=None, generic=False, now=None):
+def workout_day(records, day, preferences=None, generic=False, now=None, personal=False):
     now = now or day
     rows = workout_rows(records)
     base = [g for g in daily_checkup(rows, [], day, generic, preferences)
             if g["page"] == "Treino"]
-    from solem_training_cycle import START, cycle_base_goals
+    from solem_training_cycle import START, cycle_base_goals, cycle_config
     if not generic and day >= START:
         # Calendar B remains the cycle's base, independent of personal checklist
         # settings. Both views read the same sessions; neither creates extra reps.
-        base = cycle_base_goals(rows, day)
+        base = cycle_base_goals(rows, day, cycle_config(day, personal))
     future = day > now
     base_pct = floor(sum(min(1, max(0, g["value"]) / g["target"]) for g in base) / len(base) * 100 + 1e-7) if base and not future else None
-    plan = plan_day(rows, day, enabled=not generic)
+    plan = plan_day(rows, day, enabled=not generic, personal=personal)
     return dict(date=day.isoformat(), study=False, study_minutes=0,
                 workout=not future and any(record_date(r["data"]) == day for r in rows),
                 base_pct=base_pct, plan_pct=None if future else plan["percent"],

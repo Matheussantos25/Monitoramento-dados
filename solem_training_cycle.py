@@ -6,13 +6,17 @@ from statistics import median
 from math import floor
 from solem_progress import category_of, extras_of, number, record_date
 
-CYCLE = json.loads((Path(__file__).parent / "assets/weekly_training_plan.json").read_text(encoding="utf8"))["cycle"]
+DEFINITIONS = json.loads((Path(__file__).parent / "assets/weekly_training_plan.json").read_text(encoding="utf8"))
+CYCLE = DEFINITIONS["cycle"]
 START = date.fromisoformat(CYCLE["starts_on"])
 END = START + timedelta(days=27)
-REVISED = json.loads((Path(__file__).parent / "assets/weekly_training_plan.json").read_text(encoding="utf8"))["cycle_revised"]
+REVISED = DEFINITIONS["cycle_revised"]
+PERSONAL = DEFINITIONS["personal_cycle"]
 
 
-def cycle_config(day):
+def cycle_config(day, personal=False):
+    if personal and day >= date.fromisoformat(PERSONAL["starts_on"]):
+        return PERSONAL
     return REVISED if day >= date.fromisoformat(REVISED["starts_on"]) else CYCLE
 
 
@@ -57,7 +61,7 @@ def goals_at(rows, day, stage, cycle=CYCLE):
         base, count, estimate = baseline(rows, spec, cycle)
         fallback = key == "pull" and (estimate is None or estimate * .8 < 3)
         if fallback:
-            spec = cycle["exercises"]["row"]
+            spec = cycle["exercises"][cycle.get("pull_alternative", "row")]
             base, count, estimate = baseline(rows, spec, cycle)
         per_set = base + spec["per_set"][stage] - spec["per_set"][0]
         sets = spec["sets"][stage]
@@ -87,9 +91,9 @@ def cycle_day(records, day, cycle=None):
         for offset in range(7):
             when = first + timedelta(days=offset)
             goals = goals_at(rows, when, stage, cycle)
-            if when.weekday() in (0, 2, 4) and goals and all(g["fraction"] >= .8 for g in goals):
+            if any(g["unit"] == "rep" for g in goals) and all(g["fraction"] >= .8 for g in goals):
                 achieved += 1
-        if achieved >= 2:
+        if achieved >= cycle.get("required_sessions", 2):
             stage = min(2, stage+1)
     if index == 3:
         stage = 3  # Recovery week is never replaced by another overload week.
@@ -100,7 +104,7 @@ def cycle_day(records, day, cycle=None):
                 cycle_week=index+1, stage=stage+1, phase=cycle["labels"][stage], held=stage<index)
 
 
-def cycle_base_goals(records, day):
+def cycle_base_goals(records, day, cycle=None):
     return [dict(id=g["base_id"], label={"flexao":"Flexões", "agachamento":"Agachamentos", "cardio":"Caminhada ou corrida"}[g["base_id"]],
                  value=g["value"], target=g["target"], unit=g["unit"], page="Treino", exercise=g["exercise"])
-            for g in cycle_day(records, day)["goals"] if g["base_id"]]
+            for g in cycle_day(records, day, cycle)["goals"] if g["base_id"]]

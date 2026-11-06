@@ -11,7 +11,8 @@ import kotlin.math.floor
     @SerialName("lookback_days") val lookbackDays: Int,
     @SerialName("history_factor") val historyFactor: Double,
     val exercises: Map<String, PlanExercise>, val days: List<PlanWeekday>, val cycle: TrainingCycleDefinition? = null,
-    @SerialName("cycle_revised") val cycleRevised: TrainingCycleDefinition? = null
+    @SerialName("cycle_revised") val cycleRevised: TrainingCycleDefinition? = null,
+    @SerialName("personal_cycle") val personalCycle: TrainingCycleDefinition? = null
 )
 @Serializable data class PlanExercise(val exercise: String, val unit: String, val field: String,
     val minimum: Int, val maximum: Int, val step: Int, val sets: Int,
@@ -29,7 +30,7 @@ data class WorkoutPlanDay(val date: LocalDate, val title: String, val duration: 
 }
 
 fun cycleForDay(definition: WeeklyPlanDefinition, day: LocalDate): TrainingCycleDefinition? =
-    definition.cycleRevised?.takeIf {day >= LocalDate.parse(it.startsOn)} ?: definition.cycle
+    definition.personalCycle?.takeIf {day >= LocalDate.parse(it.startsOn)} ?: definition.cycleRevised?.takeIf {day >= LocalDate.parse(it.startsOn)} ?: definition.cycle
 
 fun weeklyPlanDay(records: List<TrainingRecord>, day: LocalDate, definition: WeeklyPlanDefinition,
     enabled: Boolean = true): WorkoutPlanDay {

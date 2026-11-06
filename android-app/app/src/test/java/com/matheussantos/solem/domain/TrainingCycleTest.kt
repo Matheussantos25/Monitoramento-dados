@@ -16,7 +16,8 @@ class TrainingCycleTest {
             val rows=Json.decodeFromJsonElement<List<TrainingRecord>>(case.getValue("records"))
             val day=LocalDate.parse(case.getValue("day").jsonPrimitive.content)
             val expected=case.getValue("expected").jsonObject
-            val plan=weeklyPlanDay(rows,day,definition)
+            val historical = definition.copy(personalCycle = null)
+            val plan=weeklyPlanDay(rows,day,historical)
             assertEquals(name,expected.getValue("active").jsonPrimitive.boolean,plan.active)
             assertEquals(name,expected.getValue("stage").jsonPrimitive.int,plan.stage)
             assertEquals(name,expected.getValue("week").jsonPrimitive.int,plan.cycleWeek)
@@ -35,7 +36,7 @@ class TrainingCycleTest {
                 assertEquals(name,goal.getValue("unit").jsonPrimitive.content,actual.spec.unit)
             }
             val settings=DashboardPreferences(pushups=100,squats=100)
-            val missions=dailyMissions(rows,emptyList(),settings,false,false,day,definition).filter {it.destination==1}
+            val missions=dailyMissions(rows,emptyList(),settings,false,false,day,historical).filter {it.destination==1}
             val base=expected.getValue("base").jsonArray
             assertEquals(name,base.size,missions.size)
             base.zip(missions).forEach {(raw,actual) ->
@@ -46,6 +47,16 @@ class TrainingCycleTest {
             }
             assertEquals(100,settings.pushups)
         }
+    }
+    @Test fun personalSplitStartsOnFridayAndEndsAfterFourWeeks() {
+        val start = LocalDate.of(2026,11,6)
+        val prior = definition.copy(personalCycle = null)
+        assertEquals(weeklyPlanDay(emptyList(),start.minusDays(1),prior), weeklyPlanDay(emptyList(),start.minusDays(1),definition))
+        val friday = weeklyPlanDay(emptyList(),start,definition)
+        assertEquals(listOf("Flexão","Remada Baixa","Puxada Alta","Prancha"), friday.goals.map { it.spec.exercise })
+        assertEquals(32,friday.goals.first().target)
+        assertEquals(4,weeklyPlanDay(emptyList(),start.plusWeeks(3),definition).stage)
+        assertTrue(weeklyPlanDay(emptyList(),start.plusWeeks(4),definition).completed)
     }
     @Test fun genericAndHistoricalGoalsUnchanged() {
         val settings=DashboardPreferences.defaults(true)

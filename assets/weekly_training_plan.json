@@ -598,5 +598,285 @@
         "note": "O deslocamento a pé para o trabalho já conta. Caminhada e corrida registradas contam, mas não é necessário correr ou fazer HIIT."
       }
     }
+  },
+  "personal_cycle": {
+    "starts_on": "2026-11-06",
+    "weeks": 4,
+    "labels": [
+      "Calibrar as séries",
+      "Ganhar repetições",
+      "Consolidar a força",
+      "Reduzir volume e comparar a técnica"
+    ],
+    "days": [
+      {
+        "title": "Pernas e abdômen",
+        "exercises": [
+          "squat",
+          "bridge",
+          "core"
+        ],
+        "minutes": "35–55 min"
+      },
+      {
+        "title": "Peito, costas e estabilidade",
+        "exercises": [
+          "push",
+          "row",
+          "pull",
+          "plank"
+        ],
+        "minutes": "45–65 min"
+      },
+      {
+        "title": "Caminhada · ritmo confortável",
+        "exercises": [
+          "walk"
+        ],
+        "minutes": "Conforme seu ritmo"
+      },
+      {
+        "title": "Pernas e abdômen",
+        "exercises": [
+          "squat",
+          "bridge",
+          "core"
+        ],
+        "minutes": "35–55 min"
+      },
+      {
+        "title": "Peito, costas e estabilidade",
+        "exercises": [
+          "push",
+          "row",
+          "lat",
+          "plank"
+        ],
+        "minutes": "45–65 min"
+      },
+      {
+        "title": "Caminhada · ritmo confortável",
+        "exercises": [
+          "walk"
+        ],
+        "minutes": "Conforme seu ritmo"
+      },
+      {
+        "title": "Descanso",
+        "exercises": [],
+        "minutes": "Sem meta obrigatória"
+      }
+    ],
+    "required_sessions": 3,
+    "pull_alternative": "lat",
+    "exercises": {
+      "push": {
+        "exercise": "Flexão",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          4,
+          4,
+          5,
+          3
+        ],
+        "per_set": [
+          8,
+          9,
+          8,
+          8
+        ],
+        "rest_seconds": 150,
+        "minimum": 8,
+        "maximum": 8,
+        "history": false,
+        "base_id": "flexao",
+        "note": "Mãos pouco além da largura dos ombros. Use a amplitude que controla em todas as séries. Seus 3×10 são a referência; se faltar margem para duas repetições, encerre a série antes."
+      },
+      "row": {
+        "exercise": "Remada Baixa",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          8,
+          9,
+          10,
+          8
+        ],
+        "rest_seconds": 120,
+        "minimum": 6,
+        "maximum": 12,
+        "history": true,
+        "base_id": "",
+        "note": "Puxe em direção ao abdômen, sem embalo. Escolha uma carga que deixe duas ou três repetições possíveis."
+      },
+      "lat": {
+        "exercise": "Puxada Alta",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          8,
+          9,
+          10,
+          8
+        ],
+        "rest_seconds": 120,
+        "minimum": 6,
+        "maximum": 12,
+        "history": true,
+        "base_id": "",
+        "note": "Puxe pela frente com controle. Ajuste a carga da máquina para terminar cada série com duas ou três repetições possíveis."
+      },
+      "pull": {
+        "exercise": "Barra Fixa (Pronada)",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          3,
+          4,
+          5,
+          3
+        ],
+        "rest_seconds": 150,
+        "minimum": 3,
+        "maximum": 5,
+        "history": true,
+        "base_id": "",
+        "note": "Use a pegada pronada e desça com controle. Use assistência se precisar para manter a execução."
+      },
+      "plank": {
+        "exercise": "Prancha",
+        "unit": "seg",
+        "field": "isometria_segundos",
+        "sets": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "per_set": [
+          20,
+          25,
+          30,
+          20
+        ],
+        "rest_seconds": 90,
+        "minimum": 10,
+        "maximum": 30,
+        "history": true,
+        "base_id": "",
+        "note": "Registre a soma dos segundos das séries. Respire normalmente e encerre quando perder o alinhamento."
+      },
+      "squat": {
+        "exercise": "Agachamento",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          4,
+          4,
+          4,
+          3
+        ],
+        "per_set": [
+          15,
+          16,
+          18,
+          12
+        ],
+        "rest_seconds": 120,
+        "minimum": 15,
+        "maximum": 15,
+        "history": false,
+        "base_id": "agachamento",
+        "note": "Seu ponto de partida são 20 agachamentos seguidos. Se 15 ficarem fáceis em todas as séries, use uma carga leve orientada na academia e mantenha as repetições nessa sessão."
+      },
+      "bridge": {
+        "exercise": "Ponte de Glúteos",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          4,
+          2
+        ],
+        "per_set": [
+          12,
+          14,
+          12,
+          10
+        ],
+        "rest_seconds": 90,
+        "minimum": 10,
+        "maximum": 10,
+        "history": false,
+        "base_id": "",
+        "note": "Eleve o quadril com os pés apoiados. Quando completar as séries com folga, ajuste a resistência com orientação na academia."
+      },
+      "core": {
+        "exercise": "Abdominal Levantada",
+        "unit": "rep",
+        "field": "repeticoes",
+        "sets": [
+          3,
+          3,
+          4,
+          2
+        ],
+        "per_set": [
+          10,
+          11,
+          10,
+          8
+        ],
+        "rest_seconds": 90,
+        "minimum": 3,
+        "maximum": 12,
+        "history": true,
+        "base_id": "",
+        "note": "Eleve as pernas deitado, mantendo a lombar controlada. Dobre os joelhos se precisar reduzir a dificuldade."
+      },
+      "walk": {
+        "exercise": "Caminhada",
+        "unit": "km",
+        "field": "distancia_km",
+        "sets": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "per_set": [
+          5,
+          5,
+          5,
+          5
+        ],
+        "rest_seconds": 0,
+        "minimum": 5,
+        "maximum": 5,
+        "history": false,
+        "base_id": "cardio",
+        "note": "O deslocamento a pé para o trabalho já conta. Caminhada e corrida registradas contam, mas não é necessário correr ou fazer HIIT."
+      }
+    }
   }
 }

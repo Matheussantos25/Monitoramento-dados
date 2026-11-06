@@ -193,3 +193,27 @@ training_plan_panel([],date(2026,10,26),calendar=False)
     assert app.session_state['checkup_workout_request']=='Abdominal Levantada'
     app.date_input(key='cycle_selected_day').set_value(__import__('datetime').date(2026,10,28)).run()
     assert all(b.disabled for b in app.button if b.key and b.key.startswith('plan_register_'))
+
+
+def test_personal_split_effective_dates_and_progression():
+    from datetime import date
+    start = date(2026, 11, 6)
+    def personal(rows, day):
+        return plan_day(rows, day, personal=True)
+    yesterday = start - timedelta(days=1)
+    assert personal([], yesterday) == plan_day([], yesterday)
+    assert personal([], start) != plan_day([], start)
+    assert not plan_day([], start, enabled=False, personal=True).get("cycle")
+    assert [g["exercise"] for g in personal([], start)["goals"]] == ["Flexão", "Remada Baixa", "Puxada Alta", "Prancha"]
+    rows = []
+    for offset in (0, 3, 4):
+        day = start + timedelta(days=offset)
+        goals = personal(rows, day)["goals"]
+        assert len(set(g["exercise"] for g in goals)) == len(goals)
+        for g in goals:
+            rows.append(record(len(rows)+1, day, g["exercise"], reps=g["target"] if g["unit"] == "rep" else 0,
+                               sets=g["sets"], seconds=g["target"] if g["unit"] == "seg" else 0))
+        assert personal(rows, start+timedelta(days=7))["stage"] == (2 if offset == 4 else 1)
+    assert personal(rows,start+timedelta(days=21))["stage"] == 4
+    assert personal(rows,start+timedelta(days=28))["completed"]
+    assert workout_day(rows,start,now=start,personal=True)["plan_pct"] == 100

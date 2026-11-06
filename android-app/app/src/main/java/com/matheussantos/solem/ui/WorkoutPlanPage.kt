@@ -20,9 +20,15 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+internal val LocalPersonalCycle = staticCompositionLocalOf { false }
+
 @Composable internal fun rememberWeeklyDefinition(): WeeklyPlanDefinition {
     val context = LocalContext.current
-    return remember { Json.decodeFromString<WeeklyPlanDefinition>(context.assets.open("weekly_training_plan.json").bufferedReader().use {it.readText()}) }
+    val personal = LocalPersonalCycle.current
+    return remember(personal) {
+        val definition = Json.decodeFromString<WeeklyPlanDefinition>(context.assets.open("weekly_training_plan.json").bufferedReader().use {it.readText()})
+        if (personal) definition else definition.copy(personalCycle = null)
+    }
 }
 
 @Composable fun WorkoutProgressBars(rows: List<TrainingRecord>, generic: Boolean, available: Boolean,
@@ -54,14 +60,15 @@ import java.util.Locale
     val plan = weeklyPlanDay(rows, day, definition, !generic)
     val future = day > today()
     Page("Plano e calendário de treino") {
-        Text("Força de corpo inteiro às segundas, quartas e sextas; caminhada às terças e quintas; recuperação no fim de semana. O histórico não mede capacidade máxima.")
-        if(!generic) (definition.cycleRevised ?: definition.cycle)?.let {cycle ->
+        if(!generic) cycleForDay(definition, day)?.let {cycle ->
             val start = LocalDate.parse(cycle.startsOn)
-            Text("Ciclo revisado: 26/10 a 22/11/2026 · a base já está incluída na sessão. Datas anteriores preservam o plano original.")
+            val fmt = DateTimeFormatter.ofPattern("dd/MM")
+            Text("Ciclo de ${start.format(fmt)} a ${start.plusDays(27).format(fmt)} · a base já está incluída na sessão.")
+            if (cycle == definition.personalCycle) Text("Segunda e quinta: pernas e abdômen. Terça e sexta: peito, costas e prancha. Quarta e sábado: caminhada. Domingo: descanso. Deixe 2–3 repetições em reserva. Se houver folga em duas sessões, aumente a resistência ou avance nas repetições, um ajuste por vez.")
             if(day < start) Button({selectedText=start.toString();monthText=YearMonth.from(start).toString()}) {Text("Ver início do novo ciclo")}
             if(plan.cycleWeek > 0) Text("Semana ${plan.cycleWeek}/4 · ${plan.phase}",style=MaterialTheme.typography.titleMedium)
             if(plan.held) Text("Etapa mantida: faltaram registros suficientes de conclusão na semana anterior. Não tente compensar sessões perdidas.")
-            Text("Semanas 1–3: progressão gradual. Semana 4: menos volume para recuperar. O app só avança com pelo menos 2 sessões de força a 80% de cada exercício na semana anterior. Isso mede registro, não recuperação: reduza ou descanse se houver fadiga ou perda de técnica.",style=MaterialTheme.typography.bodySmall)
+            Text("Semanas 1–3: progressão gradual. Semana 4: menos volume para recuperar. O app só avança com pelo menos ${cycle.requiredSessions} sessões de força a 80% de cada exercício na semana anterior. Isso mede registro, não recuperação: reduza ou descanse se houver fadiga ou perda de técnica.",style=MaterialTheme.typography.bodySmall)
             TextButton({showCycle=!showCycle}) {Text(if(showCycle) "Ocultar ciclo" else "Ver as 4 semanas · progressão planejada")}
             if(showCycle) {
                 Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -98,7 +105,7 @@ import java.util.Locale
                     Text(date.format(DateTimeFormatter.ofPattern("EEEE",Locale.forLanguageTag("pt-BR"))) + " · " + item.title,style=MaterialTheme.typography.titleMedium)
                     Text(item.goals.joinToString(" · ") {"${it.spec.exercise}: ${it.target} ${it.spec.unit}"}.ifBlank {"Sem volume extra"})
                 }
-                Text(if(plan.cycle) "Flexão e agachamento partem da capacidade que você relatou. Nos demais, usamos registros com 2–8 séries anteriores ao ciclo: 80% da mediana por série, com limites conservadores. Sem referência suficiente na barra, usamos remada. É uma heurística do app, não uma avaliação clínica. Registre repetições totais e a quantidade real de séries." else "Metas anteriores ao ciclo: 70% da mediana diária, com limites conservadores.",style=MaterialTheme.typography.bodySmall)
+                Text(if(plan.cycle) "Flexão e agachamento partem da capacidade que você relatou. Nos demais, usamos registros com 2–8 séries anteriores ao ciclo: 80% da mediana por série, com limites conservadores. Sem referência suficiente na barra, o card mostra a alternativa do ciclo. É uma heurística do app, não uma avaliação clínica. Registre repetições totais e a quantidade real de séries." else "Metas anteriores ao ciclo: 70% da mediana diária, com limites conservadores.",style=MaterialTheme.typography.bodySmall)
                 Text("Deixe cerca de 2–3 repetições possíveis; não busque falha técnica. Interrompa com dor, tontura ou falta de ar incomum. Sem barra disponível, não improvise suporte. A recuperação vale também para as metas base.",style=MaterialTheme.typography.bodySmall)
                 Text("Treinar abdômen não remove gordura localizada nem garante definição em prazo. Sono, alimentação e recuperação importam. Referência: ACSM 2026.",style=MaterialTheme.typography.bodySmall)
             }
