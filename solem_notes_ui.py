@@ -139,3 +139,22 @@ def notes_library(repo, items):
                 except Exception as exc:
                     draft["error"] = safe_error(exc)
                 st.rerun()
+
+
+def notes_page():
+    from solem_workspace_ui import require_login, safe_error, logout_private
+    from solem_workspace import Workspace
+    from solem_scripts import script_data
+    from solem_vocabulary import vocabulary_data
+    client = require_login()
+    st.header("Anotações")
+    st.caption("Pastas para organizar. Páginas para reunir texto, imagens e referências.")
+    repo = Workspace(client)
+    try:
+        client.auth.get_user()
+        items = repo.list()
+    except Exception as error:
+        st.error(safe_error(error))
+        st.button("Entrar novamente", on_click=logout_private)
+        return
+    notes_library(repo, [item for item in items if not script_data(item) and not vocabulary_data(item)])

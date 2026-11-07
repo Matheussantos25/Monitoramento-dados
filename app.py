@@ -758,7 +758,11 @@ if pagina == "Metas e aparência":
     from solem_journey_ui import settings_page
     settings_page()
 
-if pagina in ("Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro"):
+if pagina == "Anotações":
+    from solem_notes_ui import notes_page
+    notes_page()
+
+if pagina in ("Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro"):
     from solem_workspace_ui import workspace_page
     workspace_page(pagina)
 
