@@ -151,12 +151,16 @@ render_workspace(Repo(), [dict(id='map-1',kind='mindmap',title='Mapa',body='Raiz
         from streamlit.testing.v1 import AppTest
         app=AppTest.from_string('''
 from solem_workspace_ui import render_workspace
+import solem_notes_library as notes_ui
+import streamlit as st
+notes_ui._library=lambda **kwargs: st.session_state.pop('library_event',None)
 class Repo: pass
 render_workspace(Repo(), [dict(id='note-1',kind='note',title='Minha p'+chr(225)+'gina',body='# Meu resumo\\n\\n**Conceito importante**',archived=False,revision=1)], 'Anota'+chr(231)+chr(245)+'es')
 ''').run()
         self.assertFalse(app.exception)
         self.assertFalse(app.selectbox)
-        app.button(key='note_open_note-1').click().run()
+        app.session_state['library_event']=dict(event='open',action='open_note',id='note-1')
+        app.run()
         self.assertFalse(app.exception)
         draft=app.session_state['note_draft_note-1']
         self.assertEqual(draft['blocks'][0]['text'], '# Meu resumo\n\n**Conceito importante**')

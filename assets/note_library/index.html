@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{color-scheme:dark;font:14px system-ui,sans-serif;color:#e4effc;background:transparent}*{box-sizing:border-box}
+body{margin:0;padding:2px}button,select{font:inherit}button{cursor:pointer;color:inherit;background:#101b2b;border:1px solid #35485c;border-radius:8px;padding:12px;text-align:left;min-height:44px}
+button:hover{background:#1a3047}button:focus-visible,select:focus-visible{outline:2px solid #8cddfa;outline-offset:2px}
+.row{display:flex;gap:7px;margin:0 0 9px}.open{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.45;display:flex;align-items:center;gap:10px}
+.icon{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
+.actions{padding:8px;min-width:34px;text-align:center}.selected{background:#1b394e;border-color:#72c9e7}
+.folder.drop{outline:2px solid #8addf4;background:#20475d;box-shadow:inset 0 0 0 2px #8addf4}.folder.drop .open:after{content:"Soltar aqui";font-size:11px;color:#b8efff}
+.dragging{opacity:.45}.note{cursor:grab;user-select:none}.note:active{cursor:grabbing}
+small{display:block;color:#9baec4;font-size:12px;line-height:1.5;margin:8px 2px 16px}
+hr{border:0;border-top:1px solid #2b3d50;margin:19px 0}#new{width:100%;margin-bottom:15px;text-align:center}
+#status{font-size:12px;line-height:1.5;color:#9fdfef;min-height:20px;margin:12px 0 5px}.error{color:#ffb5ad!important}
+button:disabled{opacity:.55;cursor:wait}.move{margin:0 0 14px;padding:10px;border:1px solid #47647e;border-radius:8px}
+.move select{width:100%;padding:9px;color:inherit;background:#142438;border:1px solid #47647e;border-radius:6px;margin:8px 0}
+.move button{width:100%;text-align:center}.blank{padding:10px;color:#9baec4}
+</style></head><body>
+<div id="folders" aria-label="Pastas"></div>
+<small id="hint">Arraste uma anotação até uma pasta. Ou use ⋯ → Mover para.</small>
+<hr><button id="new">＋ Nova anotação</button>
+<div id="notes" aria-label="Anotações"></div>
+<p id="status" role="status" aria-live="polite"></p>
+<script>
+let args={},dragged=null,pending=null,menu=null,pointer=null,skipClick=null;
+const el=id=>document.getElementById(id);
+function height(){parent.postMessage({isStreamlitMessage:true,type:"streamlit:setFrameHeight",height:document.body.scrollHeight+8},"*")}
+function emit(action,data={}){
+ if(pending)return;
+ pending=crypto.randomUUID();
+ el("status").textContent=action==="move"?"Movendo anotação…":"Carregando…";
+ document.querySelectorAll("button").forEach(b=>b.disabled=true);
+ parent.postMessage({isStreamlitMessage:true,type:"streamlit:setComponentValue",value:{action,...data,event:pending}},"*");
+}
+function icon(folder){
+ const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("viewBox","0 0 24 24");svg.classList.add("icon");svg.setAttribute("aria-hidden","true");
+ const p=document.createElementNS(svg.namespaceURI,"path");p.setAttribute("d",folder?"M3 6h7l2 3h9v11H3Z":"M6 3h8l4 4v14H6ZM14 3v5h4M9 12h6M9 16h6");svg.append(p);return svg;
+}
+function btn(text,fn,cls=""){const b=document.createElement("button");b.textContent=text;b.onclick=fn;b.className=cls;return b}
+function move(note,destination){if(note.folder===destination){el("status").textContent="A anotação já está nesta pasta.";return}emit("move",{id:note.id,revision:note.revision,destination})}
+function folderRow(folder,loose=false){
+ const row=document.createElement("div");row.className="row folder";row.dataset.folder=folder.id;
+ const open=btn("",()=>loose?null:emit("open_folder",{id:folder.id}),"open"+(args.folder===folder.id&&!loose?" selected":""));
+ open.append(icon(true),document.createTextNode(folder.title));if(loose){open.title="Solte aqui para retirar a anotação da pasta";open.onclick=()=>{el("status").textContent="Arraste uma anotação para cá para deixá-la sem pasta."}}
+ row.append(open);
+ if(!loose){const action=btn("⋯",()=>emit("folder_actions",{id:folder.id}),"actions");action.setAttribute("aria-label","Ações da pasta "+folder.title);row.append(action)}
+ return row;
+}
+function render(){
+ el("folders").replaceChildren(...(args.folders||[]).map(f=>folderRow(f)));
+ if(!args.trash && args.folders?.length)el("folders").append(folderRow({id:"",title:"Sem pasta"},true));
+ el("hint").hidden=!!args.trash;
+ el("new").disabled=!!args.trash||!!pending;
+ const host=el("notes");host.replaceChildren();
+ for(const note of args.notes||[]){
+  const row=document.createElement("div");row.className="row";
+  const open=btn("",()=>{if(skipClick===note.id){skipClick=null;return}emit("open_note",{id:note.id})},"open note"+(args.selected===note.id?" selected":""));
+  open.append(icon(false),document.createTextNode(note.title));
+  open.title=args.trash?note.title:"Arrastar "+note.title+" para uma pasta";
+  // Pointer capture keeps desktop dragging reliable inside Streamlit's iframe.
+  open.addEventListener("pointerdown",e=>{
+   if(e.pointerType!=="mouse"||e.button!==0||pending||args.trash)return;
+   pointer={id:e.pointerId,x:e.clientX,y:e.clientY,moving:false};
+   open.setPointerCapture(e.pointerId);
+  });
+  open.addEventListener("pointermove",e=>{
+   if(!pointer||pointer.id!==e.pointerId)return;
+   if(!pointer.moving&&Math.hypot(e.clientX-pointer.x,e.clientY-pointer.y)<6)return;
+   pointer.moving=true;dragged=note;skipClick=note.id;open.classList.add("dragging");
+   document.querySelectorAll(".drop").forEach(x=>x.classList.remove("drop"));
+   const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".folder");
+   if(target)target.classList.add("drop");
+   el("status").textContent=target?"Solte para mover a anotação.":"Arraste até a pasta de destino.";
+  });
+  function endDrag(e,cancelled){
+   if(!pointer||pointer.id!==e.pointerId)return;
+   const moving=pointer.moving;pointer=null;dragged=null;open.classList.remove("dragging");
+   document.querySelectorAll(".drop").forEach(x=>x.classList.remove("drop"));
+   if(open.hasPointerCapture(e.pointerId))open.releasePointerCapture(e.pointerId);
+   if(moving){
+    const target=cancelled?null:document.elementFromPoint(e.clientX,e.clientY)?.closest(".folder");
+    if(target)move(note,target.dataset.folder);
+    else el("status").textContent="Movimentação cancelada. A anotação continua na mesma pasta.";
+    setTimeout(()=>skipClick=null,0);
+   }
+  }
+  open.addEventListener("pointerup",e=>endDrag(e,false));
+  open.addEventListener("pointercancel",e=>endDrag(e,true));
+  open.addEventListener("dragstart",e=>e.preventDefault());
+  row.append(open);
+  if(!args.trash){const action=btn("⋯",()=>{menu=menu===note.id?null:note.id;render()},"actions");action.setAttribute("aria-label","Mover "+note.title);row.append(action)}
+  host.append(row);
+  if(menu===note.id&&!args.trash){
+   const box=document.createElement("div");box.className="move";const label=document.createElement("label");label.textContent="Mover para";const select=document.createElement("select");select.setAttribute("aria-label","Pasta de destino de "+note.title);
+   for(const folder of [{id:"",title:"Sem pasta"},...(args.folders||[])]){const option=document.createElement("option");option.value=folder.id;option.textContent=folder.title;option.selected=note.folder===folder.id;select.append(option)}
+   label.append(select);box.append(label,btn("Mover",()=>move(note,select.value)));host.append(box);
+  }
+ }
+ if(!args.notes?.length){const p=document.createElement("p");p.className="blank";p.textContent="Nenhuma anotação aqui.";host.append(p)}
+ document.querySelectorAll("button").forEach(b=>b.disabled=!!pending||(b.id==="new"&&args.trash));
+ height();
+}
+el("new").onclick=()=>emit("new_note");
+window.addEventListener("message",e=>{
+ if(e.data.type!=="streamlit:render")return;
+ const next=e.data.args;
+ if(dragged)return;
+ if(pending&&next.ack!==pending)return;
+ if(pending){pending=null;menu=null}
+ args=next;render();el("status").textContent=args.message||"";el("status").className=args.error?"error":"";height();
+});
+new ResizeObserver(height).observe(document.body);
+parent.postMessage({isStreamlitMessage:true,type:"streamlit:componentReady",apiVersion:1},"*");
+</script></body></html>

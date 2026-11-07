@@ -759,7 +759,7 @@ if pagina == "Metas e aparência":
     settings_page()
 
 if pagina == "Anotações":
-    from solem_notes_ui import notes_page
+    from solem_notes_library import notes_page
     notes_page()
 
 if pagina in ("Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro"):
