@@ -20,16 +20,15 @@ def test_image_fits_private_item_limit():
 def test_folder_link_roundtrip_and_trash():
     app = AppTest.from_string("""
 import streamlit as st
-from solem_workspace_ui import render_workspace
+from solem_note_materials import folder_panel, material
 class Repo:
     def save(self, item, new_id=None):
         st.session_state.rows.append(dict(item,id=new_id,revision=1,archived=False))
     def archive(self,item,archived):
         item['archived']=archived
 rows=st.session_state.setdefault("rows",[dict(id="a5a56cce-677c-4f7e-98de-969a8e253a26",title="Pasta A",kind="note",body="Texto original",revision=1,archived=False)])
-render_workspace(Repo(),rows,"Anotações")
+folder_panel(Repo(),rows[0],[(r,material(r)) for r in rows[1:]])
 """, default_timeout=30).run()
-    app.radio(key="ws_select_note_False").set_value(FOLDER).run()
     next(x for x in app.radio if x.label=="Adicionar à pasta").set_value("Link").run()
     next(x for x in app.text_input if x.label=="Título do material").set_value("Fonte")
     next(x for x in app.text_input if x.label=="Endereço do link").set_value("https://example.org")

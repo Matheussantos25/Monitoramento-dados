@@ -265,6 +265,13 @@ class WorkspaceViewModel(application: Application): AndroidViewModel(application
         mutableState.update { it.copy(items=it.items.filterNot { x -> x.id==saved.id } + saved, message="Salvo no Supabase. Atualize no outro dispositivo.") }
         done(saved)
     }
+    fun saveNote(item: PersonalItem, assets: List<PersonalItem>, old: PersonalItem?, done: (PersonalItem) -> Unit) = action {
+        assets.chunked(20).forEach { repo.addFolderImages(it) }
+        val saved = repo.save(item, old)
+        val replaced = assets.map { it.id }.toSet() + saved.id
+        mutableState.update { it.copy(items=it.items.filterNot { row -> row.id in replaced } + assets + saved, message="Anotação salva.") }
+        done(saved)
+    }
     fun addFolderImages(items: List<PersonalItem>, done: () -> Unit) = action {
         repo.addFolderImages(items)
         load()

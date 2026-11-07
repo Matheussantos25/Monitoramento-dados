@@ -266,6 +266,10 @@ def render_workspace(repo, items, module=None):
     if module is None:
         module = st.selectbox('Módulo', list(KINDS), key='ws_module')
     kind = KINDS[module]
+    if kind == "note":
+        from solem_notes_ui import notes_library
+        notes_library(repo, items)
+        return
     from solem_note_materials import material, folder_panel
     materials = [(item, data) for item in items if (data := material(item))]
     material_ids = {item["id"] for item, _ in materials}

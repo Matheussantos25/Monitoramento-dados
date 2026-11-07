@@ -111,7 +111,7 @@ st.write('CONTEUDO_PROTEGIDO')
         from streamlit.testing.v1 import AppTest
         app=AppTest.from_string('''
 import streamlit as st
-from solem_workspace_ui import render_workspace
+from solem_workspace_ui import render_document
 if 'fake_items' not in st.session_state: st.session_state.fake_items=[]
 class Repo:
     def save(self,item,old=None,new_id=None):
@@ -120,7 +120,7 @@ class Repo:
         return saved
     def archive(self,item,archived):
         st.session_state.fake_items=[dict(x,archived=archived,revision=x['revision']+1) if x['id']==item['id'] else x for x in st.session_state.fake_items]
-render_workspace(Repo(), st.session_state.fake_items)
+render_document(Repo(), "note", False, st.session_state.fake_items[0]["id"] if st.session_state.fake_items else "new", st.session_state.fake_items[0] if st.session_state.fake_items else None)
 ''').run()
         next(x for x in app.text_input if x.label=='Título').input('Minha nota')
         app.text_area[0].input('Resumo de teste')
@@ -156,8 +156,8 @@ render_workspace(Repo(), [dict(id='note-1',kind='note',title='Minha p'+chr(225)+
 ''').run()
         self.assertFalse(app.exception)
         self.assertFalse(app.selectbox)
-        app.radio(key='ws_select_note_False').set_value('note-1').run()
-        app.radio(key='ws_view_note_note-1').set_value('Leitura').run()
+        app.button(key='note_open_note-1').click().run()
         self.assertFalse(app.exception)
-        self.assertTrue(any('# Meu resumo' in x.value for x in app.markdown))
+        draft=app.session_state['note_draft_note-1']
+        self.assertEqual(draft['blocks'][0]['text'], '# Meu resumo\n\n**Conceito importante**')
         self.assertFalse(app.text_area)

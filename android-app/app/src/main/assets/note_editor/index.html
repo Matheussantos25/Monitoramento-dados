@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;color:#edf3fc;background:#0c1420}
+*{box-sizing:border-box}body{margin:0}button,input,textarea{font:inherit}
+button{cursor:pointer;border:1px solid #33465c;background:#162436;color:#d8e6f6;border-radius:7px;padding:9px 12px}
+button:hover{background:#24384f}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #8bd5ef;outline-offset:3px}
+button:disabled{opacity:.5;cursor:wait}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:14px 0;border-bottom:1px solid #253447}
+.primary{background:#a0ddf1;color:#102332;border-color:#a0ddf1;font-weight:650;margin-left:auto}
+#status{font-size:12px;color:#a3b4c9;flex-basis:100%}article{max-width:780px;margin:auto;padding:10px 24px 28px}
+#title{width:100%;font-size:clamp(25px,4vw,34px);line-height:1.2;font-weight:650;letter-spacing:-.7px;color:inherit;background:transparent;border:0;margin:32px 0 25px;padding:0}
+.block{position:relative;margin:10px 0 22px}.text{width:100%;resize:none;background:transparent;border:0;color:inherit;font-size:17px;line-height:1.75;min-height:70px;padding:6px 0}
+.text::placeholder{color:#8091a8}.actions{display:flex;gap:5px;justify-content:flex-end;margin:3px 0}.actions button{padding:5px 9px;font-size:12px;background:transparent;border-color:transparent;color:#a6bad2}
+figure{margin:0}img{display:block;max-width:100%;max-height:650px;object-fit:contain;border-radius:8px;margin:0 auto}
+.caption{display:block;width:100%;padding:10px;background:transparent;border:0;color:#a3b4c9;font-size:13px;text-align:center}
+div.readtext{white-space:pre-wrap;overflow-wrap:anywhere;font-size:17px;line-height:1.8;margin:16px 0}a{color:#a0ddf1}
+#empty{color:#93a6be;font-size:16px;padding:50px 0}.hidden{display:none!important}
+@media(max-width:500px){article{padding:8px 12px 24px}.toolbar button{padding:9px 10px;font-size:13px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style></head><body>
+<div class="toolbar">
+<button id="text">+ Texto</button><button id="image">+ Imagens</button><button id="link">Inserir link</button>
+<button id="mode">Visualizar</button><button class="primary" id="save">Salvar</button>
+<span id="status" role="status" aria-live="polite">Pronto para escrever</span>
+</div>
+<article><input id="title" aria-label="Título da anotação" placeholder="Sem título" maxlength="160">
+<div id="blocks"></div><div id="empty" class="hidden">Comece escrevendo ou adicione imagens.</div>
+<button class="primary" id="save-bottom">Salvar anotação</button></article><input id="files" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+<script>
+let blocks=[],images={},active=null,reading=false,reset=null,initialized=false,timer=null,processing=false,saving=false,change=0;
+const byId=id=>document.getElementById(id);
+const uid=()=>crypto.randomUUID();
+function height(){parent.postMessage({isStreamlitMessage:true,type:"streamlit:setFrameHeight",height:Math.max(420,document.body.scrollHeight+12)},"*")}
+function payload(action){return {action,event:uid(),title:byId("title").value,blocks,images}}
+function emit(action){
+ const data=payload(action);
+ if(window.SolemNotes) window.SolemNotes.postMessage(JSON.stringify(data));
+ else parent.postMessage({isStreamlitMessage:true,type:"streamlit:setComponentValue",value:data},"*");
+}
+function lockSave(value){saving=value;byId("save").disabled=value||processing;byId("save-bottom").disabled=value||processing;document.querySelectorAll("textarea,#title,.caption").forEach(el=>el.readOnly=value||reading)}
+function changed(){if(saving)return;change++;byId("status").textContent="Alterações em rascunho";clearTimeout(timer);timer=setTimeout(()=>emit("draft"),550);height()}
+function grow(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";height()}
+function insert(list){let i=blocks.findIndex(b=>b.id===active);blocks.splice(i<0?blocks.length:i+1,0,...list);active=list.at(-1).id;render();changed()}
+function button(label,fn){const b=document.createElement("button");b.type="button";b.textContent=label;b.onclick=fn;return b}
+function inlineText(parentNode,text){
+ const pattern=/(\*\*([^*]+)\*\*|\x60([^\x60]+)\x60|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>]+))/g;let at=0;
+ for(const m of text.matchAll(pattern)){
+  parentNode.append(document.createTextNode(text.slice(at,m.index)));
+  const el=document.createElement(m[2]?"strong":m[3]?"code":"a");
+  el.textContent=m[2]||m[3]||m[4]||m[6];
+  if(el.tagName==="A"){el.href=m[5]||m[6];el.target="_blank";el.rel="noopener noreferrer"}
+  parentNode.append(el);at=m.index+m[0].length;
+ }
+ parentNode.append(document.createTextNode(text.slice(at)));
+}
+function render(){
+ const host=byId("blocks");host.replaceChildren();
+ byId("title").readOnly=reading;
+ ["text","image","link"].forEach(id=>byId(id).disabled=reading||processing);
+ byId("save").disabled=processing||saving;
+ byId("mode").textContent=reading?"Editar":"Visualizar";
+ byId("empty").classList.toggle("hidden",blocks.length!==0);
+ blocks.forEach((block,index)=>{
+  const wrap=document.createElement("section");wrap.className="block";
+  wrap.onclick=()=>active=block.id;
+  if(block.type==="image"){
+   const figure=document.createElement("figure"),img=document.createElement("img");
+   img.alt=block.caption||"Imagem da anotação";
+   if(images[block.ref])img.src="data:image/jpeg;base64,"+images[block.ref];
+   img.onload=height;figure.append(img);
+   const caption=document.createElement("input");caption.className="caption";caption.maxLength=160;
+   caption.value=block.caption||"";caption.placeholder="Adicionar legenda";caption.setAttribute("aria-label","Legenda da imagem");
+   caption.readOnly=reading;caption.oninput=()=>{block.caption=caption.value;changed()};
+   figure.append(caption);wrap.append(figure);
+  }else if(reading){
+   const content=document.createElement("div");content.className="readtext";
+   for(const line of (block.text||"").split("\n")){
+    const heading=line.match(/^(#{1,3})\s+(.*)$/),list=line.match(/^[-*]\s+(.*)$/);
+    const el=document.createElement(heading?"h"+heading[1].length:"p");
+    if(list)el.append(document.createTextNode("• "));
+    inlineText(el,heading?heading[2]:list?list[1]:line);
+    if(!line)el.append(document.createElement("br"));
+    content.append(el);
+   }
+   wrap.append(content);
+  }else{
+   const input=document.createElement("textarea");input.className="text";input.placeholder="Escreva aqui…";
+   input.setAttribute("aria-label","Texto da anotação "+(index+1));input.value=block.text||"";
+   input.onfocus=()=>active=block.id;input.oninput=()=>{block.text=input.value;grow(input);changed()};
+   wrap.append(input);
+  }
+  if(!reading){
+   const actions=document.createElement("div");actions.className="actions";
+   const up=button("↑",()=>{[blocks[index-1],blocks[index]]=[blocks[index],blocks[index-1]];render();changed()});up.disabled=index===0;up.setAttribute("aria-label","Mover bloco para cima");
+   const down=button("↓",()=>{[blocks[index+1],blocks[index]]=[blocks[index],blocks[index+1]];render();changed()});down.disabled=index===blocks.length-1;down.setAttribute("aria-label","Mover bloco para baixo");
+   actions.append(up,down,button("+ Texto abaixo",()=>{active=block.id;insert([{id:uid(),type:"text",text:""}])}),button("Remover",()=>{blocks.splice(index,1);render();changed()}));wrap.append(actions);
+  }
+  host.append(wrap);
+ });
+ host.querySelectorAll("textarea").forEach(grow);height();
+}
+document.addEventListener("focusout",event=>{
+ if(event.target.matches("textarea,input") && initialized && !reading && !saving){clearTimeout(timer);emit("draft")}
+});
+byId("title").oninput=changed;
+byId("text").onclick=()=>insert([{id:uid(),type:"text",text:""}]);
+byId("link").onclick=()=>insert([{id:uid(),type:"text",text:"https://"}]);
+byId("image").onclick=()=>byId("files").click();
+byId("mode").onclick=()=>{reading=!reading;render()};
+byId("save").onclick=()=>{if(saving)return;lockSave(true);clearTimeout(timer);byId("status").textContent="Salvando…";emit("save")};
+byId("save-bottom").onclick=()=>byId("save").click();
+async function compact(file){
+ if(file.size>10*1024*1024)throw Error("Cada imagem pode ter até 10 MB.");
+ const bitmap=await createImageBitmap(file);
+ try{
+  if(bitmap.width*bitmap.height>24000000)throw Error("Cada imagem pode ter até 24 megapixels.");
+  const canvas=document.createElement("canvas"),ratio=Math.min(1,1200/Math.max(bitmap.width,bitmap.height));
+  let w=Math.round(bitmap.width*ratio),h=Math.round(bitmap.height*ratio),data;
+  do{canvas.width=w;canvas.height=h;const ctx=canvas.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.drawImage(bitmap,0,0,w,h);data=canvas.toDataURL("image/jpeg",.8).split(",")[1];w=Math.max(1,Math.floor(w*.75));h=Math.max(1,Math.floor(h*.75))}while(data.length>46664);
+  return data;
+ }finally{bitmap.close()}
+}
+byId("files").onchange=async()=>{
+ const files=Array.from(byId("files").files);if(!files.length)return;
+ if(files.length>20){byId("status").textContent="Escolha até 20 imagens por vez.";return}
+ processing=true;render();byId("status").textContent="Preparando imagens…";
+ try{const additions=[],prepared={};for(const file of files){const ref=uid();prepared[ref]=await compact(file);additions.push({id:uid(),type:"image",ref,caption:file.name.replace(/\.[^.]+$/,"")})}
+ Object.assign(images,prepared);insert(additions);
+ }catch(error){byId("status").textContent=error.message||"Confira as imagens selecionadas."}
+ finally{processing=false;byId("files").value="";render()}
+};
+function load(args){
+ if(!initialized||reset!==args.reset){
+  initialized=true;reset=args.reset;blocks=args.blocks||[{id:uid(),type:"text",text:""}];images=args.images||{};
+  byId("title").value=args.title||"";active=null;render();
+ }
+ if(args.saved||args.error)lockSave(false);
+ if(args.busy)lockSave(true);
+ byId("save").disabled=processing||saving;
+ byId("save-bottom").disabled=processing||saving;
+ if(args.error)byId("status").textContent=args.error;
+ else if(args.saved)byId("status").textContent="Salvo";
+ else if(!saving)byId("status").textContent="Alterações em rascunho";
+}
+window.loadNote=load;
+window.addEventListener("message",event=>{if(event.data.type==="streamlit:render")load(event.data.args)});
+new ResizeObserver(height).observe(document.querySelector("article"));
+parent.postMessage({isStreamlitMessage:true,type:"streamlit:componentReady",apiVersion:1},"*");
+height();
+</script></body></html>

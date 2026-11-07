@@ -150,6 +150,10 @@ import java.time.LocalDate
                 Text("Abrindo seu espaço…")
                 return@Page
             }
+            if (module == "Anotações") {
+                NotesLibrary(vm, state.items, state.busy, if(state.failed) state.message else null)
+                return@Page
+            }
             Row {
                 TextButton(vm::refresh,enabled=!state.busy) { Text("Atualizar") }
             }
