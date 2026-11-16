@@ -1,7 +1,7 @@
 """Local nutrition display and editing for existing meal records."""
 import streamlit as st
 from solem_health import MEAL_TYPES, now_local
-from solem_meal_analysis import catalog, nutrition, meal_details, day_nutrition, food_display_name
+from solem_meal_analysis import catalog, nutrition, meal_details, day_nutrition, food_display_name, meal_choices
 
 
 def occasional_shortcut(table, key):
@@ -13,9 +13,9 @@ def occasional_shortcut(table, key):
         if food and food not in selected:
             st.session_state[selected_key] = [*selected, food]
         st.session_state[picker_key] = None
-    labels = {f["id"]: f.get("display_name", f["name"]) for f in table if f.get("category") == "occasional"}
-    st.selectbox("Adicionar besteira ou alimento ocasional", list(labels), format_func=labels.get,
-                 index=None, placeholder="Escolha um doce, biscoito ou salgado", key=picker_key, on_change=append_food)
+    labels = {f["id"]: f.get("display_name", f["name"]) for f in table if f.get("category") in ("occasional", "supplement")}
+    st.selectbox("Adicionar alimento ocasional ou suplemento", list(labels), format_func=labels.get,
+                 index=None, placeholder="Busque um suplemento, doce ou salgado", key=picker_key, on_change=append_food)
 
 
 def reference_details():
@@ -23,7 +23,7 @@ def reference_details():
         st.caption("Os nomes são simplificados. O cálculo continua usando estas referências específicas; preparo e ingredientes podem mudar os valores.")
         for food in catalog():
             st.write(f"{food_display_name(food['name'])} — {food['name']}")
-            if food['id'].startswith(('tbca-', 'yoki-', 'ibge-', 'taco-533', 'mars-')):
+            if food['id'].startswith(('tbca-', 'yoki-', 'ibge-', 'taco-533', 'mars-', 'integralmedica-')):
                 st.caption(food['description'])
 
 
@@ -50,7 +50,7 @@ def daily_metrics(meals):
         st.info("Calorias e proteínas do dia: sem cálculo ainda. Registre alimentos com peso; refeições antigas sem porções não são tratadas como zero.")
 
 
-def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=False):
+def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=False, entries=()):
     if old is None:
         from solem_voice_ui import meal_voice_draft
         proposal, key = meal_voice_draft(proposal, key)
@@ -61,11 +61,11 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
     st.caption("Os modos têm rascunhos separados. Salve antes de trocar de modo se quiser manter as alterações.")
     if mode=="Peso acumulado da balança":
         from solem_cumulative_meal_ui import cumulative_review
-        cumulative_review(client,day,proposal,save,f"{key}_cum",old,demo)
+        cumulative_review(client,day,proposal,save,f"{key}_cum",old,demo,entries)
         return
     table = catalog()
     labels = {food["id"]: food_display_name(food["name"]) for food in table}
-    names = {food["id"]: food["name"] for food in table}
+    choices = meal_choices(table, entries)
     reference_details()
     source_items = proposal["items"]
     items = []
@@ -94,15 +94,16 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
                     st.caption(f"Este alimento: {values['kcal']:.1f} kcal · {values['protein_g']:.1f} g de proteína")
     # Add missing ingredients without another AI request (also supports manual corrections).
     occasional_shortcut(table, key)
-    added = st.multiselect("Adicionar alimentos à refeição", list(labels), format_func=labels.get, key=f"{key}_added")
-    for food_id in added:
-        grams = st.number_input(f"Peso de {labels[food_id]} (g)", 0.0, 2000.0, 0.0, 1.0, key=f"{key}_extra_{food_id}")
-        entry = {"name": names[food_id], "food_id": food_id, "grams": grams, "confidence": "low"}
+    added = st.multiselect("Adicionar alimentos à refeição", list(choices), format_func=lambda value: choices[value][0], key=f"{key}_added")
+    for choice in added:
+        label, name, food_id = choices[choice]
+        grams = st.number_input(f"Peso de {label} (g)", 0.0, 2000.0, 0.0, 1.0, key=f"{key}_extra_{choice}")
+        entry = {"name": name, "food_id": food_id, "grams": grams, "confidence": "low"}
         items.append(entry)
-        if grams:
+        if grams and food_id:
             values = nutrition([entry])["totals"]
-            st.caption(f"{labels[food_id]}: {values['kcal']:.1f} kcal · {values['protein_g']:.1f} g de proteína")
-    st.caption("Alimento sem referência compatível? Use o registro simples, sem estimar valores de outro alimento.")
+            st.caption(f"{label}: {values['kcal']:.1f} kcal · {values['protein_g']:.1f} g de proteína")
+    st.caption("Alimentos do histórico sem referência podem ser pesados. O total nutricional inclui os alimentos com referência.")
     valid = False
     try:
         result = nutrition(items)

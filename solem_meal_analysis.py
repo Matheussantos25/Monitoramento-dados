@@ -19,6 +19,28 @@ def food_display_name(name):
                  if food["name"] == name), name)
 
 
+def meal_choices(table, entries):
+    """Extend scale choices with names from the signed-in user's diary."""
+    choices = {food["id"]: (food.get("display_name", food["name"]), food["name"], food["id"]) for food in table}
+    known = {name.casefold() for label, name, _ in choices.values() for name in (label, name)}
+    for row in entries:
+        if row.get("kind") != "meal":
+            continue
+        details = row.get("details") or {}
+        items = (details.get("nutrition") or {}).get("items", [])
+        saved = {item["name"]: item.get("food_id", "") for item in items if isinstance(item, dict) and isinstance(item.get("name"), str)}
+        for name in [*saved, *details.get("saudaveis", []), *details.get("ocasionais", [])]:
+            if not isinstance(name, str):
+                continue
+            name = name.strip()
+            if not 0 < len(name) <= 80 or name.casefold() in known:
+                continue
+            known.add(name.casefold())
+            reference = saved.get(name, "")
+            choices["history:" + name.casefold()] = (name, name, reference if reference in choices else "")
+    return choices
+
+
 def nutrition(items):
     if not isinstance(items, list) or not 1 <= len(items) <= 12:
         raise ValueError(ERRORS["invalid_items"])
@@ -40,10 +62,11 @@ def nutrition(items):
             missing += 1
             continue
         for key in NUTRIENTS: totals[key] += table[food_id]["per100"][key] * amount / 100
+    branded_whey = any(item["food_id"].startswith("integralmedica-") for item in clean)
     return {"items": clean, "totals": {key: math.floor(value * 10 + 0.5) / 10 for key, value in totals.items()},
             "missing": missing, "complete": missing == 0, "estimated": True,
-            "basis": "Referências por alimento, incluindo rótulo do Snickers Original" if any(i["food_id"] == "mars-snickers-original" for i in clean) else "USDA / TACO / TBCA / IBGE / rótulo Yoki (referências por alimento)" if any(i["food_id"].startswith("ibge-") for i in clean) else "USDA / TACO / TBCA / rótulo Yoki (referências por alimento)" if any(i["food_id"].startswith(("tbca-", "yoki-")) for i in clean) else "USDA FoodData Central / SR Legacy + TACO NEPA/Unicamp" if any(i["food_id"].startswith("taco-") for i in clean) else "USDA FoodData Central / SR Legacy",
-            "catalog_version": "solem-nutrition-v5" if any(i["food_id"] == "mars-snickers-original" for i in clean) else "solem-nutrition-v4" if any(i["food_id"].startswith("ibge-") for i in clean) else "solem-nutrition-v3" if any(i["food_id"].startswith(("tbca-", "yoki-")) for i in clean) else "solem-taco-2011-sr-2018-v2" if any(i["food_id"].startswith("taco-") for i in clean) else "sr-2018-solem-1"}
+            "basis": "Referências por alimento, incluindo rótulo Integralmédica" if branded_whey else "Referências por alimento, incluindo rótulo do Snickers Original" if any(i["food_id"] == "mars-snickers-original" for i in clean) else "USDA / TACO / TBCA / IBGE / rótulo Yoki (referências por alimento)" if any(i["food_id"].startswith("ibge-") for i in clean) else "USDA / TACO / TBCA / rótulo Yoki (referências por alimento)" if any(i["food_id"].startswith(("tbca-", "yoki-")) for i in clean) else "USDA FoodData Central / SR Legacy + TACO NEPA/Unicamp" if any(i["food_id"].startswith("taco-") for i in clean) else "USDA FoodData Central / SR Legacy",
+            "catalog_version": "solem-nutrition-v6" if branded_whey else "solem-nutrition-v5" if any(i["food_id"] == "mars-snickers-original" for i in clean) else "solem-nutrition-v4" if any(i["food_id"].startswith("ibge-") for i in clean) else "solem-nutrition-v3" if any(i["food_id"].startswith(("tbca-", "yoki-")) for i in clean) else "solem-taco-2011-sr-2018-v2" if any(i["food_id"].startswith("taco-") for i in clean) else "sr-2018-solem-1"}
 
 
 def cumulative_items(items, baseline, readings):

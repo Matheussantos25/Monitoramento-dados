@@ -1,13 +1,13 @@
 """Cumulative scale entry; individual-food weights remain the stored nutrition basis."""
 from datetime import time
 import streamlit as st
-from solem_meal_analysis import catalog, cumulative_items, nutrition, meal_details, food_display_name
+from solem_meal_analysis import catalog, cumulative_items, nutrition, meal_details, food_display_name, meal_choices
 from solem_health import MEAL_TYPES, now_local
 
-def cumulative_review(client, day, proposal, save, key, old=None, demo=False):
+def cumulative_review(client, day, proposal, save, key, old=None, demo=False, entries=()):
     from solem_meal_photo_ui import nutrient_metrics, reference_details, occasional_shortcut
     table=catalog(); labels={food["id"]:food_display_name(food["name"]) for food in table}
-    names={food["id"]:food["name"] for food in table}
+    choices = meal_choices(table, entries)
     reference_details()
     previous=old.get("details",{}) if old else {}
     weighing=proposal.get("voice_weighing") or previous.get("weighing",{})
@@ -29,13 +29,14 @@ def cumulative_review(client, day, proposal, save, key, old=None, demo=False):
                 float(old_readings[index] if len(old_readings)==len(source) else reconstructed),1.0,key=f"{key}_reading_{index}")
             items.append({**item,"food_id":chosen});readings.append(reading)
     occasional_shortcut(table, key)
-    added=st.multiselect("Adicionar alimentos na ordem da pesagem",list(labels),format_func=labels.get,key=f"{key}_added")
-    for index,food_id in enumerate(added):
+    added=st.multiselect("Adicionar alimentos na ordem da pesagem",list(choices),format_func=lambda value: choices[value][0],key=f"{key}_added")
+    for index,choice in enumerate(added):
+        label, name, food_id = choices[choice]
         # Removing/reordering an earlier addition invalidates subsequent readings.
         order="_".join(added[:index+1])
-        reading=st.number_input(f"{len(source)+index+1}. Balança após {labels[food_id]} (g)",0.0,34000.0,0.0,1.0,
+        reading=st.number_input(f"{len(source)+index+1}. Balança após {label} (g)",0.0,34000.0,0.0,1.0,
                                 key=f"{key}_reading_extra_{order}")
-        items.append(dict(name=names[food_id],food_id=food_id,grams=0));readings.append(reading)
+        items.append(dict(name=name,food_id=food_id,grams=0));readings.append(reading)
     st.caption("Ao remover ou trocar a ordem de uma adição, confira e preencha novamente as leituras seguintes. Para remover alimentos de uma refeição já salva, use o modo individual.")
     valid=False
     try:

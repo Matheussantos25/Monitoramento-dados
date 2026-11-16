@@ -63,7 +63,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
         from solem_meal_photo_ui import daily_metrics, nutrient_metrics, review_meal
         daily_metrics(consumed_meals)
         with st.expander("Registrar alimentos com balança · calorias e proteínas", expanded=True):
-            review_meal(client, day, {"items": []}, _save, f"weighed_meal_{day}", demo=demo, weighed=True)
+            review_meal(client, day, {"items": []}, _save, f"weighed_meal_{day}", demo=demo, weighed=True, entries=entries)
         st.caption("Adicione quantas refeições precisar no mesmo dia. A classificação é apenas para facilitar o registro.")
         meal_type = st.selectbox("Tipo de refeição", MEAL_TYPES, key="new_meal_type")
         skipped = st.checkbox("Sem refeição — não comi", key=f"meal_skipped_new_{day}_{meal_type}")
@@ -106,7 +106,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                             st.caption(f"{food_display_name(item['name'])} · {item['grams']:g} g · {value}")
                     except (KeyError, ValueError, TypeError): st.warning("Confira os dados nutricionais desta refeição antes de editar.")
                     with st.expander("Editar alimentos e porções"):
-                        review_meal(client, day, details["nutrition"], _save, f"meal_nutrition_{row['id']}", old=row, demo=demo)
+                        review_meal(client, day, details["nutrition"], _save, f"meal_nutrition_{row['id']}", old=row, demo=demo, entries=entries)
                 else:
                     if not details.get("sem_refeicao"):
                         st.caption("Sem cálculo nutricional: este registro não tem pesos informados.")
@@ -116,7 +116,7 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                         if enable_weights and not details.get("sem_refeicao"):
                             names = details.get("saudaveis", []) + details.get("ocasionais", [])
                             review_meal(client, day, {"items": [{"name": name, "grams": 0} for name in names]},
-                                        _save, f"meal_weighed_{row['id']}", old=row, demo=demo, weighed=True)
+                                        _save, f"meal_weighed_{row['id']}", old=row, demo=demo, weighed=True, entries=entries)
                 with st.expander("Editar refeição"):
                     if details.get("nutrition"):
                         st.caption("Salvar pelo registro simples abaixo remove os pesos e o cálculo nutricional desta refeição. Para preservá-los, use Editar alimentos e porções acima.")

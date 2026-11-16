@@ -40,7 +40,7 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
 
 @Composable fun MealReview(day: LocalDate, catalog: Catalog, workspace: WorkspaceViewModel,
     references: List<MealReference>, initial: List<MealFood>, busy: Boolean,
-    previous: HealthEntry?=null, saved: () -> Unit={}, weighed: Boolean=false) {
+    previous: HealthEntry?=null, saved: () -> Unit={}, weighed: Boolean=false, choices: Map<String, MealFood> = emptyMap()) {
     key(day, previous?.id) {
         var spoken by remember { mutableStateOf<VoiceDraft?>(null) }
         var revision by remember { mutableStateOf(0) }
@@ -48,26 +48,26 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
             parse={parseMealVoice(it,references)}, apply={spoken=it;revision++})
         key(revision) {
             MealDraftReview(day,catalog,workspace,references,spoken?.items ?: initial,busy,previous,
-                saved={if(previous==null){spoken=null;revision++};saved()},weighed=weighed,spoken=spoken)
+                saved={if(previous==null){spoken=null;revision++};saved()},weighed=weighed,spoken=spoken,choices=choices)
         }
     }
 }
 
 @Composable internal fun OccasionalChoice(references: List<MealReference>, add: (MealFood) -> Unit) {
-    val foods = references.filter { it.category == "occasional" }.associateBy { it.displayName }
-    Choice("Adicionar besteira ou alimento ocasional", "", foods.keys.toList()) { label ->
+    val foods = references.filter { it.category in listOf("occasional", "supplement") }.associateBy { it.displayName }
+    Choice("Adicionar alimento ocasional ou suplemento", "", foods.keys.toList()) { label ->
         foods[label]?.let { add(MealFood(it.name, it.id)) }
     }
 }
 
 @Composable private fun MealDraftReview(day: LocalDate, catalog: Catalog, workspace: WorkspaceViewModel,
     references: List<MealReference>, initial: List<MealFood>, busy: Boolean,
-    previous: HealthEntry?, saved: () -> Unit, weighed: Boolean, spoken: VoiceDraft?) {
+    previous: HealthEntry?, saved: () -> Unit, weighed: Boolean, spoken: VoiceDraft?, choices: Map<String, MealFood>) {
     var mode by rememberSaveable(previous?.id) {mutableStateOf(if(spoken?.cumulative ?: defaultCumulativeMeal(previous?.details)) "Peso acumulado da balança" else "Peso individual de cada alimento")}
     Choice("Como vai informar os pesos?",mode,listOf("Peso individual de cada alimento","Peso acumulado da balança")) {mode=it}
     Text("Os modos têm rascunhos separados. Salve antes de trocar de modo para manter alterações.",style=MaterialTheme.typography.bodySmall)
     if(mode=="Peso acumulado da balança") {
-        CumulativeMealReview(day,catalog,workspace,references,initial,busy,previous,saved,spoken)
+        CumulativeMealReview(day,catalog,workspace,references,initial,busy,previous,saved,spoken,choices)
         return
     }
     var items by remember { mutableStateOf(initial) }
@@ -111,6 +111,9 @@ private fun amount(value: Double) = String.format(Locale.getDefault(), "%.1f", v
                 else Text("Sem cálculo: informe peso e referência compatível.")
             }
         } }
+    }
+    if (items.size < 12) Choice("Adicionar alimentos à refeição", "", choices.keys.toList()) { label ->
+        choices[label]?.let { items = items + it; confirmed = false }
     }
     if (items.size < 12) OccasionalChoice(references) { items = items + it; confirmed = false }
     TextButton(onClick={items=items+MealFood("Outro alimento");confirmed=false},enabled=items.size<12) { Text("Adicionar alimento") }

@@ -90,6 +90,23 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                 val references: List<MealReference> = remember {
                     mealJson.decodeFromString(contextAssets(context))
                 }
+                val choices = remember(state.healthEntries, references) {
+                    val options = references.associate { it.displayName to MealFood(it.name, it.id) }.toMutableMap()
+                    val known = references.flatMap { listOf(it.name.lowercase(), it.displayName.lowercase()) }.toMutableSet()
+                    for (row in state.healthEntries.filter { it.kind == "meal" }) {
+                        val stored = runCatching { row.details["nutrition"]?.let { mealJson.decodeFromJsonElement<MealEstimate>(it) } }.getOrNull()
+                        val byName = stored?.items.orEmpty().associateBy { it.name }
+                        val names = listOf("saudaveis", "ocasionais").flatMap { key ->
+                            (row.details[key] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.content }
+                        }
+                        for (name in byName.keys + names) {
+                            if (name.isNotBlank() && name.length <= 80 && known.add(name.lowercase())) {
+                                options[name] = MealFood(name, byName[name]?.foodId.orEmpty())
+                            }
+                        }
+                    }
+                    options
+                }
                 val calculated=consumedMeals.mapNotNull { row ->
                     runCatching { row.details["nutrition"]?.let { mealJson.decodeFromJsonElement<MealEstimate>(it) }
                         ?.let { calculateMeal(it.items,references) } }.getOrNull()
@@ -105,7 +122,7 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                 var weighedForm by rememberSaveable { mutableStateOf(false) }
                 FilterChip(selected=weighedForm,onClick={weighedForm=!weighedForm},label={Text("Registrar com balança · kcal e proteínas")})
                 if(weighedForm) key(day) { MealReview(day,catalog,vm,references,emptyList(),state.busy,
-                    saved={weighedForm=false},weighed=true) }
+                    choices=choices,saved={weighedForm=false},weighed=true) }
                 Text("Registro simples · sem cálculo nutricional",style=MaterialTheme.typography.titleMedium)
                 MealForm(day, catalog, state.busy, vm)
                 if (dayMeals.isEmpty()) Text("Nenhuma refeição registrada neste dia.")
@@ -129,10 +146,10 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                         }
                         if (editingId == row.id) {
                             if(nutrition!=null) key(row.id) { MealReview(day,catalog,vm,references,nutrition.items,state.busy,row,
-                                saved={editingId=null}) }
+                                choices=choices,saved={editingId=null}) }
                             if(nutrition==null && !row.skippedMeal) key(row.id) { MealReview(day,catalog,vm,references,
                                 splitFoods(foods(row,"saudaveis")+","+foods(row,"ocasionais")).map {MealFood(it)},state.busy,row,
-                                saved={editingId=null},weighed=true) }
+                                choices=choices,saved={editingId=null},weighed=true) }
                             if(nutrition!=null) Text("Salvar pelo registro simples abaixo remove os pesos e o cálculo nutricional. Para preservá-los, use a edição nutricional acima.")
                             MealForm(day, catalog, state.busy, vm, row)
                         }

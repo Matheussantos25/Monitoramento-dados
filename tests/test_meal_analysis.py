@@ -37,9 +37,9 @@ def test_bread_and_potato_references_preserve_portions_and_cumulative_readings()
 
 def test_verified_catalog_and_platform_parity():
     foods = catalog()
-    assert len(foods) == 42
+    assert len(foods) == 43
     assert len([f for f in foods if f["id"].isdigit()]) == 24
-    assert all(food["name"] and food["source_url"].startswith(("https://fdc.nal.usda.gov/", "https://nepa.unicamp.br/", "https://tbca.net.br/", "https://www.yoki.com.br/", "https://biblioteca.ibge.gov.br/", "https://www.sondadelivery.com.br/")) for food in foods)
+    assert all(food["name"] and food["source_url"].startswith(("https://fdc.nal.usda.gov/", "https://nepa.unicamp.br/", "https://tbca.net.br/", "https://www.yoki.com.br/", "https://biblioteca.ibge.gov.br/", "https://www.sondadelivery.com.br/", "https://loca.integralmedica.com.br/")) for food in foods)
     from pathlib import Path
     root=Path(__file__).resolve().parents[1]
     for file in ("android-app/app/src/main/assets/nutrition_catalog.json", "android-app/app/src/test/resources/nutrition_catalog.json"):
@@ -147,3 +147,15 @@ def test_occasional_food_cumulative_nutrients_and_classification():
     assert not result['saudaveis'] and len(result['ocasionais'])==2
     assert 'TACO' in result['nutrition']['basis']
     assert nutrition([RICE])['catalog_version'] == 'sr-2018-solem-1'
+
+def test_prior_foods_and_whey_are_available_in_scale_choices():
+    from solem_meal_analysis import meal_choices
+    table = catalog()
+    rows = [{"kind": "meal", "details": {"saudaveis": ["Arroz", "Minha sopa"], "ocasionais": ["minha sopa"]}}]
+    choices = meal_choices(table, rows)
+    assert "history:arroz" not in choices
+    assert choices["history:minha sopa"] == ("Minha sopa", "Minha sopa", "")
+    assert "history:minha sopa" not in meal_choices(table, [])
+    _, name, food_id = choices["integralmedica-whey-chocolate-907"]
+    totals = nutrition([{"name": name, "food_id": food_id, "grams": 30}])["totals"]
+    assert (totals["kcal"], totals["protein_g"]) == (119, 20)

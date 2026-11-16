@@ -604,5 +604,20 @@
       "fat_g": 22.2222,
       "fiber_g": 2.6667
     }
+  },
+  {
+    "id": "integralmedica-whey-chocolate-907",
+    "name": "Whey Protein Integralmedica 100% Pure Chocolate (907 g)",
+    "display_name": "Whey protein · Integralmédica Chocolate",
+    "description": "Rótulo da embalagem de 907 g. Cada 30 g de pó fornecem 119 kcal e 20 g de proteína.",
+    "source_url": "https://loca.integralmedica.com.br/WebTrade/Produtos/FichaTecnica/70880.pdf",
+    "category": "supplement",
+    "per100": {
+      "kcal": 396.6667,
+      "protein_g": 66.6667,
+      "carbs_g": 17.6667,
+      "fat_g": 6.6667,
+      "fiber_g": 1.3333
+    }
   }
 ]

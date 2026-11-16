@@ -17,7 +17,7 @@ private fun scaleNumber(value:Double)=String.format(Locale.getDefault(),"%.1f",v
 private fun parseScale(value:String)=value.replace(',','.').toDoubleOrNull() ?: Double.NaN
 
 @Composable fun CumulativeMealReview(day:LocalDate,catalog:Catalog,workspace:WorkspaceViewModel,
-    references:List<MealReference>,initial:List<MealFood>,busy:Boolean,previous:HealthEntry?,saved:()->Unit,spoken:VoiceDraft?=null) {
+    references:List<MealReference>,initial:List<MealFood>,busy:Boolean,previous:HealthEntry?,saved:()->Unit,spoken:VoiceDraft?=null, choices: Map<String, MealFood> = emptyMap()) {
     val stored=remember {runCatching {previous?.details?.get("weighing")?.let {mealJson.decodeFromJsonElement<MealWeighing>(it)}}.getOrNull()}
     var items by remember {mutableStateOf(initial)}
     var baseline by rememberSaveable {mutableStateOf(scaleNumber(stored?.baseline ?: 0.0))}
@@ -51,6 +51,9 @@ private fun parseScale(value:String)=value.replace(',','.').toDoubleOrNull() ?: 
             }
             if(index==items.lastIndex) TextButton({items=items.dropLast(1);readings=readings.dropLast(1);confirmed=false},enabled=!busy) {Text("Remover última adição")}
         }
+    }
+    if (items.size < 12) Choice("Adicionar alimentos na ordem da pesagem", "", choices.keys.toList()) { label ->
+        choices[label]?.let { items = items + it; readings = readings + ""; confirmed = false }
     }
     if (items.size < 12) OccasionalChoice(references) { items = items + it; readings = readings + ""; confirmed = false }
     TextButton({items=items+MealFood("Outro alimento");readings=readings+"";confirmed=false},enabled=!busy && items.size<12) {Text("Adicionar próximo alimento")}
