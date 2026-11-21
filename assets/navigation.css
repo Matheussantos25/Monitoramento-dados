@@ -23,10 +23,10 @@ body:has(.solem-navigation) [data-testid="stSidebarCollapsedControl"] {display:n
     margin-left:0!important;width:264px!important;min-width:264px!important;
     visibility:visible!important;z-index:100;
   }
-  body:has(.solem-navigation) [data-testid="stMain"] {margin-left:264px}
+  body:has(.solem-navigation) [data-testid="stMain"] {margin-left:264px;width:calc(100% - 264px);max-width:calc(100% - 264px);min-width:0}
   body:has(.solem-navigation) [data-testid="stHeader"] {left:264px;width:calc(100% - 264px)}
   body:has(.solem-navigation.compact) [data-testid="stSidebar"] {width:88px!important;min-width:88px!important}
-  body:has(.solem-navigation.compact) [data-testid="stMain"] {margin-left:88px}
+  body:has(.solem-navigation.compact) [data-testid="stMain"] {margin-left:88px;width:calc(100% - 88px);max-width:calc(100% - 88px)}
   body:has(.solem-navigation.compact) [data-testid="stHeader"] {left:88px;width:calc(100% - 88px)}
   [data-testid="stSidebar"]:has(.compact) .sidebar-brand b,
   [data-testid="stSidebar"]:has(.compact) .sidebar-brand small,
