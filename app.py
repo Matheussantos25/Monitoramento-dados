@@ -306,7 +306,7 @@ st.set_page_config(
     page_title="Solem · Corpo & Mente",
     page_icon=str(Path(__file__).parent / "assets" / "solem-icon.png"),
     layout="wide",
-    initial_sidebar_state="auto"
+    initial_sidebar_state="expanded"
 )
 
 apply_theme()
