@@ -34,3 +34,57 @@ def menu_welcome():
             if st.button("Escolher depois", key="menu_later"):
                 st.session_state["menu_welcome_later"] = True
                 st.rerun()
+
+
+PAGE_ICONS = {
+    "Visão geral": "home", "Treino": "fitness_center", "Evolução física": "monitoring",
+    "Saúde": "favorite", "Estudar": "school", "Evolução nos estudos": "query_stats",
+    "Idiomas": "translate", "Prompts": "terminal", "Anotações": "edit_note",
+    "Resumos": "summarize", "PDFs": "picture_as_pdf", "Mapas mentais": "account_tree",
+    "Cronograma": "calendar_month", "Financeiro": "account_balance_wallet",
+    "Publicações": "video_library", "Ideias e roteiros": "movie_edit",
+    "Metas e aparência": "tune", "Configurações": "settings",
+}
+
+
+def navigation(available, progress, navigate, on_logout):
+    from pathlib import Path
+    available = [page for page in PAGE_ICONS if page in available]
+    compact = st.session_state.get("navigation_compact", False)
+    css = (Path(__file__).parent / "assets" / "navigation.css").read_text(encoding="utf-8")
+    # Keep native radio keyboard behavior and stable page values for existing callers.
+    for index, page in enumerate(available, 1):
+        css += f'.st-key-solem_page [role="radiogroup"] label:nth-child({index})::before{{content:"{PAGE_ICONS[page]}" / "";}}'
+    st.html("<style>" + css + "</style>")
+    with st.sidebar:
+        st.html('<div class="solem-navigation' + (' compact' if compact else '') + '"></div>')
+        st.html('<div class="sidebar-brand">✳ <b>solem</b><small>CORPO & MENTE</small></div>')
+        st.toggle("Somente ícones", key="navigation_compact")
+        page = st.radio("Navegação principal", available, key="solem_page", label_visibility="collapsed")
+        st.caption(f"Nível {progress['level']} · {progress['xp']} XP")
+        st.button("Personalizar abas", icon=":material/tune:", on_click=navigate,
+                  args=("Metas e aparência",), key="menu_customize", help="Escolher quais abas aparecem")
+        if on_logout:
+            st.button("Sair", icon=":material/logout:", on_click=on_logout,
+                      key="solem_logout", help="Sair da conta", use_container_width=True)
+    with st.container(key="mobile_navigation"):
+        shortcuts = [p for p in ("Visão geral", "Treino", "Saúde", "Idiomas") if p in available]
+        with st.container(key="mobile_navigation_items", horizontal=True):
+            for destination in shortcuts:
+                label = "Início" if destination == "Visão geral" else destination
+                st.button(label, icon=f":material/{PAGE_ICONS[destination]}:",
+                          key=f"mobile_nav_{destination}", help=destination,
+                          type="primary" if destination == page else "secondary",
+                          on_click=navigate, args=(destination,))
+            with st.popover("Abas", icon=":material/apps:", help="Todas as suas abas"), st.container(key="mobile_all_tabs"):
+                st.markdown("**Suas abas**")
+                for destination in available:
+                    st.button(destination, icon=f":material/{PAGE_ICONS[destination]}:",
+                              key=f"mobile_all_{destination}",
+                              type="primary" if destination == page else "secondary",
+                              on_click=navigate, args=(destination,), use_container_width=True)
+                if on_logout:
+                    st.button("Sair", icon=":material/logout:", on_click=on_logout, key="mobile_logout")
+        if page not in shortcuts:
+            st.caption(page)
+    return page
