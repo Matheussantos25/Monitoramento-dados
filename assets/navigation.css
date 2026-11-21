@@ -49,7 +49,8 @@ body:has(.solem-navigation) [data-testid="stSidebarCollapsedControl"] {display:n
   body:has(.solem-navigation) [data-testid="stMainBlockContainer"] {padding-bottom:8rem}
   .st-key-mobile_navigation {
     display:block;position:fixed;bottom:0;left:0;right:0;z-index:100;
-    padding:.45rem .5rem max(.45rem,env(safe-area-inset-bottom));
+    /* Reserve space for the Cloud owner toolbar and phone safe area. */
+    padding:.45rem .5rem max(3rem,env(safe-area-inset-bottom));
     background:#0d1725;border-top:1px solid #30435f;box-shadow:0 -4px 18px #03081044;
   }
   .st-key-mobile_navigation_items {display:flex!important;flex-wrap:nowrap!important;gap:4px!important;justify-content:space-around}
