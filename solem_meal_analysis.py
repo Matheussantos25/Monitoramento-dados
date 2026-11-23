@@ -1,12 +1,18 @@
 """Local nutrient arithmetic; no recognition service or network requests."""
 import json
 import math
+import unicodedata
 from pathlib import Path
 
 
 CATALOG_PATH = Path(__file__).parent / "supabase/functions/meal-analysis/nutrition_catalog.json"
 NUTRIENTS = ("kcal", "protein_g", "carbs_g", "fat_g", "fiber_g")
 ERRORS = {"invalid_items": "Confira os alimentos e porções (entre 0 e 2000 g por alimento)."}
+
+
+def food_sort_key(name):
+    return "".join(char for char in unicodedata.normalize("NFD", name.casefold())
+                   if not unicodedata.combining(char))
 
 
 def catalog():
@@ -38,7 +44,7 @@ def meal_choices(table, entries):
             known.add(name.casefold())
             reference = saved.get(name, "")
             choices["history:" + name.casefold()] = (name, name, reference if reference in choices else "")
-    return choices
+    return dict(sorted(choices.items(), key=lambda item: food_sort_key(item[1][0])))
 
 
 def nutrition(items):

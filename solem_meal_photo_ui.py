@@ -1,7 +1,7 @@
 """Local nutrition display and editing for existing meal records."""
 import streamlit as st
 from solem_health import MEAL_TYPES, now_local
-from solem_meal_analysis import catalog, nutrition, meal_details, day_nutrition, food_display_name, meal_choices
+from solem_meal_analysis import catalog, nutrition, meal_details, day_nutrition, food_display_name, meal_choices, food_sort_key
 
 
 def occasional_shortcut(table, key):
@@ -13,6 +13,7 @@ def occasional_shortcut(table, key):
         if food and food not in selected:
             st.session_state[selected_key] = [*selected, food]
         st.session_state[picker_key] = None
+    table = sorted(table, key=lambda food: food_sort_key(food.get("display_name", food["name"])))
     labels = {f["id"]: f.get("display_name", f["name"]) for f in table if f.get("category") in ("occasional", "supplement")}
     st.selectbox("Adicionar alimento ocasional ou suplemento", list(labels), format_func=labels.get,
                  index=None, placeholder="Busque um suplemento, doce ou salgado", key=picker_key, on_change=append_food)
@@ -63,7 +64,7 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
         from solem_cumulative_meal_ui import cumulative_review
         cumulative_review(client,day,proposal,save,f"{key}_cum",old,demo,entries)
         return
-    table = catalog()
+    table = sorted(catalog(), key=lambda food: food_sort_key(food.get("display_name", food["name"])))
     labels = {food["id"]: food_display_name(food["name"]) for food in table}
     choices = meal_choices(table, entries)
     reference_details()
@@ -94,7 +95,8 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
                     st.caption(f"Este alimento: {values['kcal']:.1f} kcal · {values['protein_g']:.1f} g de proteína")
     # Add missing ingredients without another AI request (also supports manual corrections).
     occasional_shortcut(table, key)
-    added = st.multiselect("Adicionar alimentos à refeição", list(choices), format_func=lambda value: choices[value][0], key=f"{key}_added")
+    added = st.multiselect("Adicionar alimentos à refeição", list(choices), format_func=lambda value: choices[value][0], key=f"{key}_added",
+                           placeholder="Digite o nome ou a primeira letra", help="Opções de A a Z. Os alimentos escolhidos ficam na ordem da seleção.")
     for choice in added:
         label, name, food_id = choices[choice]
         grams = st.number_input(f"Peso de {label} (g)", 0.0, 2000.0, 0.0, 1.0, key=f"{key}_extra_{choice}")

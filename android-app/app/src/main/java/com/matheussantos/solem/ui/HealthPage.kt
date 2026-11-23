@@ -88,7 +88,7 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
             })
             0 -> {
                 val references: List<MealReference> = remember {
-                    mealJson.decodeFromString(contextAssets(context))
+                    mealJson.decodeFromString<List<MealReference>>(contextAssets(context)).sortedBy { foodSortKey(it.displayName) }
                 }
                 val choices = remember(state.healthEntries, references) {
                     val options = references.associate { it.displayName to MealFood(it.name, it.id) }.toMutableMap()
@@ -105,7 +105,7 @@ private fun splitFoods(text: String) = text.split(",").map { it.trim() }.filter 
                             }
                         }
                     }
-                    options
+                    options.entries.sortedBy { foodSortKey(it.key) }.associate { it.toPair() }
                 }
                 val calculated=consumedMeals.mapNotNull { row ->
                     runCatching { row.details["nutrition"]?.let { mealJson.decodeFromJsonElement<MealEstimate>(it) }

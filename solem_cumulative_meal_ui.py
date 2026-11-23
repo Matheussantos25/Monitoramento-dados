@@ -1,12 +1,13 @@
 """Cumulative scale entry; individual-food weights remain the stored nutrition basis."""
 from datetime import time
 import streamlit as st
-from solem_meal_analysis import catalog, cumulative_items, nutrition, meal_details, food_display_name, meal_choices
+from solem_meal_analysis import catalog, cumulative_items, nutrition, meal_details, food_display_name, meal_choices, food_sort_key
 from solem_health import MEAL_TYPES, now_local
 
 def cumulative_review(client, day, proposal, save, key, old=None, demo=False, entries=()):
     from solem_meal_photo_ui import nutrient_metrics, reference_details, occasional_shortcut
-    table=catalog(); labels={food["id"]:food_display_name(food["name"]) for food in table}
+    table=sorted(catalog(), key=lambda food: food_sort_key(food.get("display_name", food["name"])))
+    labels={food["id"]:food_display_name(food["name"]) for food in table}
     choices = meal_choices(table, entries)
     reference_details()
     previous=old.get("details",{}) if old else {}
@@ -29,7 +30,8 @@ def cumulative_review(client, day, proposal, save, key, old=None, demo=False, en
                 float(old_readings[index] if len(old_readings)==len(source) else reconstructed),1.0,key=f"{key}_reading_{index}")
             items.append({**item,"food_id":chosen});readings.append(reading)
     occasional_shortcut(table, key)
-    added=st.multiselect("Adicionar alimentos na ordem da pesagem",list(choices),format_func=lambda value: choices[value][0],key=f"{key}_added")
+    added=st.multiselect("Adicionar alimentos na ordem da pesagem",list(choices),format_func=lambda value: choices[value][0],key=f"{key}_added",
+                         placeholder="Digite o nome ou a primeira letra", help="Opções de A a Z. Selecione na ordem em que colocou os alimentos na balança.")
     for index,choice in enumerate(added):
         label, name, food_id = choices[choice]
         # Removing/reordering an earlier addition invalidates subsequent readings.

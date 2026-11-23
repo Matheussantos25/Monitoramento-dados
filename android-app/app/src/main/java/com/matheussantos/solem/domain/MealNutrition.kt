@@ -20,6 +20,10 @@ import kotlin.math.floor
     val basis: String = "USDA FoodData Central / SR Legacy",
     @SerialName("catalog_version") val catalogVersion: String = "sr-2018-solem-1")
 val mealJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+fun foodSortKey(name: String): String =
+    java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD)
+        .replace(Regex("\\p{M}+"), "").lowercase(java.util.Locale.ROOT)
+
 fun foodDisplayName(name: String, references: List<MealReference>): String =
     references.firstOrNull { it.name == name }?.displayName ?: name
 // A missing record means creation; legacy records must retain individual grams.
