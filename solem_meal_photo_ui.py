@@ -15,7 +15,7 @@ def occasional_shortcut(table, key):
         st.session_state[picker_key] = None
     table = sorted(table, key=lambda food: food_sort_key(food.get("display_name", food["name"])))
     labels = {f["id"]: f.get("display_name", f["name"]) for f in table if f.get("category") in ("occasional", "supplement")}
-    st.selectbox("Adicionar alimento ocasional ou suplemento", list(labels), format_func=labels.get,
+    st.selectbox("Adicionar alimento ocasional ou suplemento", list(labels), format_func=labels.get, filter_mode="contains",
                  index=None, placeholder="Busque um suplemento, doce ou salgado", key=picker_key, on_change=append_food)
 
 
@@ -96,7 +96,7 @@ def review_meal(client, day, proposal, save, key, old=None, demo=False, weighed=
     # Add missing ingredients without another AI request (also supports manual corrections).
     occasional_shortcut(table, key)
     added = st.multiselect("Adicionar alimentos à refeição", list(choices), format_func=lambda value: choices[value][0], key=f"{key}_added",
-                           placeholder="Digite o nome ou a primeira letra", help="Opções de A a Z. Os alimentos escolhidos ficam na ordem da seleção.")
+                           placeholder="Digite o nome ou a primeira letra", filter_mode="contains", help="Opções de A a Z. Os alimentos escolhidos ficam na ordem da seleção.")
     for choice in added:
         label, name, food_id = choices[choice]
         grams = st.number_input(f"Peso de {label} (g)", 0.0, 2000.0, 0.0, 1.0, key=f"{key}_extra_{choice}")

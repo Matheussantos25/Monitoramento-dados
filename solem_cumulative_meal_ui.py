@@ -31,7 +31,7 @@ def cumulative_review(client, day, proposal, save, key, old=None, demo=False, en
             items.append({**item,"food_id":chosen});readings.append(reading)
     occasional_shortcut(table, key)
     added=st.multiselect("Adicionar alimentos na ordem da pesagem",list(choices),format_func=lambda value: choices[value][0],key=f"{key}_added",
-                         placeholder="Digite o nome ou a primeira letra", help="Opções de A a Z. Selecione na ordem em que colocou os alimentos na balança.")
+                         placeholder="Digite o nome ou a primeira letra", filter_mode="contains", help="Opções de A a Z. Selecione na ordem em que colocou os alimentos na balança.")
     for index,choice in enumerate(added):
         label, name, food_id = choices[choice]
         # Removing/reordering an earlier addition invalidates subsequent readings.

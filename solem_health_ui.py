@@ -74,10 +74,10 @@ def health_page(client, healthy_options, occasional_options, demo=False):
             meal_time = st.time_input("Horário da refeição", value=st.session_state[meal_key], key=meal_key, step=60)
             a, b = st.columns(2)
             with a:
-                healthy = st.multiselect("Alimentos habituais", meal_food_options(meal_type, healthy_options), disabled=skipped)
+                healthy = st.multiselect("Alimentos habituais", meal_food_options(meal_type, healthy_options), disabled=skipped, filter_mode="contains")
                 healthy_extra = st.text_input("Outro alimento habitual", max_chars=120, disabled=skipped)
             with b:
-                occasional = st.multiselect("Besteiras / alimentos ocasionais", occasional_options, disabled=skipped)
+                occasional = st.multiselect("Besteiras / alimentos ocasionais", occasional_options, disabled=skipped, filter_mode="contains")
                 occasional_extra = st.text_input("Outro alimento ocasional", max_chars=120, disabled=skipped)
             submitted = st.form_submit_button("Salvar refeição", use_container_width=True)
         if submitted:
@@ -134,13 +134,13 @@ def health_page(client, healthy_options, occasional_options, demo=False):
                             old_good = details.get("saudaveis", [])
                             edit_good = st.multiselect("Alimentos habituais",
                                 meal_food_options(edit_type, healthy_options, old_good), default=old_good,
-                                key=f"meal_good_{row['id']}", disabled=edit_skipped, format_func=food_display_name)
+                                key=f"meal_good_{row['id']}", disabled=edit_skipped, format_func=food_display_name, filter_mode="contains")
                             new_good = st.text_input("Outro alimento habitual", max_chars=120, disabled=edit_skipped)
                         with b:
                             old_other = details.get("ocasionais", [])
                             edit_other = st.multiselect("Alimentos ocasionais",
                                 sorted(set(occasional_options) | set(old_other)), default=old_other,
-                                key=f"meal_other_{row['id']}", disabled=edit_skipped)
+                                key=f"meal_other_{row['id']}", disabled=edit_skipped, filter_mode="contains")
                             new_other = st.text_input("Outro alimento ocasional", max_chars=120, disabled=edit_skipped)
                         edit_submitted = st.form_submit_button("Salvar edição", use_container_width=True)
                     if edit_submitted:
