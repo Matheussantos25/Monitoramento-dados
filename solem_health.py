@@ -33,10 +33,10 @@ EXERCISE_GROUPS = {
 WORKOUT_FIELD_PROFILES = {
     "cardio": ("duracao_min", "distancia_km"),
     "counted_cardio": ("repeticoes", "duracao_min"),
-    "isometric": ("repeticoes", "isometria_segundos"),
+    "isometric": ("repeticoes", "isometria_segundos", "carga_kg"),
     "timed": ("duracao_min",),
     "counted": ("repeticoes",),
-    "bodyweight": ("series", "repeticoes", "descanso_seg"),
+    "bodyweight": ("series", "repeticoes", "carga_kg", "descanso_seg"),
     "resistance": ("series", "repeticoes", "carga_kg", "descanso_seg"),
 }
 WORKOUT_EXERCISE_PROFILES = {
@@ -59,6 +59,20 @@ WORKOUT_EXERCISE_PROFILES = {
 def workout_fields(exercise):
     profile = WORKOUT_EXERCISE_PROFILES.get(exercise, "resistance")
     return WORKOUT_FIELD_PROFILES[profile]
+
+
+def optional_workout_load(exercise):
+    return WORKOUT_EXERCISE_PROFILES.get(exercise) in ("bodyweight", "isometric")
+
+
+def workout_load(exercise, with_weight, value):
+    import math
+    if optional_workout_load(exercise) and not with_weight:
+        return 0.0
+    value = float(value)
+    if not math.isfinite(value) or value < 0 or (optional_workout_load(exercise) and value == 0):
+        raise ValueError("Informe o peso extra em kg, maior que zero, ou escolha Normal (sem peso extra).")
+    return value
 
 
 def format_one_decimal(value):

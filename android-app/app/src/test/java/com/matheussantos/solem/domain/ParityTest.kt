@@ -8,6 +8,17 @@ import org.junit.Test
 import java.time.LocalDate
 
 class ParityTest {
+    @Test fun optionalLoadRetainsFractionalKgAndNormalDiscardsStaleLoad() {
+        for (exercise in listOf("Flexão","Agachamento","Barra Fixa (Pronada)","Prancha")) {
+            assertTrue(catalog.optionalWorkoutLoad(exercise))
+            assertEquals(7.5,catalog.workoutLoad(exercise,true,"7,5"),0.0)
+            assertEquals(0.0,catalog.workoutLoad(exercise,false,"20"),0.0)
+            for(bad in listOf("0","-1","NaN","Infinity",""))
+                assertTrue(runCatching { catalog.workoutLoad(exercise,true,bad) }.isFailure)
+        }
+        assertFalse(catalog.optionalWorkoutLoad("Corrida"))
+        assertEquals(30.0,catalog.workoutLoad("Puxada Alta",false,"30"),0.0)
+    }
     private fun resource(name: String) = javaClass.classLoader!!.getResourceAsStream(name)!!.bufferedReader().use { it.readText() }
     private val catalog get() = Catalog(Json.parseToJsonElement(resource("catalog.json")).jsonObject)
     @Test fun legacyWorkoutNullsUseSafeDefaults() {
@@ -42,9 +53,9 @@ class ParityTest {
     }
     @Test fun presetsAndRotationUseWebValues() {
         assertEquals("Bíceps", catalog.group("Barra Fixa (Supinada)"))
-        assertEquals(listOf("repeticoes", "isometria_segundos"), catalog.workoutFields("Prancha"))
+        assertEquals(listOf("repeticoes", "isometria_segundos", "carga_kg"), catalog.workoutFields("Prancha"))
         assertEquals(listOf("duracao_min", "distancia_km"), catalog.workoutFields("Caminhada"))
-        assertEquals(listOf("series", "repeticoes", "descanso_seg"), catalog.workoutFields("Flexão"))
+        assertEquals(listOf("series", "repeticoes", "carga_kg", "descanso_seg"), catalog.workoutFields("Flexão"))
         assertEquals(catalog.route.first(), nextSubject(emptyList(), catalog))
         val row = TrainingRecord(1, "2026-09-06", "12:00:00", "Estudos", catalog.route.last())
         assertEquals(catalog.route.first(), nextSubject(listOf(row), catalog))

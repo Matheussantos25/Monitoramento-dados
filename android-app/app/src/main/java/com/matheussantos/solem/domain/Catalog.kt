@@ -39,6 +39,17 @@ class Catalog(private val root: JsonObject, val generic: Boolean = false) {
             .distinct().sortedWith(String.CASE_INSENSITIVE_ORDER)
     }
     fun group(exercise: String) = groups.entries.firstOrNull { exercise in it.value }?.key ?: "Outro"
+    fun optionalWorkoutLoad(exercise: String): Boolean =
+        root.getValue("WORKOUT_EXERCISE_PROFILES").jsonObject[exercise]?.jsonPrimitive?.content in listOf("bodyweight", "isometric")
+
+    fun workoutLoad(exercise: String, withWeight: Boolean, input: String): Double {
+        if (optionalWorkoutLoad(exercise) && !withWeight) return 0.0
+        val load = input.replace(',', '.').toDoubleOrNull()
+        require(load != null && load.isFinite() && load >= 0 && (!optionalWorkoutLoad(exercise) || load > 0)) {
+            "Informe o peso extra em kg, maior que zero, ou escolha Normal (sem peso extra)."
+        }
+        return load
+    }
     fun workoutFields(exercise: String): List<String> {
         val profile = root.getValue("WORKOUT_EXERCISE_PROFILES").jsonObject[exercise]?.jsonPrimitive?.content ?: "resistance"
         return root.getValue("WORKOUT_FIELD_PROFILES").jsonObject.getValue(profile).jsonArray.map { it.jsonPrimitive.content }

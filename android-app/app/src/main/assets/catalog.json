@@ -338,7 +338,8 @@
     ],
     "isometric": [
       "repeticoes",
-      "isometria_segundos"
+      "isometria_segundos",
+      "carga_kg"
     ],
     "timed": [
       "duracao_min"
@@ -349,6 +350,7 @@
     "bodyweight": [
       "series",
       "repeticoes",
+      "carga_kg",
       "descanso_seg"
     ],
     "resistance": [

@@ -14,7 +14,7 @@ from pathlib import Path
 import streamlit.components.v1 as components
 from solem_ui import apply_theme, shell, overview, section_intro, goal_panel
 from solem_health import (training_measure_stats, training_category_stats, training_recommendation,
-                          workout_fields, format_one_decimal, now_local)
+                          workout_fields, optional_workout_load, workout_load, format_one_decimal, now_local)
 from solem_gps import gps_distance_tracker
 from solem_workout_timer import workout_timer, apply_timing_event
 from solem_exercise_guide import exercise_guide
@@ -814,6 +814,8 @@ if pagina == "Treino":
             for field, value in spoken['values'].items():
                 target = 'treino_distancia' if field == 'distancia_km' else f'treino_{field}_{selected}'
                 st.session_state[target] = value
+            if 'carga_kg' in spoken['values'] and optional_workout_load(selected):
+                st.session_state[f'treino_tipo_carga_{selected}'] = "Com peso" if spoken['values']['carga_kg'] > 0 else "Normal (sem peso extra)"
             if 'duracao_min' in spoken['values']:
                 st.session_state.pop(f'treino_tempo_medido_{selected}', None)
         exercicio_input = st.selectbox("Exercício", exercicios_disponiveis, key="treino_exercicio")
@@ -862,6 +864,12 @@ if pagina == "Treino":
         if measured_time:
             st.caption(f"Tempo medido: {measured_time['seconds'] // 60} min {measured_time['seconds'] % 60:02d} s. "
                        "O campo em minutos é arredondado para cima; os segundos exatos são preservados ao salvar sem alterar a duração.")
+        with_weight = True
+        if optional_workout_load(exercicio_input):
+            with_weight = st.radio("Peso no exercício", ["Normal (sem peso extra)", "Com peso"],
+                                   horizontal=True, key=f"treino_tipo_carga_{exercicio_input}") == "Com peso"
+            if with_weight:
+                st.caption("Informe somente a carga adicionada, em kg. Não inclua seu peso corporal.")
         with st.form("registro_treino", clear_on_submit=True):
             st.markdown("<h3 style='margin-bottom: 20px; color: #83DCFF;'>Registrar atividade</h3>", unsafe_allow_html=True)
             c_top1, c_top2, c_top3 = st.columns([2, 1, 1])
@@ -878,6 +886,8 @@ if pagina == "Treino":
                 "isometria_segundos": "Tempo sustentado (seg)",
                 "duracao_min": "Duração (min)", "distancia_km": "Distância (km)",
             }
+            if optional_workout_load(exercicio_input):
+                labels["carga_kg"] = "Peso extra (kg)"
             if exercicio_input == "Subida Escada (Andares)":
                 labels["repeticoes"] = "Andares percorridos"
             if exercicio_input in ("Prancha", "L-Sit", "Handstand (Parada de Mãos)"):
@@ -885,6 +895,9 @@ if pagina == "Treino":
             values = {}
             columns = st.columns(min(2, len(fields)))
             for index, field in enumerate(fields):
+                if field == "carga_kg" and not with_weight:
+                    values[field] = 0.0
+                    continue
                 if field == "descanso_seg":
                     values[field] = rest_seconds
                     continue
@@ -902,6 +915,11 @@ if pagina == "Treino":
             humor = st.selectbox("Estado Mental no Treino", ["Normal", "Motivado", "Desmotivado"])
             
             if st.form_submit_button("Salvar treino", use_container_width=True):
+                try:
+                    values["carga_kg"] = workout_load(exercicio_input, with_weight, values.get("carga_kg", 0))
+                except ValueError as error:
+                    st.error(str(error))
+                    st.stop()
                 grupo = next((g for g, l in EXERCICIOS_PRESETADOS.items() if exercicio_input in l), "Outro")
                 mochila_json = {"humor": humor, "isometria_tentativas": isometria_tentativas,
                                 "isometria_segundos": values.get("isometria_segundos", 0)}

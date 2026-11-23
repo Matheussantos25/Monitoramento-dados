@@ -63,10 +63,10 @@ def test_training_measure_is_specific_to_exercise_and_cardio_unit():
 def test_workout_fields_fit_exercise_and_average_has_at_most_one_decimal():
     from solem_health import WORKOUT_EXERCISE_PROFILES
     assert len(WORKOUT_EXERCISE_PROFILES) == 21
-    assert workout_fields("Ponte de Glúteos") == ("series", "repeticoes", "descanso_seg")
-    assert workout_fields("Prancha") == ("repeticoes", "isometria_segundos")
+    assert workout_fields("Ponte de Glúteos") == ("series", "repeticoes", "carga_kg", "descanso_seg")
+    assert workout_fields("Prancha") == ("repeticoes", "isometria_segundos", "carga_kg")
     assert workout_fields("Caminhada") == ("duracao_min", "distancia_km")
-    assert workout_fields("Flexão") == ("series", "repeticoes", "descanso_seg")
+    assert workout_fields("Flexão") == ("series", "repeticoes", "carga_kg", "descanso_seg")
     assert format_one_decimal(12) == "12"
     assert format_one_decimal(12.34) == "12.3"
     rows = [base_record("2026-09-20", "08:00:00", "Abdominal", "Prancha", repeticoes=2,

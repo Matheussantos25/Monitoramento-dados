@@ -27,6 +27,7 @@ import java.time.ZoneOffset
     var series by rememberSaveable { mutableStateOf((existing?.series ?: 1).toString()) }
     var reps by rememberSaveable { mutableStateOf((existing?.repeticoes ?: 0).toString()) }
     var load by rememberSaveable { mutableStateOf((existing?.loadKg ?: 0.0).toString()) }
+    var withWeight by rememberSaveable(existing?.id) { mutableStateOf((existing?.loadKg ?: 0.0) > 0.0) }
     var duration by rememberSaveable { mutableStateOf((existing?.durationMinutes ?: 0).toString()) }
     var distance by rememberSaveable { mutableStateOf((existing?.distanceKm ?: 0.0).toString()) }
     var rest by rememberSaveable { mutableStateOf((existing?.restSeconds ?: 60).toString()) }
@@ -85,11 +86,11 @@ import java.time.ZoneOffset
                         parse={text->parseWorkoutVoice(text,catalog.exercises,exercise).also {draft->
                             require(draft.values.keys.all {it in catalog.workoutFields(draft.exercise)}) {"Há medidas que não pertencem a este exercício. Confira exercício, duração e repetições."}
                         }}, apply={draft->
-                            if(exercise!=draft.exercise){series="1";reps="0";load="0";duration="0";distance="0";rest="60";iso="0";measuredSeconds=null}
+                            if(exercise!=draft.exercise){series="1";reps="0";load="0";withWeight=false;duration="0";distance="0";rest="60";iso="0";measuredSeconds=null}
                             exercise=draft.exercise
                             draft.values.forEach {(field,value)-> when(field){
                                 "series"->series=value.toInt().toString(); "repeticoes"->reps=value.toInt().toString()
-                                "carga_kg"->load=value.toString(); "descanso_seg"->rest=value.toInt().toString()
+                                "carga_kg"->{load=value.toString();withWeight=value>0}; "descanso_seg"->rest=value.toInt().toString()
                                 "duracao_min"->{duration=value.toInt().toString();measuredSeconds=null}
                                 "distancia_km"->distance=value.toString(); "isometria_segundos"->iso=value.toInt().toString()
                             }}
@@ -99,7 +100,7 @@ import java.time.ZoneOffset
                         if (WalkLocationService.state.value.active) error = "Pare o GPS antes de trocar o exercício."
                         else if (exercise != it) {
                             exercise = it
-                            series = "1"; reps = "0"; load = "0"; duration = "0"
+                            series = "1"; reps = "0"; load = "0"; withWeight=false; duration = "0"
                             distance = "0"; rest = "60"; iso = "0"; measuredSeconds = null
                         }
                     }
@@ -135,7 +136,15 @@ import java.time.ZoneOffset
                         "Prancha", "L-Sit", "Handstand (Parada de Mãos)" -> "Tentativas / repetições"
                         else -> "Repetições totais"
                     }, reps, true) { reps = it }
-                    if ("carga_kg" in workoutFields) Field("Carga (kg)", load, true) { load = it }
+                    if (catalog.optionalWorkoutLoad(exercise)) {
+                        Choice("Peso no exercício", if(withWeight) "Com peso" else "Normal (sem peso extra)", listOf("Normal (sem peso extra)", "Com peso")) {
+                            withWeight=it=="Com peso";success=false;error=null
+                        }
+                        if(withWeight) {
+                            Text("Informe somente a carga adicionada. Não inclua seu peso corporal.",style=MaterialTheme.typography.bodySmall)
+                            Field("Peso extra (kg)", load, true) { load=it;success=false }
+                        }
+                    } else if ("carga_kg" in workoutFields) Field("Carga (kg)", load, true) { load = it }
                     if ("isometria_segundos" in workoutFields) Field("Tempo sustentado (seg)", iso, true) { iso = it }
                     if ("descanso_seg" in workoutFields) Field("Descanso entre séries (seg)", rest, true) { rest = it }
                     WorkoutTimingPanel(exercise, if ("descanso_seg" in workoutFields) (rest.toIntOrNull() ?: 0).coerceIn(0, 86400) else null,
@@ -261,7 +270,7 @@ import java.time.ZoneOffset
                             base.copy(data = date, horario = time, group = catalog.group(exercise), exercicio = exercise,
                                 series = if ("series" in workoutFields) int(series) else 0,
                                 repeticoes = repetitions,
-                                loadKg = if ("carga_kg" in workoutFields) decimal(load) else 0.0,
+                                loadKg = if ("carga_kg" in workoutFields) catalog.workoutLoad(exercise,withWeight,load) else 0.0,
                                 restSeconds = if ("descanso_seg" in workoutFields) int(rest) else 0,
                                 durationMinutes = if ("duracao_min" in workoutFields) int(duration) else 0,
                                 distanceKm = if ("distancia_km" in workoutFields) decimal(distance) else 0.0,

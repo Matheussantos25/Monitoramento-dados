@@ -67,12 +67,12 @@ def test_voice_meal_review_does_not_save_until_confirmed_and_survives_reruns():
     app.button(key='voice_meal_voice_apply').click().run()
     assert not app.exception
     prefix='voice_meal_dictated_1_cum'
-    assert app.number_input(key=prefix+'_reading_1').value == 323
+    assert app.number_input(key=prefix+'_slot_reading_1').value == 323
     assert app.button(key=prefix+'_save').disabled
     assert 'saves' not in app.session_state
-    app.number_input(key=prefix+'_reading_1').set_value(320).run()
+    app.number_input(key=prefix+'_slot_reading_1').set_value(320).run()
     app.run()
-    assert app.number_input(key=prefix+'_reading_1').value == 320
+    assert app.number_input(key=prefix+'_slot_reading_1').value == 320
     app.checkbox(key=prefix+'_confirmed').check().run()
     app.button(key=prefix+'_save').click().run()
     assert not app.exception
@@ -149,7 +149,7 @@ review_meal(None,date(2026,10,24),{'items':[]},_save,'weighed_meal_2026-10-24',d
     app.button(key=key+'_voice_apply').click().run()
     assert not app.exception
     assert app.radio(key=key+'_dictated_1_weighing_mode').value == 'Peso acumulado da balança'
-    assert app.number_input(key=key+'_dictated_1_cum_reading_1').value == 200
+    assert app.number_input(key=key+'_dictated_1_cum_slot_reading_1').value == 200
     assert app.button(key=key+'_dictated_1_cum_save').disabled
     assert len(app.session_state['demo_health_entries']) == 1
 
