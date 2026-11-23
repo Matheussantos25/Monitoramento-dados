@@ -20,6 +20,11 @@ import kotlin.math.floor
     val basis: String = "USDA FoodData Central / SR Legacy",
     @SerialName("catalog_version") val catalogVersion: String = "sr-2018-solem-1")
 val mealJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+// Only food assignments move. Chronological scale readings stay in their slots.
+fun moveCumulativeFood(items: List<MealFood>, from: Int, to: Int): List<MealFood> {
+    require(from in items.indices && to in items.indices) { "Posição de alimento inválida" }
+    return items.toMutableList().apply { add(to, removeAt(from)) }
+}
 fun foodSortKey(name: String): String =
     java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"), "").lowercase(java.util.Locale.ROOT)

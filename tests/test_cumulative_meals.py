@@ -65,22 +65,22 @@ review_meal(None,date(2026,10,23),old["details"]["nutrition"] if old else {"item
     assert app.radio(key="scale_weighing_mode").value=="Peso acumulado da balança"
     app.multiselect(key="scale_cum_added").set_value(["175200","169757"]).run()
     app.number_input(key="scale_cum_baseline").set_value(250)
-    app.number_input(key="scale_cum_reading_extra_175200").set_value(310)
-    app.number_input(key="scale_cum_reading_extra_175200_169757").set_value(378).run()
+    app.number_input(key="scale_cum_slot_reading_0").set_value(310)
+    app.number_input(key="scale_cum_slot_reading_1").set_value(378).run()
     app.checkbox(key="scale_cum_confirmed").check().run()
     app.button(key="scale_cum_save").click().run()
     assert not app.exception
     details=app.session_state.saved
     assert [x["grams"] for x in details["nutrition"]["items"]]==[60,68]
-    app.number_input(key="scale_cum_reading_extra_175200_169757").set_value(300).run()
+    app.number_input(key="scale_cum_slot_reading_1").set_value(300).run()
     assert app.button(key="scale_cum_save").disabled
     # New editor restores the original readings rather than treating grams as totals.
     edit=AppTest.from_string(code,default_timeout=40)
     edit.session_state["old"]=dict(id="a",logged_at="12:00:00",details=details)
     edit.run()
     assert edit.radio(key="scale_weighing_mode").value=="Peso acumulado da balança"
-    assert edit.number_input(key="scale_cum_reading_1").value==378
-    edit.number_input(key="scale_cum_reading_0").set_value(319).run()
+    assert edit.number_input(key="scale_cum_slot_reading_1").value==378
+    edit.number_input(key="scale_cum_slot_reading_0").set_value(319).run()
     edit.checkbox(key="scale_cum_confirmed").check().run()
     edit.button(key="scale_cum_save").click().run()
     assert [x["grams"] for x in edit.session_state.saved["nutrition"]["items"]]==[69,59]
@@ -95,9 +95,9 @@ def test_diary_stores_and_edits_one_cumulative_record(monkeypatch):
     key=f"weighed_meal_{day}"
     assert app.radio(key=f"{key}_weighing_mode").value=="Peso acumulado da balança"
     app.multiselect(key=f"{key}_cum_added").set_value(["175200","169757","168928"]).run()
-    app.number_input(key=f"{key}_cum_reading_extra_175200").set_value(60)
-    app.number_input(key=f"{key}_cum_reading_extra_175200_169757").set_value(128)
-    app.number_input(key=f"{key}_cum_reading_extra_175200_169757_168928").set_value(201).run()
+    app.number_input(key=f"{key}_cum_slot_reading_0").set_value(60)
+    app.number_input(key=f"{key}_cum_slot_reading_1").set_value(128)
+    app.number_input(key=f"{key}_cum_slot_reading_2").set_value(201).run()
     app.checkbox(key=f"{key}_cum_confirmed").check().run()
     app.button(key=f"{key}_cum_save").click().run()
     assert not app.exception
@@ -106,8 +106,8 @@ def test_diary_stores_and_edits_one_cumulative_record(monkeypatch):
     assert app.radio(key=f"{key}_weighing_mode").value=="Peso acumulado da balança"
     row=rows[0]; edit=f"meal_nutrition_{row['id']}_cum"
     assert [x["grams"] for x in row["details"]["nutrition"]["items"]]==[60,68,73]
-    assert app.number_input(key=f"{edit}_reading_0").value==60
-    app.number_input(key=f"{edit}_reading_0").set_value(69).run()
+    assert app.number_input(key=f"{edit}_slot_reading_0").value==60
+    app.number_input(key=f"{edit}_slot_reading_0").set_value(69).run()
     app.checkbox(key=f"{edit}_confirmed").check().run()
     app.button(key=f"{edit}_save").click().run()
     assert not app.exception

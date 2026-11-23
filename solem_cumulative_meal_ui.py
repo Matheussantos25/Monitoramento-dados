@@ -1,5 +1,6 @@
 """Cumulative scale entry; individual-food weights remain the stored nutrition basis."""
 from datetime import time
+import json
 import streamlit as st
 from solem_meal_analysis import catalog, cumulative_items, nutrition, meal_details, food_display_name, meal_choices, food_sort_key
 from solem_health import MEAL_TYPES, now_local
@@ -13,33 +14,52 @@ def cumulative_review(client, day, proposal, save, key, old=None, demo=False, en
     previous=old.get("details",{}) if old else {}
     weighing=proposal.get("voice_weighing") or previous.get("weighing",{})
     source=proposal["items"]
+    signature=json.dumps([source,weighing],sort_keys=True,ensure_ascii=False)
+    signature_key=f"{key}_source_signature"
+    if signature_key in st.session_state and st.session_state[signature_key] != signature:
+        # A successful edit changed the source. Reopen that version, not the old draft order.
+        for state_key in list(st.session_state):
+            if state_key.startswith(f"{key}_"):
+                del st.session_state[state_key]
+    st.session_state[signature_key]=signature
     st.caption("Adicione os alimentos na mesma ordem em que foram colocados no prato. Não zere a balança entre eles. Se retirar comida ou zerar novamente, use o modo individual.")
+    def unconfirm_baseline():
+        st.session_state[f"{key}_confirmed"] = False
+
     baseline=st.number_input("Leitura inicial: prato vazio (g) — 0 se usou tara",0.0,10000.0,
-                             float(weighing.get("baseline_g",0)),step=1.0,key=f"{key}_baseline")
-    items=[]; readings=[]
-    old_readings=weighing.get("readings_g",[])
-    reconstructed=float(weighing.get("baseline_g",0))
-    for index,item in enumerate(source):
-        reconstructed+=float(item["grams"])
-        with st.container(border=True):
-            st.markdown(f"**{index+1}. {food_display_name(item['name'])}**")
-            chosen=st.selectbox("Referência nutricional / preparo",[""]+list(labels),
-                index=([""]+list(labels)).index(item.get("food_id","") if item.get("food_id","") in labels else ""),
-                format_func=lambda value:labels.get(value,"Sem correspondência — não calcular"),key=f"{key}_food_{index}")
-            reading=st.number_input("Leitura da balança após este alimento (g)",0.0,34000.0,
-                float(old_readings[index] if len(old_readings)==len(source) else reconstructed),1.0,key=f"{key}_reading_{index}")
-            items.append({**item,"food_id":chosen});readings.append(reading)
+                             float(weighing.get("baseline_g",0)),step=1.0,key=f"{key}_baseline",on_change=unconfirm_baseline)
+    from solem_food_order import sync_order, food_order
     occasional_shortcut(table, key)
     added=st.multiselect("Adicionar alimentos na ordem da pesagem",list(choices),format_func=lambda value: choices[value][0],key=f"{key}_added",
-                         placeholder="Digite o nome ou a primeira letra", filter_mode="contains", help="Opções de A a Z. Selecione na ordem em que colocou os alimentos na balança.")
-    for index,choice in enumerate(added):
-        label, name, food_id = choices[choice]
-        # Removing/reordering an earlier addition invalidates subsequent readings.
-        order="_".join(added[:index+1])
-        reading=st.number_input(f"{len(source)+index+1}. Balança após {label} (g)",0.0,34000.0,0.0,1.0,
-                                key=f"{key}_reading_extra_{order}")
-        items.append(dict(name=name,food_id=food_id,grams=0));readings.append(reading)
-    st.caption("Ao remover ou trocar a ordem de uma adição, confira e preencha novamente as leituras seguintes. Para remover alimentos de uma refeição já salva, use o modo individual.")
+                         placeholder="Digite o nome ou a primeira letra", filter_mode="contains", help="Opções de A a Z. Corrija a sequência no controle de ordem abaixo.")
+    rows = {f"source:{i}": dict(item) for i, item in enumerate(source)}
+    rows.update({f"added:{choice}": dict(name=choices[choice][1],food_id=choices[choice][2],grams=0) for choice in added})
+    old_readings=weighing.get("readings_g",[])
+    reconstructed=float(weighing.get("baseline_g",0))
+    defaults={}
+    for i,item in enumerate(source):
+        reconstructed+=float(item["grams"])
+        defaults[f"source:{i}"]=old_readings[i] if len(old_readings)==len(source) else reconstructed
+    order=sync_order(st.session_state,key,list(rows),defaults)
+    food_order(key,{token:food_display_name(item["name"]) for token,item in rows.items()})
+
+    def unconfirm():
+        st.session_state[f"{key}_confirmed"] = False
+
+    items=[]; readings=[]
+    for index,token in enumerate(order):
+        item=rows[token]
+        name=food_display_name(item["name"])
+        if token.startswith("source:"):
+            chosen=st.selectbox(f"Referência de {name} / preparo",[""]+list(labels),
+                index=([""]+list(labels)).index(item.get("food_id","") if item.get("food_id","") in labels else ""),
+                format_func=lambda value:labels.get(value,"Sem correspondência — não calcular"),
+                filter_mode="contains",key=f"{key}_reference_{token}",on_change=unconfirm)
+            item={**item,"food_id":chosen}
+        reading=st.number_input(f"{index+1}. Balança após {name} (g)",0.0,34000.0,step=1.0,
+                                key=f"{key}_slot_reading_{index}",on_change=unconfirm)
+        items.append(item);readings.append(reading)
+    st.caption("Trocar a ordem recalcula as porções sem alterar as leituras. Remover uma seleção limpa as leituras a partir daquela posição. Nada muda na refeição salva até você confirmar e salvar.")
     valid=False
     try:
         calculated=cumulative_items(items,baseline,readings)

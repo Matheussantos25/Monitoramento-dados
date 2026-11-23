@@ -4,6 +4,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class MealNutritionTest {
+    @Test fun movingFoodsKeepsChronologicalReadingsAndRecalculatesPortions() {
+        val items=listOf(MealFood("Arroz","169757"),MealFood("Feijão","175200"),MealFood("Frango","171477"))
+        val weighing=MealWeighing(readings=listOf(69.0,128.0,201.0))
+        val moved=moveCumulativeFood(items,0,2)
+        assertEquals(listOf("Feijão","Frango","Arroz"),moved.map {it.name})
+        assertEquals(listOf("Arroz","Feijão","Frango"),items.map {it.name})
+        assertEquals(listOf(69.0,59.0,73.0),cumulativeMealItems(moved,weighing).map {it.grams})
+        assertEquals(items,moveCumulativeFood(moved,2,0))
+        assertEquals(listOf(69.0,128.0,201.0),weighing.readings)
+    }
     private val catalog: List<MealReference> = mealJson.decodeFromString(javaClass.getResource("/nutrition_catalog.json")!!.readText())
     private val rice=MealFood("Arroz","169757",150.0,"high")
     @Test fun cuscuzAndSweetBreadKeepPortions() {

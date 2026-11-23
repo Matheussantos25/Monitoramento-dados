@@ -31,6 +31,10 @@ private fun parseScale(value:String)=value.replace(',','.').toDoubleOrNull() ?: 
     MealReferenceDetails(references)
     Text("Coloque os alimentos na ordem do registro, sem zerar a balança entre eles. Informe 0 como peso inicial se usou tara. Se retirou comida ou zerou novamente, use o modo individual.")
     Field("Leitura inicial: prato vazio (g)",baseline,true) {baseline=it;confirmed=false}
+    FoodOrderControl(items.map { foodDisplayName(it.name,references) }, !busy) { from,to ->
+        items=moveCumulativeFood(items,from,to)
+        confirmed=false
+    }
     items.forEachIndexed {index,item ->
         Panel("${index+1}. ${foodDisplayName(item.name,references)}") {
             Field("Alimento",foodDisplayName(item.name,references)) {name ->items=items.mapIndexed {at,food->if(at==index)food.copy(name=name.take(80))else food};confirmed=false}
