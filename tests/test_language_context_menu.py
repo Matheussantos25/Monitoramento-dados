@@ -28,7 +28,7 @@ def test_listening_fields_are_saved_without_anki_counts_and_edit_clears_media_on
 def test_menu_defaults_pin_recovery_and_preserve_preferences_and_other_accounts():
     old = preferences(personal=True)
     before = deepcopy(old)
-    assert visible_menu(list(TABS.values()),old) == list(TABS.values())
+    assert visible_menu(list(TABS.values()),old) == [v for k,v in TABS.items() if k not in ("physical", "study_progress")]
     assert 'Financeiro' not in visible_menu(list(TABS.values()),preferences(generic=True),True)
     changed = preferences(dict(old, menu_tabs=['languages','finance','weight'],menu_done=True),personal=True)
     assert set(changed['menu_tabs']) == PINNED | {'languages','finance','weight'}

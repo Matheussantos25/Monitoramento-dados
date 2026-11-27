@@ -8,17 +8,21 @@ TABS = {
     "scripts": "Ideias e roteiros", "languages": "Idiomas", "weight": "Peso",
     "history": "Todos os registros", "calendar": "Calendário", "ranks": "Elos",
 }
+NESTED_TABS = {"physical": "training", "study_progress": "study"}
+MODULE_PAGES = {"Evolução física": "Treino", "Evolução nos estudos": "Estudar"}
+
 PINNED = {"overview", "settings", "account"}
 STARTER = {"overview", "training", "physical", "health", "languages", "settings", "account", "weight", "history", "calendar", "ranks"}
 
 
 def menu_tabs(saved=None, generic=False):
     if saved is None:
-        return [key for key in TABS if not generic or key in STARTER]
+        saved = [key for key in TABS if not generic or key in STARTER]
     if not isinstance(saved, list) or any(not isinstance(key, str) for key in saved):
         raise ValueError("Seleção de abas inválida.")
     # Preserve known cross-platform IDs; ignore obsolete IDs from newer/older clients.
-    return [key for key in TABS if key in saved or key in PINNED]
+    enabled = {NESTED_TABS.get(key, key) for key in saved} | PINNED
+    return [key for key in TABS if key in enabled and key not in NESTED_TABS]
 
 
 def visible_menu(pages, prefs, generic=False):

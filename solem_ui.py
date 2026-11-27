@@ -8,7 +8,7 @@ from solem_progress import calculate_progress
 from solem_journal_ui import monthly_journal
 from solem_checkup import daily_checkup
 
-PAGES = ["Visão geral", "Treino", "Evolução física", "Saúde", "Estudar", "Evolução nos estudos", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Publicações", "Metas e aparência", "Configurações", "Ideias e roteiros", "Idiomas"]
+PAGES = ["Visão geral", "Treino", "Saúde", "Estudar", "Prompts", "Anotações", "Resumos", "PDFs", "Mapas mentais", "Cronograma", "Financeiro", "Publicações", "Metas e aparência", "Configurações", "Ideias e roteiros", "Idiomas"]
 
 
 def apply_theme():
@@ -26,6 +26,12 @@ def apply_theme():
 
 
 def navigate(page):
+    from solem_navigation import MODULE_PAGES
+    if page in MODULE_PAGES:
+        st.session_state[f"module_section_{MODULE_PAGES[page]}"] = page
+        page = MODULE_PAGES[page]
+    elif page in ("Treino", "Estudar"):
+        st.session_state[f"module_section_{page}"] = "Registrar"
     st.session_state["solem_page"] = page
     st.session_state["menu_direct_page"] = page
 
@@ -39,7 +45,9 @@ def navigate_checkup(page, exercise=None):
 
 
 def shell(df, on_logout=None):
-    from solem_navigation import visible_menu
+    from solem_navigation import visible_menu, MODULE_PAGES
+    if st.session_state.get("solem_page") in MODULE_PAGES:
+        navigate(st.session_state["solem_page"])
     from solem_navigation_ui import menu_welcome
     available = visible_menu(PAGES, st.session_state.get("journey_preferences", {}), st.session_state.get("generic_account", False))
     direct = st.session_state.get("menu_direct_page")

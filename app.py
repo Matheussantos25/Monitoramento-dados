@@ -741,6 +741,8 @@ else:
 
 # --- INTERFACE MAIN ---
 pagina, progresso = shell(df_raw, on_logout=logout_private)
+from solem_navigation_ui import module_section
+pagina = module_section(pagina)
 
 if pagina == "Idiomas":
     from solem_languages_ui import language_page

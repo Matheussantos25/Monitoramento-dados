@@ -88,3 +88,15 @@ def navigation(available, progress, navigate, on_logout):
         if page not in shortcuts:
             st.caption(page)
     return page
+
+
+def module_section(page):
+    """Internal module navigation; only the selected view renders its widgets."""
+    dashboards = {"Treino": "Evolução física", "Estudar": "Evolução nos estudos"}
+    if page not in dashboards:
+        return page
+    with st.container(key="module_navigation"):
+        st.markdown(f"### {page}")
+        selected = st.radio(f"Seção de {page}", ["Registrar", dashboards[page]],
+                           horizontal=True, key=f"module_section_{page}", label_visibility="collapsed")
+    return page if selected == "Registrar" else dashboards[page]

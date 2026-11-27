@@ -2,6 +2,7 @@ package com.matheussantos.solem.ui
 
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -109,6 +110,16 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
     }
     val activityAvailable=state is TrainingUiState.Ready || state is TrainingUiState.Empty
     val route=backStack?.destination?.route.orEmpty()
+    var trainingSection by rememberSaveable { mutableStateOf("Registrar") }
+    var studySection by rememberSaveable { mutableStateOf("Registrar") }
+    LaunchedEffect(route) {
+        if(route=="2" || route=="6") {
+            if(route=="2") trainingSection="Evolução física" else studySection="Evolução nos estudos"
+            nav.navigate(if(route=="2") "1" else "5") {
+                popUpTo(route) {inclusive=true}; launchSingleTop=true
+            }
+        }
+    }
     val isRecord=route.startsWith("edit/") || route.startsWith("new-workout/") || route=="workout-plan"
     val catalog = remember(generic, rows) { Catalog(context, generic).withStudyTopics(rows) }
     LaunchedEffect(message) { message?.let { snack.showSnackbar(it); vm.consumeMessage() } }
@@ -124,7 +135,7 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
         ModalDrawerSheet {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
                 Text("✳ solem",Modifier.padding(16.dp),style=MaterialTheme.typography.headlineMedium)
-                listOf("JORNADA" to listOf(0,1,2,3,19,5,6,9,10), "BIBLIOTECA" to listOf(18,11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(17,8))
+                listOf("JORNADA" to listOf(0,1,3,19,5,9,10), "BIBLIOTECA" to listOf(18,11,12,13,14,7), "PLANEJAMENTO" to listOf(15,16), "CONTA" to listOf(17,8))
                     .map { (group, indices) -> group to indices.filter { androidTabIds[it] in menu.tabs } }
                     .filter { it.second.isNotEmpty() }.forEach { (group, indices) ->
                     Text(group,Modifier.padding(16.dp,12.dp),style=MaterialTheme.typography.labelSmall)
@@ -179,32 +190,34 @@ val LocalGpsAccount = staticCompositionLocalOf { "" }
                     {nav.navigate("workout-plan")}) }
                 composable("workout-plan") { WorkoutPlanPage(rows,generic,activityAvailable) { exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}") } }
                 composable("1") {
-                    var section by rememberSaveable { mutableStateOf("Registrar") }
+                    val section = trainingSection
                     Column(Modifier.fillMaxSize()) {
-                        Row(Modifier.padding(horizontal=20.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                            listOf("Registrar", "Registros", "Plano").forEach { option -> FilterChip(selected=section==option, onClick={section=option}, label={Text(option)}) }
+                        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal=20.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            listOf("Registrar", "Registros", "Evolução física", "Plano").forEach { option -> FilterChip(selected=section==option, onClick={trainingSection=option}, label={Text(option)}) }
                         }
                         if (section == "Registrar") EntryScreen("Treino", catalog, rows, busy = busy,
                             save = { id, value, done -> vm.save(id, value, done) }, batch = { value, done -> vm.insertBatch(value, done) })
+                        else if(section == "Evolução física") PhysicalCharts(rows, catalog)
                         else if(section == "Plano") WorkoutPlanPage(rows,generic,activityAvailable) { exercise -> nav.navigate("new-workout/${Uri.encode(exercise)}") }
                         else History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }, "Treino", Modifier.weight(1f))
                     }
                 }
-                composable("2") { PhysicalCharts(rows, catalog) }
+                composable("2") { CircularProgressIndicator() }
                 composable("3") { HealthPage(catalog, workspaceVm) }
                 composable("4") { HealthPage(catalog, workspaceVm,2) }
                 composable("health/{section}") { entry -> HealthPage(catalog,workspaceVm,entry.arguments?.getString("section")?.toIntOrNull() ?: -1) }
                 composable("5") {
-                    var section by rememberSaveable { mutableStateOf("Registrar") }
+                    val section = studySection
                     Column(Modifier.fillMaxSize()) {
-                        Row(Modifier.padding(horizontal=20.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                            listOf("Registrar", "Registros").forEach { option -> FilterChip(selected=section==option, onClick={section=option}, label={Text(option)}) }
+                        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal=20.dp), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            listOf("Registrar", "Registros", "Evolução nos estudos").forEach { option -> FilterChip(selected=section==option, onClick={studySection=option}, label={Text(option)}) }
                         }
                         if (section == "Registrar") StudyPage(rows.filterNot {it.isLanguage()}, catalog, busy, vm)
+                        else if(section == "Evolução nos estudos") StudyCharts(rows.filterNot {it.isLanguage()}, catalog)
                         else History(rows.filterNot {it.isLanguage()}, busy, vm::delete, { nav.navigate("edit/" + it.id) }, "Estudo", Modifier.weight(1f))
                     }
                 }
-                composable("6") { StudyCharts(rows.filterNot {it.isLanguage()}, catalog) }
+                composable("6") { CircularProgressIndicator() }
                 composable("7") { PromptsPage(workspaceVm, generic) }
                 composable("8") { History(rows, busy, vm::delete, { nav.navigate("edit/" + it.id) }) }
                 composable("new-workout/{exercise}") { entry ->

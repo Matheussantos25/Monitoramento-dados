@@ -18,7 +18,7 @@ import com.matheussantos.solem.viewmodel.MenuViewModel
         Text("Escolha as áreas do seu menu. Ocultar uma aba mantém todos os registros. A seleção fica na sua conta e vale também para o site.")
         Text("Visão geral e Personalizar ficam sempre acessíveis. Você pode mudar suas escolhas quando quiser.",style=MaterialTheme.typography.bodySmall)
         if(state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        androidTabIds.forEachIndexed {index,id -> if(id !in pinnedTabs) {
+        androidTabIds.forEachIndexed {index,id -> if(id !in pinnedTabs && id !in nestedTabs) {
             Row(Modifier.fillMaxWidth().toggleable(value=id in selection,enabled=state.loaded && !state.busy,role=Role.Checkbox,
                 onValueChange={selection=if(it)selection+id else selection-id}).padding(vertical=4.dp),verticalAlignment=Alignment.CenterVertically) {
                 Checkbox(id in selection,null,enabled=state.loaded && !state.busy)

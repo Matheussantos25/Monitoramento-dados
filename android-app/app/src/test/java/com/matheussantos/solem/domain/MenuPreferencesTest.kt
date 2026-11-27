@@ -6,7 +6,7 @@ import kotlinx.serialization.json.*
 
 class MenuPreferencesTest {
     @Test fun defaultsPreserveExistingAndPinRecovery() {
-        assertEquals(menuTabIds.toSet(),menuTabs(null,false))
+        assertEquals(menuTabIds.toSet()-nestedTabs.keys,menuTabs(null,false))
         assertFalse("finance" in menuTabs(null,true))
         assertTrue("finance" in menuTabs(listOf("finance"),true))
         assertEquals(pinnedTabs,menuTabs(emptyList(),true))
@@ -19,6 +19,15 @@ class MenuPreferencesTest {
         assertTrue(changed.containsAll(pinnedTabs))
         assertFalse("training" in changed)
         assertTrue("languages" in changed)
+    }
+    @Test fun oldDashboardSelectionsOpenParentModules() {
+        val saved=listOf("physical", "study_progress", "languages")
+        assertEquals(pinnedTabs+setOf("training","study","languages"),menuTabs(saved,false))
+        assertEquals(listOf("physical", "study_progress", "languages"),saved)
+        val current=menuTabs(saved,false)
+        val hidden=mergedMenuTabs(emptySet(),current,androidTabIds.toSet()-pinnedTabs)
+        assertFalse("training" in hidden)
+        assertFalse("study" in hidden)
     }
     @Test fun listeningIsMediaWithoutAnkiCounts() {
         val value=languageMutation("2026-11-03","22:00","Inglês","Escuta",25,
